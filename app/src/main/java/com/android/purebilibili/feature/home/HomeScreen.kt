@@ -49,29 +49,21 @@ fun HomeScreen(
         }
     }
 
-    // 🔥 状态栏优化：基于背景亮度智能适配（优化防闪烁）
+    // --- 状态栏与沉浸式逻辑 ---
     val view = LocalView.current
     val backgroundColor = MaterialTheme.colorScheme.background
-    val surfaceColor = MaterialTheme.colorScheme.surface
 
-    // 使用 remember 缓存亮度判断，避免频繁重组
     val isLightBackground = remember(backgroundColor) {
         backgroundColor.luminance() > 0.5f
     }
 
-    // 使用 DisposableEffect 确保只在必要时更新
     if (!view.isInEditMode) {
         DisposableEffect(isLightBackground) {
             val window = (view.context as Activity).window
             val insetsController = WindowCompat.getInsetsController(window, view)
-
-            // 核心逻辑：根据背景亮度自动选择状态栏图标颜色
             insetsController.isAppearanceLightStatusBars = isLightBackground
-
-            // 保持透明背景以支持沉浸式体验
             window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = Color.Transparent.toArgb()
-
             onDispose { }
         }
     }
@@ -81,9 +73,10 @@ fun HomeScreen(
     val statusBarHeight = WindowInsets.statusBars.getTop(density).let { with(density) { it.toDp() } }
     val navBarHeight = WindowInsets.navigationBars.getBottom(density).let { with(density) { it.toDp() } }
 
-    // 🔥 优化后的内容区域间距
-    // TopBar 高度 = 状态栏 + 头像行(48dp) + 间距(8dp) + 搜索栏(48dp) + 底部间距(8dp)
-    val topContentPadding = statusBarHeight + 48.dp + 8.dp + 48.dp + 8.dp + 12.dp
+    // 🔥🔥🔥 【修改】调整顶部 Padding 以适配新的单行 TopBar 🔥🔥🔥
+    // 状态栏高度 + TopBar 内容高度 (64dp) + 列表顶部留白 (8dp)
+    val topContentPadding = statusBarHeight + 64.dp + 8.dp
+
     val bottomContentPadding = navBarHeight + 16.dp
 
     // 显示模式
@@ -137,6 +130,7 @@ fun HomeScreen(
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Fixed(columnsCount),
+                    // 使用新的 contentPadding
                     contentPadding = PaddingValues(
                         start = 12.dp,
                         end = 12.dp,
@@ -147,7 +141,11 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    itemsIndexed(state.videos) { index, video ->
+                    itemsIndexed(
+                        items = state.videos,
+                        key = { _, video -> video.bvid },
+                        contentType = { _, _ -> "video_card" }
+                    ) { index, video ->
                         if (displayMode == 1) {
                             ImmersiveVideoCard(video, index) { bvid, cid ->
                                 onVideoClick(bvid, cid, video.pic)
@@ -185,7 +183,7 @@ fun HomeScreen(
                 contentColor = Color.White
             )
 
-            // 顶层：集成搜索的 TopBar
+            // 顶层：新的 TopBar
             HomeTopBar(
                 user = state.user,
                 isScrolled = isScrolled,

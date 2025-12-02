@@ -1,5 +1,7 @@
+// 文件路径: feature/video/VideoActivity.kt
 package com.android.purebilibili.feature.video
 
+import android.Manifest
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
@@ -7,10 +9,12 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -31,21 +35,30 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+private const val TAG = "BiliPlayerActivity"
+
 class VideoActivity : ComponentActivity() {
 
     private val viewModel: PlayerViewModel by viewModels()
-
-    // 手动管理全屏状态，默认 false (竖屏)
     private var isFullscreen by mutableStateOf(false)
     private var isInPipMode by mutableStateOf(false)
 
+    // 🔥 1. 权限回调
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) Log.d(TAG, "✅ 通知权限已授予") else Log.w(TAG, "❌ 通知权限被拒绝，媒体控件可能无法显示")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // 🔥🔥 修复 1: 强制初始状态为竖屏
-        // 防止上次奔溃或退出时卡在横屏状态
         if (savedInstanceState == null) {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+
+        // 🔥 2. 请求权限 (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         val bvid = intent.getStringExtra("bvid")
@@ -54,39 +67,29 @@ class VideoActivity : ComponentActivity() {
             return
         }
 
-        // 根据当前实际配置更新 UI 状态
         updateStateFromConfig(resources.configuration)
 
         setContent {
             MaterialTheme {
-                // 如果 build.gradle 没同步好导致报错，可临时改回 viewModel.uiState.collectAsState()
                 val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
 
+                // 初始化播放器 (VideoPlayerState 内部已包含自动元数据更新逻辑)
                 val playerState = rememberVideoPlayerState(
                     context = this,
                     viewModel = viewModel,
                     bvid = bvid
                 )
 
-                // 🔥🔥 修复 2: 拦截返回键
-                // 如果当前是全屏，按返回键先退出全屏，而不是直接关闭页面
                 BackHandler(enabled = isFullscreen) {
                     toggleFullscreen()
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black)
-                ) {
-                    // === 播放器区域 ===
+                Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                     Box(
                         modifier = if (isFullscreen) {
-                            Modifier.fillMaxSize() // 全屏模式：填满屏幕
+                            Modifier.fillMaxSize()
                         } else {
-                            Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(16f / 9f) // 竖屏模式：固定 16:9
+                            Modifier.fillMaxWidth().aspectRatio(16f / 9f)
                         }
                     ) {
                         VideoPlayerSection(
@@ -99,22 +102,17 @@ class VideoActivity : ComponentActivity() {
                                 viewModel.changeQuality(quality, pos)
                             },
                             onBack = {
-                                // 点击左上角返回按钮：如果是全屏就切竖屏，否则退出
                                 if (isFullscreen) toggleFullscreen() else finish()
                             }
                         )
                     }
 
-                    // === 竖屏时的下方内容 (评论/详情) ===
                     if (!isFullscreen && !isInPipMode) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "评论区与详情页 (待实现)", color = Color.Gray)
-                            // TODO: 这里放 VideoDetailInfo(uiState.info) 和 CommentList
+                            Text(text = "详情页内容区域 (待实现)", color = Color.Gray)
                         }
                     }
                 }
@@ -122,21 +120,17 @@ class VideoActivity : ComponentActivity() {
         }
     }
 
-    // 监听系统配置变化 (Manifest 中必须配置 configChanges)
+    // --- 配置与全屏逻辑保持不变 ---
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         updateStateFromConfig(newConfig)
     }
 
-    // 统一更新状态和系统栏显隐
     private fun updateStateFromConfig(config: Configuration) {
         val isLandscape = config.orientation == Configuration.ORIENTATION_LANDSCAPE
         isFullscreen = isLandscape
-
-        // 控制状态栏/导航栏 (沉浸式)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-
         if (isLandscape) {
             windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
         } else {
@@ -144,24 +138,18 @@ class VideoActivity : ComponentActivity() {
         }
     }
 
-    // 🔥🔥 修复 3: 切换全屏的核心逻辑
     private fun toggleFullscreen() {
         if (isFullscreen) {
-            // 当前是横屏 -> 切回竖屏
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         } else {
-            // 当前是竖屏 -> 切为横屏
-            // 使用 SENSOR_LANDSCAPE 让用户可以左右180度翻转手机
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
     }
 
-    // --- 画中画 (PiP) 支持 ---
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val state = viewModel.uiState.value
-            // 只有视频加载成功且正在播放时才进入画中画
             if (state is PlayerUiState.Success) {
                 enterPictureInPictureMode(
                     PictureInPictureParams.Builder()

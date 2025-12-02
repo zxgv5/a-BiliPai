@@ -29,17 +29,24 @@ class MainActivity : ComponentActivity() {
             // 1. 获取存储的模式 (默认为跟随系统)
             val themeMode by SettingsManager.getThemeMode(context).collectAsState(initial = AppThemeMode.FOLLOW_SYSTEM)
 
-            // 2. 获取系统当前的深色状态
+            // 🔥🔥 2. [新增] 获取动态取色设置 (默认为 true)
+            val dynamicColor by SettingsManager.getDynamicColor(context).collectAsState(initial = true)
+
+            // 3. 获取系统当前的深色状态
             val systemInDark = isSystemInDarkTheme()
 
-            // 🔥🔥 3. 核心逻辑：根据枚举值决定是否开启 DarkTheme
+            // 4. 根据枚举值决定是否开启 DarkTheme
             val useDarkTheme = when (themeMode) {
                 AppThemeMode.FOLLOW_SYSTEM -> systemInDark // 跟随系统：系统黑则黑，系统白则白
                 AppThemeMode.LIGHT -> false                // 强制浅色
                 AppThemeMode.DARK -> true                  // 强制深色
             }
 
-            PureBiliBiliTheme(darkTheme = useDarkTheme) {
+            // 5. 传入参数
+            PureBiliBiliTheme(
+                darkTheme = useDarkTheme,
+                dynamicColor = dynamicColor // 🔥🔥 传入动态取色开关
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

@@ -1,10 +1,7 @@
 // 文件路径: feature/search/SearchScreen.kt
 package com.android.purebilibili.feature.search
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,7 +37,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.android.purebilibili.core.database.entity.SearchHistory
 import com.android.purebilibili.core.theme.BiliPink
 import com.android.purebilibili.feature.home.VideoGridItem
@@ -49,7 +45,7 @@ import com.android.purebilibili.feature.home.VideoGridItem
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel = viewModel(),
-    userFace: String = "", // 🔥 新增：从外部传入头像 URL
+    userFace: String = "",
     onBack: () -> Unit,
     onVideoClick: (String, Long) -> Unit,
     onAvatarClick: () -> Unit
@@ -57,54 +53,25 @@ fun SearchScreen(
     val state by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // 1. 滚动状态监听
+    // 1. 滚动状态监听 (用于列表)
     val historyListState = rememberLazyListState()
     val resultGridState = rememberLazyGridState()
 
-    // 2. 核心：计算是否滚动 (决定顶部栏背景)
-    val isScrolled by remember(state.showResults) {
-        derivedStateOf {
-            if (state.showResults) {
-                resultGridState.firstVisibleItemIndex > 0 || resultGridState.firstVisibleItemScrollOffset > 10
-            } else {
-                historyListState.firstVisibleItemIndex > 0 || historyListState.firstVisibleItemScrollOffset > 10
-            }
-        }
-    }
-
-    // 3. 顶部栏颜色动画 (透明 -> Surface)
-    val topBarContainerColor by animateColorAsState(
-        targetValue = if (isScrolled) MaterialTheme.colorScheme.surface else Color.Transparent,
-        animationSpec = tween(durationMillis = 300),
-        label = "TopBarBg"
-    )
-
-    // 4. 顶部避让高度 (状态栏 + 顶部栏高度)
+    // 2. 顶部避让高度计算
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.getTop(density).let { with(density) { it.toDp() } }
-    val topBarHeight = 56.dp
+    val topBarHeight = 64.dp // 搜索栏高度
     val contentTopPadding = statusBarHeight + topBarHeight
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0), // 手动处理 Insets
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
-        // 🔥 核心改变：搜索栏放到底部
-        bottomBar = {
-            BottomSearchBar(
-                query = state.query,
-                onQueryChange = { viewModel.onQueryChange(it) },
-                onSearch = {
-                    viewModel.search(it)
-                    keyboardController?.hide()
-                },
-                onClearQuery = { viewModel.onQueryChange("") }
-            )
-        }
-    ) { padding -> // padding 包含了 bottomBar 的高度
+        // 🔥 移除 bottomBar，搜索栏现在位于顶部 Box 中
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = padding.calculateBottomPadding()) // 底部避让搜索栏
+                .padding(padding)
         ) {
             // --- 列表内容层 ---
             if (state.showResults) {
@@ -120,7 +87,7 @@ fun SearchScreen(
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
                         state = resultGridState,
-                        // 顶部避让 TopBar，底部留白防止遮挡
+                        // 🔥 contentPadding 顶部避让搜索栏
                         contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = 16.dp, start = 8.dp, end = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -135,6 +102,7 @@ fun SearchScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     state = historyListState,
+                    // 🔥 contentPadding 顶部避让搜索栏
                     contentPadding = PaddingValues(top = contentTopPadding + 16.dp, bottom = 16.dp, start = 16.dp, end = 16.dp)
                 ) {
                     if (state.hotList.isNotEmpty()) {
@@ -168,167 +136,138 @@ fun SearchScreen(
                 }
             }
 
-            // --- 顶部导航层 (Back + Avatar) ---
-            // 放置在最上层，实现沉浸遮挡
-            SimpleTopBar(
-                userFace = userFace,
-                containerColor = topBarContainerColor,
+            // --- 🔥 顶部搜索栏 (常驻顶部) ---
+            SearchTopBar(
+                query = state.query,
                 onBack = onBack,
-                onAvatarClick = onAvatarClick,
+                onQueryChange = { viewModel.onQueryChange(it) },
+                onSearch = {
+                    viewModel.search(it)
+                    keyboardController?.hide()
+                },
+                onClearQuery = { viewModel.onQueryChange("") },
                 modifier = Modifier.align(Alignment.TopCenter)
             )
         }
     }
 }
 
-// 🔥 新设计：顶部简易栏 (只有返回和头像)
+// 🔥 新设计的顶部搜索栏
 @Composable
-fun SimpleTopBar(
-    userFace: String,
-    containerColor: Color,
-    onBack: () -> Unit,
-    onAvatarClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(containerColor) // 动态背景色
-    ) {
-        Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // 左侧：返回按钮
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
-            }
-
-            // 右侧：头像
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(0.3f), CircleShape)
-                    .clickable { onAvatarClick() }
-            ) {
-                if (userFace.isNotEmpty()) {
-                    AsyncImage(
-                        model = userFace,
-                        contentDescription = "Avatar",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Search, // 没头像显示一个默认图标
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-// 🔥 新设计：底部悬浮搜索栏
-@Composable
-fun BottomSearchBar(
+fun SearchTopBar(
     query: String,
+    onBack: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
-    onClearQuery: () -> Unit
+    onClearQuery: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.ime) // 🔥 关键：随键盘顶起
-            .windowInsetsPadding(WindowInsets.navigationBars) // 避让底部导航条
-            .shadow(16.dp, spotColor = Color.Black.copy(0.1f)),
+        modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+        shadowElevation = 3.dp // 添加一点阴影区分内容
     ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxWidth()
-                .height(48.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.Search,
-                null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(start = 16.dp, end = 12.dp)
-                    .size(20.dp)
-            )
+        Column {
+            // 状态栏避让
+            Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier.weight(1f),
-                textStyle = TextStyle(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 16.sp
-                ),
-                singleLine = true,
-                cursorBrush = SolidColor(BiliPink),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
-                decorationBox = { inner ->
-                    Box(contentAlignment = Alignment.CenterStart) {
-                        if (query.isEmpty()) {
-                            Text(
-                                "搜索视频、UP主...",
-                                style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.7f), fontSize = 16.sp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp) // 增加高度以容纳更大的输入框
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 1. 返回按钮
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                // 2. 搜索输入框 (占据中间)
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(50)) // 胶囊圆角
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    BasicTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        modifier = Modifier.weight(1f),
+                        textStyle = TextStyle(
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 15.sp
+                        ),
+                        singleLine = true,
+                        cursorBrush = SolidColor(BiliPink),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
+                        decorationBox = { inner ->
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (query.isEmpty()) {
+                                    Text(
+                                        "搜索视频、UP主...",
+                                        style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f), fontSize = 15.sp)
+                                    )
+                                }
+                                inner()
+                            }
+                        }
+                    )
+
+                    if (query.isNotEmpty()) {
+                        IconButton(
+                            onClick = onClearQuery,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Clear,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
-                        inner()
                     }
                 }
-            )
 
-            if (query.isNotEmpty()) {
-                IconButton(onClick = onClearQuery) {
-                    Icon(Icons.Default.Clear, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                }
-            } else {
-                // 如果为空，可以显示一个占位或者什么都不显示
                 Spacer(modifier = Modifier.width(12.dp))
-            }
 
-            // 搜索按钮 (胶囊型)
-            if (query.isNotEmpty()) {
-                Button(
+                // 3. 搜索按钮
+                TextButton(
                     onClick = { onSearch(query) },
-                    colors = ButtonDefaults.buttonColors(containerColor = BiliPink),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                    modifier = Modifier
-                        .padding(end = 4.dp)
-                        .height(36.dp)
+                    // 如果有内容则高亮，无内容则灰色
+                    enabled = query.isNotEmpty()
                 ) {
-                    Text("搜索", fontSize = 14.sp)
+                    Text(
+                        "搜索",
+                        color = if (query.isNotEmpty()) BiliPink else MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f),
+                        fontSize = 16.sp
+                    )
                 }
             }
         }
     }
 }
 
-// HistoryItem 保持不变...
+// HistoryItem 保持不变
 @Composable
 fun HistoryItem(
     history: SearchHistory,
@@ -349,5 +288,5 @@ fun HistoryItem(
             Icon(Icons.Default.Close, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f), modifier = Modifier.size(16.dp))
         }
     }
-    Divider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
+    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
 }

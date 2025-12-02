@@ -1,10 +1,11 @@
+// 文件路径: feature/settings/SettingsViewModel.kt
 package com.android.purebilibili.feature.settings
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.purebilibili.core.store.SettingsManager
-import com.android.purebilibili.core.util.CacheUtils // 🔥 确保导入 CacheUtils
+import com.android.purebilibili.core.util.CacheUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,26 +17,49 @@ data class SettingsUiState(
     val autoPlay: Boolean = true,
     val hwDecode: Boolean = true,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
-    val cacheSize: String = "计算中..." // 🔥 新增：缓存大小状态
+    val dynamicColor: Boolean = true,
+    val bgPlay: Boolean = false,
+    val cacheSize: String = "计算中..."
+)
+
+// 内部数据类，用于分批合并流
+private data class BaseSettings(
+    val autoPlay: Boolean,
+    val hwDecode: Boolean,
+    val themeMode: AppThemeMode,
+    val dynamicColor: Boolean,
+    val bgPlay: Boolean
 )
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
 
-    // 🔥 1. 本地状态流：缓存大小
+    // 本地状态流：缓存大小
     private val _cacheSize = MutableStateFlow("计算中...")
 
-    // 🔥 2. 将 DataStore 数据与本地缓存状态合并
-    val state: StateFlow<SettingsUiState> = combine(
+    // 🔥🔥 [核心修复] 分两步合并，解决 combine 参数限制报错
+    // 第 1 步：合并 DataStore 的 5 个设置
+    private val baseSettingsFlow = combine(
         SettingsManager.getAutoPlay(context),
         SettingsManager.getHwDecode(context),
         SettingsManager.getThemeMode(context),
-        _cacheSize // 合并缓存状态
-    ) { autoPlay, hwDecode, themeMode, cacheSize ->
+        SettingsManager.getDynamicColor(context),
+        SettingsManager.getBgPlay(context)
+    ) { autoPlay, hwDecode, themeMode, dynamicColor, bgPlay ->
+        BaseSettings(autoPlay, hwDecode, themeMode, dynamicColor, bgPlay)
+    }
+
+    // 第 2 步：与缓存大小合并
+    val state: StateFlow<SettingsUiState> = combine(
+        baseSettingsFlow,
+        _cacheSize
+    ) { settings, cacheSize ->
         SettingsUiState(
-            autoPlay = autoPlay,
-            hwDecode = hwDecode,
-            themeMode = themeMode,
+            autoPlay = settings.autoPlay,
+            hwDecode = settings.hwDecode,
+            themeMode = settings.themeMode,
+            dynamicColor = settings.dynamicColor,
+            bgPlay = settings.bgPlay,
             cacheSize = cacheSize
         )
     }.stateIn(
@@ -44,38 +68,26 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         initialValue = SettingsUiState()
     )
 
-    // 初始化时计算一次缓存
     init {
         refreshCacheSize()
     }
 
     // --- 功能方法 ---
 
-    // 🔥 计算缓存大小
     fun refreshCacheSize() {
-        viewModelScope.launch {
-            _cacheSize.value = CacheUtils.getTotalCacheSize(context)
-        }
+        viewModelScope.launch { _cacheSize.value = CacheUtils.getTotalCacheSize(context) }
     }
 
-    // 🔥 清理缓存
     fun clearCache() {
         viewModelScope.launch {
             CacheUtils.clearAllCache(context)
-            // 清理完后重新计算并更新 UI
             _cacheSize.value = CacheUtils.getTotalCacheSize(context)
         }
     }
 
-    fun toggleAutoPlay(value: Boolean) {
-        viewModelScope.launch { SettingsManager.setAutoPlay(context, value) }
-    }
-
-    fun toggleHwDecode(value: Boolean) {
-        viewModelScope.launch { SettingsManager.setHwDecode(context, value) }
-    }
-
-    fun setThemeMode(mode: AppThemeMode) {
-        viewModelScope.launch { SettingsManager.setThemeMode(context, mode) }
-    }
+    fun toggleAutoPlay(value: Boolean) { viewModelScope.launch { SettingsManager.setAutoPlay(context, value) } }
+    fun toggleHwDecode(value: Boolean) { viewModelScope.launch { SettingsManager.setHwDecode(context, value) } }
+    fun setThemeMode(mode: AppThemeMode) { viewModelScope.launch { SettingsManager.setThemeMode(context, mode) } }
+    fun toggleDynamicColor(value: Boolean) { viewModelScope.launch { SettingsManager.setDynamicColor(context, value) } }
+    fun toggleBgPlay(value: Boolean) { viewModelScope.launch { SettingsManager.setBgPlay(context, value) } }
 }

@@ -7,9 +7,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.view.View
 import android.view.Window
-import android.view.WindowManager // 🔥 新增导入
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,32 +49,48 @@ fun VideoDetailScreen(
     val configuration = LocalConfiguration.current
     val uiState by viewModel.uiState.collectAsState()
 
-    // 1. 直接通过系统配置判断是否全屏
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // 画中画状态
     var isPipMode by remember { mutableStateOf(isInPipMode) }
     LaunchedEffect(isInPipMode) { isPipMode = isInPipMode }
 
-    // 🔥🔥🔥【关键修复】退出页面时重置亮度
-    // 解决回到首页后提示“亮度被顶层应用控制”的问题
+    // 退出重置亮度
     DisposableEffect(Unit) {
         onDispose {
             val window = context.findActivity()?.window
             val layoutParams = window?.attributes
-            // 强制重置为系统默认 (-1f)
             layoutParams?.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
             window?.attributes = layoutParams
         }
     }
 
+    // 初始化播放器状态
     val playerState = rememberVideoPlayerState(
         context = context,
         viewModel = viewModel,
         bvid = bvid
     )
 
-    // 2. 辅助函数：切换屏幕方向
+    // 🔥🔥🔥 核心修改：当获取到视频详情 Success 时，更新系统媒体控制中心信息
+    LaunchedEffect(uiState) {
+        if (uiState is PlayerUiState.Success) {
+            val info = (uiState as PlayerUiState.Success).info
+            playerState.updateMediaMetadata(
+                title = info.title,
+                artist = info.owner.name,
+                coverUrl = info.pic // 或者是 info.cover，根据你的数据模型决定
+            )
+        } else if (uiState is PlayerUiState.Loading) {
+            // 加载中也可以先设置个占位标题（可选）
+            playerState.updateMediaMetadata(
+                title = "加载中...",
+                artist = "",
+                coverUrl = coverUrl // 从外部传入的封面
+            )
+        }
+    }
+
+    // 辅助函数：切换屏幕方向
     fun toggleOrientation() {
         val activity = context.findActivity() ?: return
         if (isLandscape) {
@@ -85,7 +100,7 @@ fun VideoDetailScreen(
         }
     }
 
-    // 3. 沉浸式状态栏控制
+    // 沉浸式状态栏控制
     val backgroundColor = MaterialTheme.colorScheme.background
     val isLightBackground = remember(backgroundColor) { backgroundColor.luminance() > 0.5f }
 
@@ -95,13 +110,11 @@ fun VideoDetailScreen(
             val insetsController = WindowCompat.getInsetsController(window, view)
 
             if (isLandscape) {
-                // 横屏：隐藏状态栏和导航栏，黑色背景
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
                 insetsController.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 window.statusBarColor = Color.Black.toArgb()
                 window.navigationBarColor = Color.Black.toArgb()
             } else {
-                // 竖屏：显示状态栏，恢复原来的颜色
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
                 insetsController.isAppearanceLightStatusBars = isLightBackground
                 window.statusBarColor = Color.Transparent.toArgb()
@@ -110,14 +123,12 @@ fun VideoDetailScreen(
         }
     }
 
-    // 4. 界面布局
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(if (isLandscape) Color.Black else MaterialTheme.colorScheme.background)
     ) {
         if (isLandscape) {
-            // === 横屏全屏模式 ===
             VideoPlayerSection(
                 playerState = playerState,
                 uiState = uiState,
@@ -128,9 +139,7 @@ fun VideoDetailScreen(
                 onBack = { toggleOrientation() }
             )
         } else {
-            // === 竖屏普通模式 ===
             Column(modifier = Modifier.fillMaxSize()) {
-                // 播放器容器 (16:9)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -148,7 +157,6 @@ fun VideoDetailScreen(
                     )
                 }
 
-                // 下方内容区域
                 when (uiState) {
                     is PlayerUiState.Loading -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -187,7 +195,6 @@ fun VideoDetailScreen(
     }
 }
 
-// 扩展函数：查找 Context 对应的 Activity
 private fun Context.findActivity(): Activity? {
     var context = this
     while (context is ContextWrapper) {
@@ -197,6 +204,7 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
+// VideoContentSection 保持原样，无需修改
 @Composable
 fun VideoContentSection(
     info: ViewInfo,
@@ -209,7 +217,6 @@ fun VideoContentSection(
 ) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-
     val commentHeaderIndex = 6 + relatedVideos.size + 1
 
     LazyColumn(
@@ -255,9 +262,7 @@ fun VideoContentSection(
             HorizontalDivider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         }
 
-        item {
-            ReplyHeader(count = replyCount)
-        }
+        item { ReplyHeader(count = replyCount) }
 
         if (replies.isEmpty() && replyCount > 0 && isRepliesLoading) {
             item {

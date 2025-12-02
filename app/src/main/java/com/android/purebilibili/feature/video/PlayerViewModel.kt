@@ -11,8 +11,10 @@ import com.android.purebilibili.data.model.response.ReplyItem
 import com.android.purebilibili.data.model.response.ViewInfo
 import com.android.purebilibili.data.repository.VideoRepository
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.io.InputStream
 
@@ -58,16 +60,17 @@ class PlayerViewModel : ViewModel() {
     private val _subReplyState = MutableStateFlow(SubReplyUiState())
     val subReplyState = _subReplyState.asStateFlow()
 
+    private val _toastEvent = Channel<String>()
+    val toastEvent = _toastEvent.receiveAsFlow()
+
     private var currentBvid: String = ""
     private var currentCid: Long = 0
     private var exoPlayer: ExoPlayer? = null
 
-    // 🔥🔥 核心修复 1: 绑定播放器时，如果数据已经准备好，立即播放
     fun attachPlayer(player: ExoPlayer) {
         this.exoPlayer = player
         val currentState = _uiState.value
         if (currentState is PlayerUiState.Success) {
-            // 数据先到，播放器后到 -> 立即补发播放指令
             playVideo(currentState.playUrl, currentState.startPosition)
         }
     }
@@ -81,13 +84,15 @@ class PlayerViewModel : ViewModel() {
         exoPlayer = null
     }
 
-    // 🔥🔥 核心修复 2: 统一的播放控制方法
-    private fun playVideo(url: String, seekTo: Long = 0L) {
+    // 🔥🔥🔥 [修改 1] 增加 forceReset 参数，默认 false
+    private fun playVideo(url: String, seekTo: Long = 0L, forceReset: Boolean = false) {
         val player = exoPlayer ?: return
 
-        // 防止重复设置相同的 URL 导致视频重置
         val currentUri = player.currentMediaItem?.localConfiguration?.uri.toString()
-        if (currentUri == url && player.playbackState != Player.STATE_IDLE) {
+
+        // 如果不是强制重置，且 URL 相同，且正在播放，则跳过（避免重复加载）
+        // 但如果是切换画质，即使 URL 看起来一样（有时 B 站返回相同 URL），我们也要强制重置
+        if (!forceReset && currentUri == url && player.playbackState != Player.STATE_IDLE) {
             return
         }
 
@@ -123,9 +128,7 @@ class PlayerViewModel : ViewModel() {
                 val realQuality = playData.quality
 
                 if (url.isNotEmpty()) {
-                    // 🔥🔥 核心修复 3: 拿到 URL 后立即触发播放逻辑
                     playVideo(url)
-
                     _uiState.value = PlayerUiState.Success(
                         info = info,
                         playUrl = url,
@@ -137,7 +140,6 @@ class PlayerViewModel : ViewModel() {
                         startPosition = 0L,
                         emoteMap = emoteMap
                     )
-                    // 初始加载评论
                     loadComments(info.aid)
                 } else {
                     _uiState.value = PlayerUiState.Error("无法获取播放地址")
@@ -148,6 +150,7 @@ class PlayerViewModel : ViewModel() {
         }
     }
 
+    // --- 评论加载逻辑 ---
     fun loadComments(aid: Long) {
         val currentState = _uiState.value
         if (currentState is PlayerUiState.Success) {
@@ -185,7 +188,6 @@ class PlayerViewModel : ViewModel() {
         }
     }
 
-    // 打开楼中楼
     fun openSubReply(rootReply: ReplyItem) {
         _subReplyState.value = SubReplyUiState(
             visible = true,
@@ -196,16 +198,13 @@ class PlayerViewModel : ViewModel() {
         loadSubReplies(rootReply.oid, rootReply.rpid, 1)
     }
 
-    // 关闭楼中楼
     fun closeSubReply() {
         _subReplyState.value = _subReplyState.value.copy(visible = false)
     }
 
-    // 加载更多二级评论
     fun loadMoreSubReplies() {
         val state = _subReplyState.value
         if (state.isLoading || state.isEnd || state.rootReply == null) return
-
         val nextPage = state.page + 1
         _subReplyState.value = state.copy(isLoading = true)
         loadSubReplies(state.rootReply.oid, state.rootReply.rpid, nextPage)
@@ -235,56 +234,60 @@ class PlayerViewModel : ViewModel() {
         }
     }
 
+    // --- 核心优化: 清晰度切换 ---
     fun changeQuality(qualityId: Int, currentPos: Long) {
         val currentState = _uiState.value
         if (currentState is PlayerUiState.Success) {
             viewModelScope.launch {
-                fetchAndPlay(
-                    currentBvid, currentCid, qualityId,
-                    currentState.info, currentState.related, currentState.danmakuStream, currentPos,
-                    currentState.replies, currentState.replyCount, currentState.emoteMap
-                )
+                try {
+                    fetchAndPlay(
+                        currentBvid, currentCid, qualityId,
+                        currentState, currentPos
+                    )
+                } catch (e: Exception) {
+                    _toastEvent.send("清晰度切换失败: ${e.message}")
+                }
             }
         }
     }
 
     private suspend fun fetchAndPlay(
         bvid: String, cid: Long, qn: Int,
-        info: ViewInfo, related: List<RelatedVideo>,
-        danmaku: InputStream?, startPos: Long,
-        replies: List<ReplyItem>, replyCount: Int,
-        emoteMap: Map<String, String>
+        currentState: PlayerUiState.Success,
+        startPos: Long
     ) {
-        try {
-            val playUrlData = VideoRepository.getPlayUrlData(bvid, cid, qn)
-            val url = playUrlData?.durl?.firstOrNull()?.url ?: ""
-            val qualities = playUrlData?.accept_quality ?: emptyList()
-            val labels = playUrlData?.accept_description ?: emptyList()
-            val realQuality = playUrlData?.quality ?: qn
+        // 调用 Repository 获取新画质链接
+        // 🔥 确保 VideoRepository.getPlayUrlData 已经接收 qn 参数
+        val playUrlData = VideoRepository.getPlayUrlData(bvid, cid, qn)
 
-            if (url.isNotEmpty()) {
-                //  切换清晰度后，重新设置播放源并跳转进度
-                playVideo(url, startPos)
+        val url = playUrlData?.durl?.firstOrNull()?.url ?: ""
+        val qualities = playUrlData?.accept_quality ?: emptyList()
+        val labels = playUrlData?.accept_description ?: emptyList()
+        val realQuality = playUrlData?.quality ?: qn
 
-                _uiState.value = PlayerUiState.Success(
-                    info = info,
-                    playUrl = url,
-                    related = related,
-                    danmakuStream = danmaku,
-                    currentQuality = realQuality,
-                    qualityIds = qualities,
-                    qualityLabels = labels,
-                    startPosition = startPos,
-                    replies = replies,
-                    replyCount = replyCount,
-                    isRepliesLoading = false,
-                    emoteMap = emoteMap
-                )
+        if (url.isNotEmpty()) {
+            // 修改 2] 传入 forceReset = true，强制 ExoPlayer 刷新
+            playVideo(url, startPos, forceReset = true)
+
+            _uiState.value = currentState.copy(
+                playUrl = url,
+                currentQuality = realQuality,
+                qualityIds = qualities,
+                qualityLabels = labels,
+                startPosition = startPos
+            )
+
+            // 提示用户实际切换结果
+            val targetLabel = labels.getOrNull(qualities.indexOf(qn)) ?: "$qn"
+            val realLabel = labels.getOrNull(qualities.indexOf(realQuality)) ?: "$realQuality"
+
+            if (realQuality != qn) {
+                _toastEvent.send("尝试切换至 $targetLabel 失败，已降级至 $realLabel (可能需要登录)")
             } else {
-                _uiState.value = PlayerUiState.Error("该清晰度无法播放")
+                _toastEvent.send("已切换至 $realLabel")
             }
-        } catch (e: Exception) {
-            _uiState.value = PlayerUiState.Error("清晰度切换失败: ${e.message}")
+        } else {
+            _toastEvent.send("该清晰度无法播放")
         }
     }
 }

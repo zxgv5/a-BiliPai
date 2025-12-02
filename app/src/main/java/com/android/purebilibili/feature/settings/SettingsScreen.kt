@@ -1,8 +1,13 @@
 // 文件路径: feature/settings/SettingsScreen.kt
 package com.android.purebilibili.feature.settings
 
+import android.app.AppOpsManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.Process
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,8 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.purebilibili.core.theme.BiliPink
-// 🔥 导入新的枚举
-import com.android.purebilibili.feature.settings.AppThemeMode
 
 const val GITHUB_URL = "https://github.com/jay3-yy/BiliPai/"
 
@@ -46,25 +49,19 @@ fun SettingsScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
 
-    // 1. 从 ViewModel 获取核心状态 (包含 themeMode 和 cacheSize)
     val state by viewModel.state.collectAsState()
-
-    // 2. 其他 UI 状态 (SharedPreferences)
     val prefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
 
     var displayModeInt by remember { mutableIntStateOf(prefs.getInt("display_mode", 0)) }
     var isStatsEnabled by remember { mutableStateOf(prefs.getBoolean("show_stats", false)) }
-    var isBgPlay by remember { mutableStateOf(prefs.getBoolean("bg_play", false)) }
     var danmakuScale by remember { mutableFloatStateOf(prefs.getFloat("danmaku_scale", 1.0f)) }
-    var useDynamicColor by remember { mutableStateOf(prefs.getBoolean("dynamic_color", true)) }
 
-    // --- 弹窗状态 ---
     var showModeDialog by remember { mutableStateOf(false) }
     var showCacheDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    // 🔥🔥 [新增] 权限弹窗状态
+    var showPipPermissionDialog by remember { mutableStateOf(false) }
 
-    // --- 初始化逻辑 ---
-    // 每次进入页面时刷新缓存大小
     LaunchedEffect(Unit) {
         viewModel.refreshCacheSize()
     }
@@ -73,6 +70,48 @@ fun SettingsScreen(
         displayModeInt = mode
         prefs.edit().putInt("display_mode", mode).apply()
         showModeDialog = false
+    }
+
+    // 🔥🔥 [新增] 检查画中画权限的辅助函数
+    fun checkPipPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    AppOpsManager.OPSTR_PICTURE_IN_PICTURE,
+                    Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_PICTURE_IN_PICTURE,
+                    Process.myUid(),
+                    context.packageName
+                )
+            }
+            return mode == AppOpsManager.MODE_ALLOWED
+        }
+        return false
+    }
+
+    // 🔥🔥 [新增] 跳转到系统设置的函数
+    fun gotoPipSettings() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // 直接使用字符串 action，解决 "Unresolved reference" 报错
+                val intent = Intent(
+                    "android.settings.PICTURE_IN_PICTURE_SETTINGS",
+                    Uri.parse("package:${context.packageName}")
+                )
+                context.startActivity(intent)
+            }
+        } catch (e: Exception) {
+            // 如果跳转特定页面失败，跳转到应用详情页作为保底
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.data = Uri.parse("package:${context.packageName}")
+            context.startActivity(intent)
+        }
     }
 
     // 1. 首页模式弹窗
@@ -107,7 +146,7 @@ fun SettingsScreen(
         )
     }
 
-    // 2. 🔥 主题模式弹窗 (适配新逻辑)
+    // 2. 主题模式弹窗
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
@@ -142,17 +181,13 @@ fun SettingsScreen(
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) {
-                    Text("取消", color = BiliPink)
-                }
-            },
+            confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text("取消", color = BiliPink) } },
             containerColor = MaterialTheme.colorScheme.surface,
             textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 
-    // 3. 🔥 缓存清理弹窗 (集成 CacheUtils)
+    // 3. 缓存清理弹窗
     if (showCacheDialog) {
         AlertDialog(
             onDismissRequest = { showCacheDialog = false },
@@ -161,7 +196,6 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        // 🔥 调用 ViewModel 执行清理
                         viewModel.clearCache()
                         Toast.makeText(context, "缓存已清除", Toast.LENGTH_SHORT).show()
                         showCacheDialog = false
@@ -170,6 +204,30 @@ fun SettingsScreen(
                 ) { Text("确认清除") }
             },
             dismissButton = { TextButton(onClick = { showCacheDialog = false }) { Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    // 🔥🔥 [新增] 权限申请弹窗
+    if (showPipPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPipPermissionDialog = false },
+            title = { Text("权限申请", color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text("检测到未开启“画中画”权限。请在设置中开启该权限，否则无法使用小窗播放。", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        gotoPipSettings()
+                        showPipPermissionDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BiliPink)
+                ) { Text("去设置") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPipPermissionDialog = false }) {
+                    Text("暂不开启", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
             containerColor = MaterialTheme.colorScheme.surface
         )
     }
@@ -183,7 +241,6 @@ fun SettingsScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                // 适配主题色
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -192,7 +249,6 @@ fun SettingsScreen(
                 )
             )
         },
-        // 适配背景色
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
@@ -200,7 +256,6 @@ fun SettingsScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // --- 区域 1: 首页与外观 ---
             item { SettingsSectionTitle("首页与外观") }
             item {
                 SettingsGroup {
@@ -211,31 +266,27 @@ fun SettingsScreen(
                         onClick = { showModeDialog = true }
                     )
                     Divider()
+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         SettingSwitchItem(
                             icon = Icons.Outlined.Palette,
                             title = "动态取色 (Material You)",
                             subtitle = "跟随系统壁纸变换应用主题色",
-                            checked = useDynamicColor,
-                            onCheckedChange = {
-                                useDynamicColor = it
-                                prefs.edit().putBoolean("dynamic_color", it).apply()
-                            }
+                            checked = state.dynamicColor,
+                            onCheckedChange = { viewModel.toggleDynamicColor(it) }
                         )
                         Divider()
                     }
-                    // 🔥 修改：改为可点击项，弹出选择框
+
                     SettingClickableItem(
                         icon = Icons.Outlined.DarkMode,
                         title = "深色模式",
-                        // 显示当前选中的模式名称
                         value = state.themeMode.label,
                         onClick = { showThemeDialog = true }
                     )
                 }
             }
 
-            // --- 区域 2: 播放与解码 ---
             item { SettingsSectionTitle("播放与解码") }
             item {
                 SettingsGroup {
@@ -255,14 +306,28 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.toggleAutoPlay(it) }
                     )
                     Divider()
+
+                    // 🔥🔥 [修改] 增加权限检测逻辑
                     SettingSwitchItem(
                         icon = Icons.Outlined.PictureInPicture,
                         title = "后台/画中画播放",
                         subtitle = "应用切到后台时继续播放",
-                        checked = isBgPlay,
-                        onCheckedChange = {
-                            isBgPlay = it
-                            prefs.edit().putBoolean("bg_play", it).apply()
+                        checked = state.bgPlay,
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                // 尝试开启时，先检查权限
+                                if (checkPipPermission()) {
+                                    viewModel.toggleBgPlay(true)
+                                } else {
+                                    // 没权限，弹窗，且暂时不开启开关（或者也可以开启开关但提示）
+                                    // 这里策略是：允许开启开关，但同时弹窗提醒去设置
+                                    viewModel.toggleBgPlay(true)
+                                    showPipPermissionDialog = true
+                                }
+                            } else {
+                                // 关闭时直接关闭
+                                viewModel.toggleBgPlay(false)
+                            }
                         }
                     )
                     Divider()
@@ -279,7 +344,7 @@ fun SettingsScreen(
                 }
             }
 
-            // --- 区域 3: 弹幕设置 ---
+            // ... (弹幕设置和高级选项部分代码与之前一致，保持不变)
             item { SettingsSectionTitle("弹幕设置") }
             item {
                 SettingsGroup {
@@ -297,14 +362,12 @@ fun SettingsScreen(
                 }
             }
 
-            // --- 区域 4: 高级选项 ---
             item { SettingsSectionTitle("高级选项") }
             item {
                 SettingsGroup {
                     SettingClickableItem(
                         icon = Icons.Outlined.DeleteOutline,
                         title = "清除缓存",
-                        // 🔥 使用动态计算的缓存大小
                         value = state.cacheSize,
                         onClick = { showCacheDialog = true }
                     )
@@ -329,8 +392,7 @@ fun SettingsScreen(
     }
 }
 
-// --- 组件封装 (核心修复：颜色适配) ---
-
+// ... 底部组件封装保持不变 ...
 @Composable
 fun SettingsSectionTitle(title: String) {
     Text(
@@ -347,7 +409,6 @@ fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(16.dp))
-            // 适配卡片背景 (深灰/纯白)
             .background(MaterialTheme.colorScheme.surface),
         content = content
     )
