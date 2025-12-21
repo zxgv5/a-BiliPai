@@ -17,6 +17,7 @@ import coil.request.CachePolicy
 import com.android.purebilibili.core.network.NetworkModule
 import com.android.purebilibili.core.network.WbiKeyManager
 import com.android.purebilibili.core.plugin.PluginManager
+import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.TokenManager
 import com.android.purebilibili.core.util.Logger
 import com.android.purebilibili.feature.plugin.AdFilterPlugin
@@ -26,6 +27,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 
 private const val TAG = "PureApplication"
 
@@ -237,15 +240,21 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
     }
     
     /**
-     * 🔥 同步应用图标状态 - 确保桌面只显示一个图标
+     * 🎨 同步应用图标状态
      * 
-     * 这解决了：切换图标后重新安装或更新应用导致多个图标出现的问题。
-     * 在应用启动时读取用户保存的图标偏好，然后同步所有 alias 的启用状态。
+     * 在 Application.onCreate 时调用，确保启动器图标与用户偏好一致。
+     * 
+     * 修复：重装后检测 icon 偏好与 Manifest 默认状态冲突，自动重置为默认图标。
      */
     private fun syncAppIconState() {
         try {
             val pm = packageManager
-            val currentIcon = com.android.purebilibili.core.store.SettingsManager.getAppIconSync(this)
+            val packageName = this.packageName
+            
+            // 读取用户保存的图标偏好
+            val currentIcon = runBlocking {
+                SettingsManager.getAppIcon(this@PureApplication).first()
+            }
             
             // alias 映射
             val allAliases = listOf(
@@ -261,9 +270,38 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
                 "Dark" to "${packageName}.MainActivityAliasDark"
             )
             
+            // 🔥🔥 [重装检测] 检查目标alias是否可用
             // 找到需要启用的 alias
             val targetAlias = allAliases.find { it.first == currentIcon }?.second
                 ?: "${packageName}.MainActivityAlias3D" // 默认3D
+            
+            val targetAliasComponent = android.content.ComponentName(packageName, targetAlias)
+            val targetState = pm.getComponentEnabledSetting(targetAliasComponent)
+            
+            // 如果目标alias是disabled（说明之前被禁用了，可能是重装），强制重置为3D
+            if (currentIcon != "3D" && targetState == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+                Logger.d(TAG, "🔄 Detected reinstall: target icon '$currentIcon' is disabled, resetting to '3D'")
+                runBlocking {
+                    SettingsManager.setAppIcon(this@PureApplication, "3D")
+                }
+                // 确保3D被启用
+                val alias3D = android.content.ComponentName(packageName, "${packageName}.MainActivityAlias3D")
+                pm.setComponentEnabledSetting(
+                    alias3D,
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+                // 禁用其他所有alias
+                allAliases.filter { it.second != "${packageName}.MainActivityAlias3D" }.forEach { (_, aliasFullName) ->
+                    pm.setComponentEnabledSetting(
+                        android.content.ComponentName(packageName, aliasFullName),
+                        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        android.content.pm.PackageManager.DONT_KILL_APP
+                    )
+                }
+                Logger.d(TAG, "🎨 Reset to default 3D icon")
+                return
+            }
             
             // 同步所有 alias 状态：只有目标启用，其他禁用
             allAliases.forEach { (_, aliasFullName) ->

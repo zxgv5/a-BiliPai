@@ -137,8 +137,8 @@ dependencies {
     implementation("com.airbnb.android:lottie-compose:6.3.0")
     
     // --- 3.3 Haze (毛玻璃效果) ---
-    implementation("dev.chrisbanes.haze:haze:0.7.3")
-    implementation("dev.chrisbanes.haze:haze-materials:0.7.3")
+    implementation("dev.chrisbanes.haze:haze:0.9.0-beta01")
+    implementation("dev.chrisbanes.haze:haze-materials:0.9.0-beta01")
     
     // --- 3.4 Shimmer (骨架屏加载) ---
     implementation("com.valentinilk.shimmer:compose-shimmer:1.2.0")

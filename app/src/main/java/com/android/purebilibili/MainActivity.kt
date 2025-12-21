@@ -47,6 +47,8 @@ import com.android.purebilibili.feature.video.ui.overlay.MiniPlayerOverlay
 import com.android.purebilibili.core.ui.SharedTransitionProvider
 import coil.compose.AsyncImage
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.animation.doOnEnd
+import android.widget.ImageView
 
 private const val TAG = "MainActivity"
 private const val PREFS_NAME = "app_welcome"
@@ -65,8 +67,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var miniPlayerManager: MiniPlayerManager
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 🚀 安装 SplashScreen（必须在 super.onCreate 之前调用）
-        val splashScreen = installSplashScreen()
+        // 🚀 安装 SplashScreen
+        installSplashScreen()
         
         super.onCreate(savedInstanceState)
         // 🔥 初始调用，后续会根据主题动态更新

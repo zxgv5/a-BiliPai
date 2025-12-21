@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
+import com.android.purebilibili.core.ui.blur.unifiedBlur  // 🔥 统一模糊API
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 import com.android.purebilibili.core.util.HapticType
@@ -134,11 +135,7 @@ fun FrostedBottomBar(
                 .clip(barShape)
                 .then(
                     if (hazeState != null) {
-                        Modifier.hazeChild(
-                            state = hazeState,
-                            style = HazeMaterials.thin(),
-                            shape = barShape
-                        )
+                        Modifier.unifiedBlur(hazeState)  // 🔥 版本自适应模糊
                     } else {
                         Modifier
                     }

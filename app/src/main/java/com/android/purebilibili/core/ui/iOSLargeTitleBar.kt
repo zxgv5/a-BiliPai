@@ -24,6 +24,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
+import com.android.purebilibili.core.ui.blur.unifiedBlur  // 🔥 统一模糊API
 
 /**
  * 🍎 iOS 风格大标题导航栏
@@ -96,11 +97,7 @@ fun iOSLargeTitleBar(
                     .fillMaxWidth()
                     .height(56.dp)
                     .alpha(blurAlpha)
-                    .hazeChild(
-                        state = hazeState,
-                        style = HazeMaterials.thin(),
-                        shape = RoundedCornerShape(0.dp)
-                    )
+                    .unifiedBlur(hazeState)  // 🔥 版本自适应模糊
                     .background(
                         MaterialTheme.colorScheme.surface.copy(alpha = 0.85f * blurAlpha)
                     )

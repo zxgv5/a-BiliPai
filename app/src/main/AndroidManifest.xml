@@ -102,6 +102,20 @@
         </activity-alias>
 
         <activity-alias
+            android:name=".MainActivityAliasFlatMaterial"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_flat_material"
+            android:roundIcon="@mipmap/ic_launcher_flat_material_round"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter android:priority="1">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
             android:name=".MainActivityAliasNeon"
             android:enabled="false"
             android:exported="true"

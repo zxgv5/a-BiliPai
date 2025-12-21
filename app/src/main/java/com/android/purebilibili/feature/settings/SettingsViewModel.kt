@@ -296,6 +296,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 "Blue" to "${packageName}.MainActivityAliasBlue",
                 "Retro" to "${packageName}.MainActivityAliasRetro",
                 "Flat" to "${packageName}.MainActivityAliasFlat",
+                "Flat Material" to "${packageName}.MainActivityAliasFlatMaterial",
                 "Neon" to "${packageName}.MainActivityAliasNeon",
                 "Telegram Blue" to "${packageName}.MainActivityAliasTelegramBlue",
                 "Pink" to "${packageName}.MainActivityAliasPink",

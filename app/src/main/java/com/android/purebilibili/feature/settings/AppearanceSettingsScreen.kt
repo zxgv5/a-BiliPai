@@ -279,7 +279,8 @@ fun AppearanceSettingsScreen(
                             IconOption("Blue", "经典蓝", "原版"),
                             IconOption("Retro", "复古怀旧", "80年代"),
                             IconOption("Flat", "扁平现代", "Material"),
-                            IconOption("Neon", "霜虹发光", "赛博朋克"),
+                            IconOption("Flat Material", "扁平材质", "Material You"),
+                            IconOption("Neon", "霓虹", "夜间"),
                             IconOption("Telegram Blue", "纸飞机蓝", "Telegram"),
                             IconOption("Pink", "樱花粉", "可爱"),
                             IconOption("Purple", "香芋紫", "梦幻"),
@@ -313,6 +314,7 @@ fun AppearanceSettingsScreen(
                                             "Blue" -> com.android.purebilibili.R.mipmap.ic_launcher_blue
                                             "Retro" -> com.android.purebilibili.R.mipmap.ic_launcher_retro
                                             "Flat" -> com.android.purebilibili.R.mipmap.ic_launcher_flat
+                                            "Flat Material" -> com.android.purebilibili.R.mipmap.ic_launcher_flat_material
                                             "Neon" -> com.android.purebilibili.R.mipmap.ic_launcher_neon
                                             "Telegram Blue" -> com.android.purebilibili.R.mipmap.ic_launcher_telegram_blue
                                             "Pink" -> com.android.purebilibili.R.mipmap.ic_launcher_telegram_pink
