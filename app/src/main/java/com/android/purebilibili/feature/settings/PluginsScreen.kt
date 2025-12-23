@@ -62,6 +62,21 @@ fun PluginsScreen(
     var isImporting by remember { mutableStateOf(false) }
     var importError by remember { mutableStateOf<String?>(null) }
     
+    // 🔥🔥 [修复] 编辑插件状态移至顶层，避免在 LazyColumn 内嵌套 LazyColumn 导致闪退
+    var editingPlugin by remember { mutableStateOf<com.android.purebilibili.core.plugin.json.JsonRulePlugin?>(null) }
+    
+    // 🆕 如果正在编辑插件，显示编辑器全屏覆盖
+    editingPlugin?.let { plugin ->
+        JsonPluginEditorScreen(
+            plugin = plugin,
+            onBack = { editingPlugin = null },
+            onSave = { updated ->
+                com.android.purebilibili.core.plugin.json.JsonPluginManager.updatePlugin(updated)
+            }
+        )
+        return
+    }
+    
     // 🔥🔥 [修复] 设置导航栏透明，确保底部手势栏沉浸式效果
     val context = androidx.compose.ui.platform.LocalContext.current
     val view = androidx.compose.ui.platform.LocalView.current
@@ -236,6 +251,8 @@ fun PluginsScreen(
             if (jsonPlugins.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
+                    val filterStats by com.android.purebilibili.core.plugin.json.JsonPluginManager.filterStats.collectAsState()
+                    
                     Surface(
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
@@ -247,10 +264,15 @@ fun PluginsScreen(
                             jsonPlugins.forEachIndexed { index, loadedPlugin ->
                                 JsonPluginItem(
                                     loaded = loadedPlugin,
+                                    filterCount = filterStats[loadedPlugin.plugin.id] ?: 0,
                                     onToggle = { enabled ->
                                         com.android.purebilibili.core.plugin.json.JsonPluginManager.setEnabled(
                                             loadedPlugin.plugin.id, enabled
                                         )
+                                    },
+                                    onEdit = {
+                                        // 🔥 使用顶层的 editingPlugin 状态
+                                        editingPlugin = loadedPlugin.plugin
                                     },
                                     onDelete = {
                                         com.android.purebilibili.core.plugin.json.JsonPluginManager.removePlugin(
@@ -508,7 +530,9 @@ private fun getPluginColor(index: Int): Color {
 @Composable
 private fun JsonPluginItem(
     loaded: com.android.purebilibili.core.plugin.json.LoadedJsonPlugin,
+    filterCount: Int,
     onToggle: (Boolean) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val plugin = loaded.plugin
@@ -517,6 +541,7 @@ private fun JsonPluginItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onEdit() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -561,11 +586,24 @@ private fun JsonPluginItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
-            Text(
-                text = "by ${plugin.author}",
-                style = MaterialTheme.typography.labelSmall,
-                color = iOSPurple
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "by ${plugin.author}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = iOSPurple
+                )
+                // 🆕 过滤统计显示
+                if (filterCount > 0) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "• 已过滤 $filterCount 项",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
         
         // 开关
@@ -610,3 +648,4 @@ private fun JsonPluginItem(
         )
     }
 }
+

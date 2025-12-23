@@ -1,0 +1,296 @@
+// 文件路径: feature/settings/JsonPluginEditorScreen.kt
+package com.android.purebilibili.feature.settings
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.android.purebilibili.core.plugin.json.JsonPluginManager
+import com.android.purebilibili.core.plugin.json.JsonRulePlugin
+import com.android.purebilibili.core.plugin.json.Rule
+import com.android.purebilibili.core.theme.iOSBlue
+import kotlinx.serialization.json.JsonPrimitive
+
+/**
+ * 🔧 JSON 插件编辑器界面
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun JsonPluginEditorScreen(
+    plugin: JsonRulePlugin,
+    onBack: () -> Unit,
+    onSave: (JsonRulePlugin) -> Unit
+) {
+    var name by remember { mutableStateOf(plugin.name) }
+    var description by remember { mutableStateOf(plugin.description) }
+    var rules by remember { mutableStateOf(plugin.rules.toMutableList()) }
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("编辑插件", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        val updated = plugin.copy(
+                            name = name,
+                            description = description,
+                            rules = rules
+                        )
+                        onSave(updated)
+                        onBack()
+                    }) {
+                        Icon(Icons.Filled.Save, contentDescription = "保存", tint = iOSBlue)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 基本信息
+            item {
+                Text(
+                    text = "基本信息",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            item {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("插件名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            
+            item {
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("描述") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            
+            // 规则列表
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "规则列表 (${rules.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = {
+                        rules = (rules + Rule(
+                            field = "title",
+                            op = "contains",
+                            value = JsonPrimitive(""),
+                            action = "hide"
+                        )).toMutableList()
+                    }) {
+                        Icon(Icons.Filled.Add, contentDescription = "添加规则", tint = iOSBlue)
+                    }
+                }
+            }
+            
+            itemsIndexed(rules) { index, rule ->
+                RuleEditor(
+                    rule = rule,
+                    pluginType = plugin.type,
+                    onUpdate = { updated ->
+                        rules = rules.toMutableList().also { it[index] = updated }
+                    },
+                    onDelete = {
+                        rules = rules.toMutableList().also { it.removeAt(index) }
+                    }
+                )
+            }
+            
+            if (rules.isEmpty()) {
+                item {
+                    Text(
+                        text = "点击 + 添加规则",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RuleEditor(
+    rule: Rule,
+    pluginType: String,
+    onUpdate: (Rule) -> Unit,
+    onDelete: () -> Unit
+) {
+    val fieldOptions = if (pluginType == "feed") {
+        listOf("title", "duration", "owner.mid", "owner.name", "stat.view", "stat.like")
+    } else {
+        listOf("content", "userId", "type")
+    }
+    
+    val opOptions = listOf("eq", "ne", "lt", "le", "gt", "ge", "contains", "startsWith", "endsWith", "regex")
+    val actionOptions = if (pluginType == "feed") listOf("hide") else listOf("hide", "highlight")
+    
+    var field by remember { mutableStateOf(rule.field) }
+    var op by remember { mutableStateOf(rule.op) }
+    var value by remember { mutableStateOf(
+        (rule.value as? JsonPrimitive)?.content ?: ""
+    ) }
+    var action by remember { mutableStateOf(rule.action) }
+    
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp)),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "规则",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "删除",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            
+            // 字段选择
+            DropdownSelector(
+                label = "字段",
+                value = field,
+                options = fieldOptions,
+                onSelect = { 
+                    field = it
+                    onUpdate(rule.copy(field = it))
+                }
+            )
+            
+            // 操作符选择
+            DropdownSelector(
+                label = "操作符",
+                value = op,
+                options = opOptions,
+                onSelect = { 
+                    op = it
+                    onUpdate(rule.copy(op = it))
+                }
+            )
+            
+            // 值输入
+            OutlinedTextField(
+                value = value,
+                onValueChange = { 
+                    value = it
+                    onUpdate(rule.copy(value = JsonPrimitive(it)))
+                },
+                label = { Text("值") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            // 动作选择
+            DropdownSelector(
+                label = "动作",
+                value = action,
+                options = actionOptions,
+                onSelect = { 
+                    action = it
+                    onUpdate(rule.copy(action = it))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DropdownSelector(
+    label: String,
+    value: String,
+    options: List<String>,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Box {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(value.ifEmpty { "选择..." })
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            onSelect(option)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
