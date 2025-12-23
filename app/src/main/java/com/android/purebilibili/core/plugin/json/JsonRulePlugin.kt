@@ -1,7 +1,9 @@
 // 文件路径: core/plugin/json/JsonRulePlugin.kt
 package com.android.purebilibili.core.plugin.json
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 /**
  * 🎯 JSON 规则插件数据模型
@@ -19,16 +21,75 @@ data class JsonRulePlugin(
 )
 
 /**
+ * 🆕 条件表达式（支持 AND/OR 嵌套）
+ */
+@Serializable
+sealed class Condition {
+    /**
+     * 简单条件：单个字段比较
+     */
+    @Serializable
+    @SerialName("simple")
+    data class Simple(
+        val field: String,
+        val op: String,
+        val value: JsonElement
+    ) : Condition()
+    
+    /**
+     * AND 条件：所有子条件都必须满足
+     */
+    @Serializable
+    @SerialName("and")
+    data class And(
+        val and: List<Condition>
+    ) : Condition()
+    
+    /**
+     * OR 条件：任一子条件满足即可
+     */
+    @Serializable
+    @SerialName("or")
+    data class Or(
+        val or: List<Condition>
+    ) : Condition()
+}
+
+/**
  * 单条规则
+ * 
+ * 支持两种格式：
+ * 1. 旧格式（向后兼容）：直接使用 field/op/value
+ * 2. 新格式：使用 condition 复合条件
  */
 @Serializable
 data class Rule(
-    val field: String,        // 字段路径，如 "owner.mid", "title"
-    val op: String,           // 操作符: eq, ne, lt, le, gt, ge, contains, startsWith, endsWith, regex, in
-    val value: kotlinx.serialization.json.JsonElement,  // 比较值（支持多种类型）
+    // 旧格式字段（向后兼容）
+    val field: String? = null,
+    val op: String? = null,
+    val value: JsonElement? = null,
+    
+    // 🆕 新格式：复合条件
+    val condition: Condition? = null,
+    
     val action: String,       // 动作: hide, highlight
     val style: HighlightStyle? = null  // 仅 highlight 时使用
-)
+) {
+    /**
+     * 获取统一的条件对象（兼容新旧格式）
+     */
+    fun toCondition(): Condition? {
+        // 优先使用新格式
+        if (condition != null) return condition
+        
+        // 回退到旧格式
+        if (field != null && op != null && value != null) {
+            return Condition.Simple(field, op, value)
+        }
+        
+        return null
+    }
+}
 
 /**
  * 高亮样式
@@ -64,3 +125,4 @@ object RuleAction {
     const val HIDE = "hide"
     const val HIGHLIGHT = "highlight"
 }
+

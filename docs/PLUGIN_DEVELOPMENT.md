@@ -114,6 +114,65 @@ JSON 规则插件是最简单的插件形式，只需编写一个 JSON 文件即
 }
 ```
 
+### 🆕 复合条件（AND/OR）
+
+从 v3.2.0 开始，支持使用 `and` 和 `or` 组合多个条件实现更精确的过滤。
+
+#### AND 条件
+
+所有子条件**都必须满足**时才触发动作：
+
+```json
+{
+    "condition": {
+        "and": [
+            { "field": "duration", "op": "lt", "value": 60 },
+            { "field": "title", "op": "contains", "value": "搬运" }
+        ]
+    },
+    "action": "hide"
+}
+```
+
+#### OR 条件
+
+**任一**子条件满足时即触发动作：
+
+```json
+{
+    "condition": {
+        "or": [
+            { "field": "owner.name", "op": "contains", "value": "营销号" },
+            { "field": "title", "op": "regex", "value": "震惊.*必看" }
+        ]
+    },
+    "action": "hide"
+}
+```
+
+#### 嵌套条件
+
+支持 AND/OR 嵌套实现复杂逻辑：
+
+```json
+{
+    "condition": {
+        "and": [
+            { "field": "stat.view", "op": "lt", "value": 1000 },
+            {
+                "or": [
+                    { "field": "title", "op": "contains", "value": "广告" },
+                    { "field": "title", "op": "contains", "value": "推广" }
+                ]
+            }
+        ]
+    },
+    "action": "hide"
+}
+```
+
+> 💡 **向后兼容**：旧格式 `field/op/value` 仍然有效，无需修改现有插件。
+
 ### 示例插件
 
 #### 1️⃣ 短视频过滤器
@@ -322,7 +381,7 @@ A: 确保正则表达式语法正确，可以在 [regex101](https://regex101.com
 
 **Q: 可以组合多个条件吗？**
 
-A: 目前每条规则独立判断，多条规则是 OR 关系。AND 关系需要使用正则表达式。
+A: ✅ 支持！使用 `and` 和 `or` 复合条件可以组合多个条件。参见上方的[复合条件（AND/OR）](#-复合条件andor)章节。
 
 ---
 

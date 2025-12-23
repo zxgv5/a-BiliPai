@@ -31,6 +31,10 @@ object JsonPluginManager {
     private val _plugins = MutableStateFlow<List<LoadedJsonPlugin>>(emptyList())
     val plugins: StateFlow<List<LoadedJsonPlugin>> = _plugins.asStateFlow()
     
+    /** 🆕 过滤统计 (插件ID -> 过滤数量) */
+    private val _filterStats = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val filterStats: StateFlow<Map<String, Int>> = _filterStats.asStateFlow()
+    
     private var isInitialized = false
     
     /**
@@ -104,16 +108,54 @@ object JsonPluginManager {
     // ============ 过滤方法 ============
     
     /**
-     * 过滤视频列表
+     * 过滤视频列表（带统计）
      */
     fun filterVideos(videos: List<VideoItem>): List<VideoItem> {
         val feedPlugins = _plugins.value.filter { it.enabled && it.plugin.type == "feed" }
         if (feedPlugins.isEmpty()) return videos
         
-        return videos.filter { video ->
+        val result = videos.filter { video ->
             feedPlugins.all { loaded ->
-                RuleEngine.shouldShowVideo(video, loaded.plugin.rules)
+                val show = RuleEngine.shouldShowVideo(video, loaded.plugin.rules)
+                // 🆕 记录过滤统计
+                if (!show) {
+                    val current = _filterStats.value.getOrDefault(loaded.plugin.id, 0)
+                    _filterStats.value = _filterStats.value + (loaded.plugin.id to (current + 1))
+                }
+                show
             }
+        }
+        return result
+    }
+    
+    /**
+     * 🆕 更新插件规则
+     */
+    fun updatePlugin(plugin: JsonRulePlugin) {
+        // 保存到本地
+        savePlugin(plugin)
+        
+        // 更新列表（保留 enabled 状态）
+        _plugins.value = _plugins.value.map { loaded ->
+            if (loaded.plugin.id == plugin.id) {
+                loaded.copy(plugin = plugin)
+            } else loaded
+        }
+        
+        // 重置该插件的统计
+        _filterStats.value = _filterStats.value - plugin.id
+        
+        Logger.d(TAG, "✅ 插件已更新: ${plugin.name}")
+    }
+    
+    /**
+     * 🆕 重置统计
+     */
+    fun resetStats(pluginId: String? = null) {
+        if (pluginId != null) {
+            _filterStats.value = _filterStats.value - pluginId
+        } else {
+            _filterStats.value = emptyMap()
         }
     }
     

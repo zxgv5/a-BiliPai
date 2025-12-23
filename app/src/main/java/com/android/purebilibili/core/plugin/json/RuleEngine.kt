@@ -13,7 +13,8 @@ private const val TAG = "RuleEngine"
 /**
  * 🔧 规则引擎
  * 
- * 评估 JSON 规则并执行相应动作
+ * 评估 JSON 规则并执行相应动作。
+ * 🆕 支持 AND/OR 复合条件的递归评估。
  */
 object RuleEngine {
     
@@ -24,9 +25,9 @@ object RuleEngine {
         for (rule in rules) {
             if (rule.action != RuleAction.HIDE) continue
             
-            val fieldValue = getVideoFieldValue(video, rule.field)
-            if (evaluateCondition(fieldValue, rule.op, rule.value)) {
-                Logger.d(TAG, "🚫 隐藏视频: ${video.title} (规则: ${rule.field} ${rule.op})")
+            val condition = rule.toCondition() ?: continue
+            if (evaluateCondition(condition) { field -> getVideoFieldValue(video, field) }) {
+                Logger.d(TAG, "🚫 隐藏视频: ${video.title} (规则匹配)")
                 return false
             }
         }
@@ -40,8 +41,8 @@ object RuleEngine {
         for (rule in rules) {
             if (rule.action != RuleAction.HIDE) continue
             
-            val fieldValue = getDanmakuFieldValue(danmaku, rule.field)
-            if (evaluateCondition(fieldValue, rule.op, rule.value)) {
+            val condition = rule.toCondition() ?: continue
+            if (evaluateCondition(condition) { field -> getDanmakuFieldValue(danmaku, field) }) {
                 return false
             }
         }
@@ -55,13 +56,44 @@ object RuleEngine {
         for (rule in rules) {
             if (rule.action != RuleAction.HIGHLIGHT) continue
             
-            val fieldValue = getDanmakuFieldValue(danmaku, rule.field)
-            if (evaluateCondition(fieldValue, rule.op, rule.value)) {
+            val condition = rule.toCondition() ?: continue
+            if (evaluateCondition(condition) { field -> getDanmakuFieldValue(danmaku, field) }) {
                 return rule.style?.toDanmakuStyle()
             }
         }
         return null
     }
+    
+    // ============ 🆕 复合条件评估 ============
+    
+    /**
+     * 递归评估条件表达式
+     * 
+     * @param condition 条件对象（Simple/And/Or）
+     * @param fieldValueGetter 字段值获取函数
+     * @return 条件是否满足
+     */
+    private fun evaluateCondition(
+        condition: Condition,
+        fieldValueGetter: (String) -> Any?
+    ): Boolean {
+        return when (condition) {
+            is Condition.Simple -> {
+                val fieldValue = fieldValueGetter(condition.field)
+                evaluatePrimitive(fieldValue, condition.op, condition.value)
+            }
+            is Condition.And -> {
+                // AND: 所有子条件都必须满足
+                condition.and.all { child -> evaluateCondition(child, fieldValueGetter) }
+            }
+            is Condition.Or -> {
+                // OR: 任一子条件满足即可
+                condition.or.any { child -> evaluateCondition(child, fieldValueGetter) }
+            }
+        }
+    }
+    
+    // ============ 字段值获取 ============
     
     /**
      * 获取视频字段值
@@ -94,10 +126,12 @@ object RuleEngine {
         }
     }
     
+    // ============ 基础条件评估 ============
+    
     /**
-     * 评估条件
+     * 评估基础条件（单个字段比较）
      */
-    private fun evaluateCondition(fieldValue: Any?, op: String, ruleValue: JsonElement): Boolean {
+    private fun evaluatePrimitive(fieldValue: Any?, op: String, ruleValue: JsonElement): Boolean {
         if (fieldValue == null) return false
         
         return when (op) {
@@ -167,3 +201,4 @@ object RuleEngine {
         )
     }
 }
+

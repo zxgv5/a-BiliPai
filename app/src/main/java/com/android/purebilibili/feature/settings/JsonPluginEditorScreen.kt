@@ -169,8 +169,8 @@ private fun RuleEditor(
     val opOptions = listOf("eq", "ne", "lt", "le", "gt", "ge", "contains", "startsWith", "endsWith", "regex")
     val actionOptions = if (pluginType == "feed") listOf("hide") else listOf("hide", "highlight")
     
-    var field by remember { mutableStateOf(rule.field) }
-    var op by remember { mutableStateOf(rule.op) }
+    var field by remember { mutableStateOf(rule.field ?: "title") }
+    var op by remember { mutableStateOf(rule.op ?: "contains") }
     var value by remember { mutableStateOf(
         (rule.value as? JsonPrimitive)?.content ?: ""
     ) }
