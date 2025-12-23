@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.purebilibili.core.plugin.PluginInfo
 import com.android.purebilibili.core.plugin.PluginManager
-import com.android.purebilibili.core.plugin.external.ExternalPluginManager
 import com.android.purebilibili.core.theme.BiliPink
 import com.android.purebilibili.core.theme.iOSBlue
 import com.android.purebilibili.core.theme.iOSGreen
@@ -258,7 +257,7 @@ fun PluginsScreen(
             text = {
                 Column {
                     Text(
-                        text = "输入插件下载链接 (.json 规则 或 .bpx 插件包)",
+                        text = "输入 JSON 规则插件的下载链接",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -270,7 +269,7 @@ fun PluginsScreen(
                             importError = null
                         },
                         label = { Text("插件 URL") },
-                        placeholder = { Text("https://...") },
+                        placeholder = { Text("https://xxx.json") },
                         singleLine = true,
                         isError = importError != null,
                         supportingText = importError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
@@ -299,26 +298,14 @@ fun PluginsScreen(
                             return@TextButton
                         }
                         
-                        // 🆕 支持 .json 和 .bpx
-                        val isJson = importUrl.endsWith(".json")
-                        val isBpx = importUrl.endsWith(".bpx")
-                        
-                        if (!isJson && !isBpx) {
-                            importError = "链接必须以 .json 或 .bpx 结尾"
+                        if (!importUrl.endsWith(".json")) {
+                            importError = "链接必须以 .json 结尾"
                             return@TextButton
                         }
                         
                         isImporting = true
                         scope.launch {
-                            val result = if (isJson) {
-                                // JSON 规则插件
-                                com.android.purebilibili.core.plugin.json.JsonPluginManager.importFromUrl(importUrl)
-                                    .map { it.name }
-                            } else {
-                                // DEX 插件包
-                                ExternalPluginManager.installFromUrl(importUrl)
-                                    .map { it.name }
-                            }
+                            val result = com.android.purebilibili.core.plugin.json.JsonPluginManager.importFromUrl(importUrl)
                             isImporting = false
                             
                             if (result.isSuccess) {

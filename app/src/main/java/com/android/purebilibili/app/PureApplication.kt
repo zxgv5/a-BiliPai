@@ -87,10 +87,6 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
         PluginManager.register(EyeProtectionPlugin())
         Logger.d(TAG, "🔌 Plugin system initialized with 4 built-in plugins")
         
-        // 🆕 外部插件系统初始化
-        com.android.purebilibili.core.plugin.external.ExternalPluginManager.initialize(this)
-        Logger.d(TAG, "🔌 External plugin system initialized")
-        
         // 🆕 JSON 规则插件系统初始化
         com.android.purebilibili.core.plugin.json.JsonPluginManager.initialize(this)
         Logger.d(TAG, "🔌 JSON plugin system initialized")
