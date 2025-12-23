@@ -12,9 +12,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.purebilibili.core.plugin.PluginInfo
 import com.android.purebilibili.core.plugin.PluginManager
+import com.android.purebilibili.core.plugin.external.ExternalPluginManager
 import com.android.purebilibili.core.theme.BiliPink
 import com.android.purebilibili.core.theme.iOSBlue
 import com.android.purebilibili.core.theme.iOSGreen
@@ -50,6 +53,12 @@ fun PluginsScreen(
     
     // 展开状态追踪
     var expandedPluginId by remember { mutableStateOf<String?>(null) }
+    
+    // 🆕 导入插件对话框状态
+    var showImportDialog by remember { mutableStateOf(false) }
+    var importUrl by remember { mutableStateOf("") }
+    var isImporting by remember { mutableStateOf(false) }
+    var importError by remember { mutableStateOf<String?>(null) }
     
     // 🔥🔥 [修复] 设置导航栏透明，确保底部手势栏沉浸式效果
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -158,6 +167,69 @@ fun PluginsScreen(
                 )
             }
             
+            // 🆕 导入外部插件按钮
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "外部插件",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 32.dp, bottom = 8.dp)
+                )
+            }
+            
+            item {
+                Surface(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { showImportDialog = true },
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(iOSBlue.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CloudDownload,
+                                contentDescription = null,
+                                tint = iOSBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "导入外部插件",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "通过 URL 安装 .bpx 插件",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                            tint = iOSBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            
             // 底部说明
             item {
                 Spacer(modifier = Modifier.height(24.dp))
@@ -171,6 +243,111 @@ fun PluginsScreen(
             
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
+    }
+    
+    // 🆕 导入插件对话框
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showImportDialog = false
+                importUrl = ""
+                importError = null
+            },
+            icon = { Icon(Icons.Outlined.CloudDownload, contentDescription = null) },
+            title = { Text("导入外部插件") },
+            text = {
+                Column {
+                    Text(
+                        text = "输入插件下载链接 (.json 规则 或 .bpx 插件包)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = importUrl,
+                        onValueChange = { 
+                            importUrl = it
+                            importError = null
+                        },
+                        label = { Text("插件 URL") },
+                        placeholder = { Text("https://...") },
+                        singleLine = true,
+                        isError = importError != null,
+                        supportingText = importError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    if (isImporting) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("正在安装...")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (importUrl.isBlank()) {
+                            importError = "请输入 URL"
+                            return@TextButton
+                        }
+                        
+                        // 🆕 支持 .json 和 .bpx
+                        val isJson = importUrl.endsWith(".json")
+                        val isBpx = importUrl.endsWith(".bpx")
+                        
+                        if (!isJson && !isBpx) {
+                            importError = "链接必须以 .json 或 .bpx 结尾"
+                            return@TextButton
+                        }
+                        
+                        isImporting = true
+                        scope.launch {
+                            val result = if (isJson) {
+                                // JSON 规则插件
+                                com.android.purebilibili.core.plugin.json.JsonPluginManager.importFromUrl(importUrl)
+                                    .map { it.name }
+                            } else {
+                                // DEX 插件包
+                                ExternalPluginManager.installFromUrl(importUrl)
+                                    .map { it.name }
+                            }
+                            isImporting = false
+                            
+                            if (result.isSuccess) {
+                                showImportDialog = false
+                                importUrl = ""
+                                importError = null
+                            } else {
+                                importError = result.exceptionOrNull()?.message ?: "安装失败"
+                            }
+                        }
+                    },
+                    enabled = !isImporting
+                ) {
+                    Text("安装")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        showImportDialog = false
+                        importUrl = ""
+                        importError = null
+                    },
+                    enabled = !isImporting
+                ) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 
@@ -232,6 +409,14 @@ private fun PluginItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // 🆕 显示作者
+                if (plugin.author != "Unknown") {
+                    Text(
+                        text = "by ${plugin.author}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.width(8.dp))

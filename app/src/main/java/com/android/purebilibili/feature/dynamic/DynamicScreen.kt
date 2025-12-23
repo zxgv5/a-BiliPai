@@ -491,20 +491,30 @@ fun SidebarUserItem(
     ) {
         Box {
             // 头像
+            val faceUrl = remember(user.face) {
+                val raw = user.face.trim()
+                when {
+                    raw.isEmpty() -> ""
+                    raw.startsWith("https://") -> raw
+                    raw.startsWith("http://") -> raw.replace("http://", "https://")
+                    raw.startsWith("//") -> "https:$raw"
+                    else -> "https://$raw"
+                }
+            }
+            
             AsyncImage(
                 model = coil.request.ImageRequest.Builder(LocalContext.current)
-                    .data(user.face.let { if (it.startsWith("http://")) it.replace("http://", "https://") else it })
+                    .data(faceUrl.ifEmpty { null })
                     .crossfade(true)
                     .build(),
                 contentDescription = user.name,
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .then(
-                        if (isSelected) Modifier.background(
-                            BiliPink.copy(alpha = 0.3f),
-                            CircleShape
-                        ) else Modifier
+                    .background(
+                        if (isSelected) BiliPink.copy(alpha = 0.3f)
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                        CircleShape
                     ),
                 contentScale = ContentScale.Crop
             )
@@ -586,7 +596,7 @@ fun DynamicCardV2(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .clickable { onUserClick(author.mid) },
+                        .clickable(enabled = author.mid > 0) { onUserClick(author.mid) },
                     contentScale = ContentScale.Crop
                 )
                 

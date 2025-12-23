@@ -300,16 +300,6 @@ fun ElegantVideoCard(
                     color = iOSSystemGray.copy(alpha = 0.7f)
                 )
             }
-            
-            // 🔥🔥 点赞数标签（UP主名称右边，仅显示 >= 1000 的）
-            if (video.stat.like >= 1000) {
-                Text(
-                    text = " · 👍${FormatUtils.formatStat(video.stat.like.toLong())}",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFFFF6633)  // 橙色
-                )
-            }
         }
     }
 }

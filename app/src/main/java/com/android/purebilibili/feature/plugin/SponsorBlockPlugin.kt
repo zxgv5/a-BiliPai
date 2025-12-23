@@ -47,6 +47,7 @@ class SponsorBlockPlugin : PlayerPlugin {
     override val name = "空降助手"
     override val description = "自动跳过视频中的广告、赞助、片头片尾等片段"
     override val version = "1.0.0"
+    override val author = "YangY"
     override val icon: ImageVector = Icons.Outlined.RocketLaunch
     
     // 当前视频的跳过片段

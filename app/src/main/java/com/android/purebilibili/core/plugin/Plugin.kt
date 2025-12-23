@@ -22,6 +22,10 @@ interface Plugin {
     /** 版本号，如 "1.0.0" */
     val version: String
     
+    /** 🆕 插件作者 */
+    val author: String
+        get() = "Unknown"
+    
     /** 插件图标 (可选) */
     val icon: ImageVector?
         get() = null

@@ -41,6 +41,7 @@ class DanmakuEnhancePlugin : DanmakuPlugin {
     override val name = "弹幕增强"
     override val description = "关键词屏蔽、同传弹幕高亮"
     override val version = "1.0.0"
+    override val author = "YangY"
     override val icon: ImageVector = Icons.Outlined.Comment
     
     private var config: DanmakuEnhanceConfig = DanmakuEnhanceConfig()

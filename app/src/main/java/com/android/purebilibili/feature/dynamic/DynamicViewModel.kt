@@ -48,7 +48,10 @@ class DynamicViewModel : ViewModel() {
             VideoRepository.getFollowedLive(page = 1).onSuccess { liveRooms ->
                 // 提取所有关注用户信息
                 val users = extractUsersFromDynamics() + extractUsersFromLive(liveRooms)
-                _followedUsers.value = users.distinctBy { it.uid }
+                // 🔥🔥 [修复] 过滤无效用户数据，避免真机崩溃
+                _followedUsers.value = users
+                    .filter { it.uid > 0 && it.name.isNotBlank() }
+                    .distinctBy { it.uid }
             }
         }
     }

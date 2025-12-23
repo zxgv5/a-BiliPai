@@ -1,0 +1,10 @@
+{
+    "id": "duration_filter",
+    "name": "时长过滤",
+    "description": "隐藏时长小于指定秒数的视频",
+    "version": "1.0.0",
+    "author": "BiliPai",
+    "pluginClass": "com.bilipai.plugins.DurationFilterPlugin",
+    "type": "feed",
+    "minAppVersion": "3.1.0"
+}

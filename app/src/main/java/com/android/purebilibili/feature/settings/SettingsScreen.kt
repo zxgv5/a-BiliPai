@@ -150,20 +150,14 @@ fun SettingsScreen(
             item { SettingsSectionTitle("关注作者") }
             item {
                 SettingsGroup {
-                    // 🔥 根据系统主题选择图标
-                    val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
-                    val telegramIcon = if (isDarkTheme) {
-                        com.android.purebilibili.R.drawable.ic_telegram_squircle_dark
-                    } else {
-                        com.android.purebilibili.R.drawable.ic_telegram_squircle
-                    }
-                    SettingClickableItem(
-                        iconPainter = androidx.compose.ui.res.painterResource(telegramIcon),
-                        title = "Telegram 频道",
-                        value = "@BiliPai",
-                        onClick = { uriHandler.openUri("https://t.me/BiliPai") },
-                        iconTint = Color.Unspecified
-                    )
+                // 🔥 使用 mono 图标 + iconTint，与其他设置项风格统一，自动支持深浅色
+                SettingClickableItem(
+                    iconPainter = androidx.compose.ui.res.painterResource(com.android.purebilibili.R.drawable.ic_telegram_mono),
+                    title = "Telegram 频道",
+                    value = "@BiliPai",
+                    onClick = { uriHandler.openUri("https://t.me/BiliPai") },
+                    iconTint = Color(0xFF0088CC)  // Telegram 品牌蓝
+                )
                     Divider()
                     SettingClickableItem(
                         icon = AppIcons.Twitter,

@@ -58,6 +58,7 @@ class EyeProtectionPlugin : Plugin {
     override val name = "夜间护眼"
     override val description = "护眼提醒、自动降低亮度和蓝光过滤"
     override val version = "1.0.0"
+    override val author = "YangY"
     override val icon: ImageVector = Icons.Outlined.Nightlight
     
     private var config: EyeProtectionConfig = EyeProtectionConfig()

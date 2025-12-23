@@ -1,0 +1,185 @@
+// 文件路径: core/plugin/json/JsonPluginManager.kt
+package com.android.purebilibili.core.plugin.json
+
+import android.content.Context
+import com.android.purebilibili.core.plugin.DanmakuItem
+import com.android.purebilibili.core.plugin.DanmakuStyle
+import com.android.purebilibili.core.util.Logger
+import com.android.purebilibili.data.model.response.VideoItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.io.File
+import java.net.URL
+
+private const val TAG = "JsonPluginManager"
+
+/**
+ * 🔌 JSON 规则插件管理器
+ * 
+ * 管理通过 URL 导入的 JSON 规则插件
+ */
+object JsonPluginManager {
+    
+    private val json = Json { ignoreUnknownKeys = true }
+    private lateinit var appContext: Context
+    
+    /** 已加载的插件列表 */
+    private val _plugins = MutableStateFlow<List<LoadedJsonPlugin>>(emptyList())
+    val plugins: StateFlow<List<LoadedJsonPlugin>> = _plugins.asStateFlow()
+    
+    private var isInitialized = false
+    
+    /**
+     * 初始化
+     */
+    fun initialize(context: Context) {
+        if (isInitialized) return
+        appContext = context.applicationContext
+        isInitialized = true
+        
+        // 加载已保存的插件
+        loadSavedPlugins()
+        Logger.d(TAG, "🔌 JsonPluginManager initialized")
+    }
+    
+    /**
+     * 从 URL 导入插件
+     */
+    suspend fun importFromUrl(url: String): Result<JsonRulePlugin> {
+        return withContext(Dispatchers.IO) {
+            try {
+                Logger.d(TAG, "📥 下载插件: $url")
+                val content = URL(url).readText()
+                val plugin = json.decodeFromString<JsonRulePlugin>(content)
+                
+                // 验证插件类型
+                if (plugin.type !in listOf("feed", "danmaku")) {
+                    return@withContext Result.failure(Exception("不支持的插件类型: ${plugin.type}"))
+                }
+                
+                // 保存到本地
+                savePlugin(plugin)
+                
+                // 添加到列表
+                val loaded = LoadedJsonPlugin(plugin, enabled = true, sourceUrl = url)
+                _plugins.value = _plugins.value.filter { it.plugin.id != plugin.id } + loaded
+                
+                Logger.d(TAG, "✅ 插件导入成功: ${plugin.name}")
+                Result.success(plugin)
+            } catch (e: Exception) {
+                Logger.e(TAG, "❌ 导入失败", e)
+                Result.failure(e)
+            }
+        }
+    }
+    
+    /**
+     * 删除插件
+     */
+    fun removePlugin(pluginId: String) {
+        val file = File(getPluginDir(), "$pluginId.json")
+        if (file.exists()) file.delete()
+        
+        _plugins.value = _plugins.value.filter { it.plugin.id != pluginId }
+        Logger.d(TAG, "🗑️ 删除插件: $pluginId")
+    }
+    
+    /**
+     * 启用/禁用插件
+     */
+    fun setEnabled(pluginId: String, enabled: Boolean) {
+        _plugins.value = _plugins.value.map { 
+            if (it.plugin.id == pluginId) it.copy(enabled = enabled) else it
+        }
+        
+        // 保存状态
+        val prefs = appContext.getSharedPreferences("json_plugins", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("enabled_$pluginId", enabled).apply()
+    }
+    
+    // ============ 过滤方法 ============
+    
+    /**
+     * 过滤视频列表
+     */
+    fun filterVideos(videos: List<VideoItem>): List<VideoItem> {
+        val feedPlugins = _plugins.value.filter { it.enabled && it.plugin.type == "feed" }
+        if (feedPlugins.isEmpty()) return videos
+        
+        return videos.filter { video ->
+            feedPlugins.all { loaded ->
+                RuleEngine.shouldShowVideo(video, loaded.plugin.rules)
+            }
+        }
+    }
+    
+    /**
+     * 过滤单个弹幕
+     */
+    fun shouldShowDanmaku(danmaku: DanmakuItem): Boolean {
+        val danmakuPlugins = _plugins.value.filter { it.enabled && it.plugin.type == "danmaku" }
+        return danmakuPlugins.all { loaded ->
+            RuleEngine.shouldShowDanmaku(danmaku, loaded.plugin.rules)
+        }
+    }
+    
+    /**
+     * 获取弹幕高亮样式
+     */
+    fun getDanmakuStyle(danmaku: DanmakuItem): DanmakuStyle? {
+        val danmakuPlugins = _plugins.value.filter { it.enabled && it.plugin.type == "danmaku" }
+        for (loaded in danmakuPlugins) {
+            val style = RuleEngine.getDanmakuHighlightStyle(danmaku, loaded.plugin.rules)
+            if (style != null) return style
+        }
+        return null
+    }
+    
+    // ============ 私有方法 ============
+    
+    private fun getPluginDir(): File {
+        val dir = File(appContext.filesDir, "json_plugins")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+    
+    private fun savePlugin(plugin: JsonRulePlugin) {
+        val file = File(getPluginDir(), "${plugin.id}.json")
+        file.writeText(json.encodeToString(JsonRulePlugin.serializer(), plugin))
+    }
+    
+    private fun loadSavedPlugins() {
+        val dir = getPluginDir()
+        if (!dir.exists()) return
+        
+        val prefs = appContext.getSharedPreferences("json_plugins", Context.MODE_PRIVATE)
+        
+        val loaded = dir.listFiles()?.mapNotNull { file ->
+            try {
+                if (file.extension != "json") return@mapNotNull null
+                val plugin = json.decodeFromString<JsonRulePlugin>(file.readText())
+                val enabled = prefs.getBoolean("enabled_${plugin.id}", true)
+                LoadedJsonPlugin(plugin, enabled, sourceUrl = null)
+            } catch (e: Exception) {
+                Logger.w(TAG, "⚠️ 加载插件失败: ${file.name}")
+                null
+            }
+        } ?: emptyList()
+        
+        _plugins.value = loaded
+        Logger.d(TAG, "📦 加载了 ${loaded.size} 个 JSON 插件")
+    }
+}
+
+/**
+ * 已加载的 JSON 插件
+ */
+data class LoadedJsonPlugin(
+    val plugin: JsonRulePlugin,
+    val enabled: Boolean,
+    val sourceUrl: String?
+)
