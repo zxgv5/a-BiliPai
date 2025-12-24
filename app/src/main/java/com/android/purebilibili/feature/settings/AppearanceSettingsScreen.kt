@@ -33,6 +33,7 @@ import com.android.purebilibili.core.theme.iOSPink
 import com.android.purebilibili.core.theme.iOSPurple
 import com.android.purebilibili.core.theme.iOSTeal
 import com.android.purebilibili.core.ui.blur.BlurIntensity
+import kotlinx.coroutines.launch
 
 /**
  * 🍎 外观设置二级页面
@@ -384,6 +385,12 @@ fun AppearanceSettingsScreen(
             // 🍎 界面效果
             item { SettingsSectionTitle("界面效果") }
             item {
+                val scope = rememberCoroutineScope()
+                val bottomBarVisibilityMode by com.android.purebilibili.core.store.SettingsManager
+                    .getBottomBarVisibilityMode(context).collectAsState(
+                        initial = com.android.purebilibili.core.store.SettingsManager.BottomBarVisibilityMode.ALWAYS_VISIBLE
+                    )
+                
                 SettingsGroup {
                     SettingSwitchItem(
                         icon = Icons.Outlined.ViewStream,
@@ -393,6 +400,105 @@ fun AppearanceSettingsScreen(
                         onCheckedChange = { viewModel.toggleBottomBarFloating(it) },
                         iconTint = iOSTeal
                     )
+                    
+                    Divider()
+                    
+                    // 🔥🔥 [新增] 底栏显示模式选择
+                    var visibilityModeExpanded by remember { mutableStateOf(false) }
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { visibilityModeExpanded = !visibilityModeExpanded }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.Visibility,
+                                contentDescription = null,
+                                tint = com.android.purebilibili.core.theme.iOSOrange,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "底栏显示模式",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = bottomBarVisibilityMode.label,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = if (visibilityModeExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        
+                        // 展开后的选项
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = visibilityModeExpanded,
+                            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(top = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                com.android.purebilibili.core.store.SettingsManager.BottomBarVisibilityMode.entries.forEach { mode ->
+                                    val isSelected = mode == bottomBarVisibilityMode
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                            )
+                                            .clickable {
+                                                scope.launch {
+                                                    com.android.purebilibili.core.store.SettingsManager
+                                                        .setBottomBarVisibilityMode(context, mode)
+                                                }
+                                                visibilityModeExpanded = false
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                mode.label,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary 
+                                                        else MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                mode.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                            )
+                                        }
+                                        if (isSelected) {
+                                            Icon(
+                                                Icons.Outlined.Check,
+                                                contentDescription = "已选择",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     Divider()
                     
                     // 🔥 底栏磨砂效果 (moved up)
@@ -516,7 +622,7 @@ fun AppearanceSettingsScreen(
     }
 }
 /**
- * 🔥 模糊强度选择器
+ * 🔥 模糊强度选择器 (可展开/收起)
  */
 @Composable
 fun BlurIntensitySelector(
@@ -524,8 +630,25 @@ fun BlurIntensitySelector(
     onIntensityChange: (BlurIntensity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    var isExpanded by remember { mutableStateOf(false) }
+    
+    // 获取当前选中项的显示文本
+    val currentTitle = when (selectedIntensity) {
+        BlurIntensity.ULTRA_THIN -> "轻盈"
+        BlurIntensity.THIN -> "标准"
+        BlurIntensity.THICK -> "浓郁"
+    }
+    
+    Column(modifier = modifier.padding(horizontal = 16.dp)) {
+        // 标题行 - 可点击展开/收起
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { isExpanded = !isExpanded }
+                .padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 Icons.Outlined.BlurOn,
                 contentDescription = null,
@@ -533,43 +656,65 @@ fun BlurIntensitySelector(
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "模糊强度",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "选择模糊效果的强烈程度",
+                    text = currentTitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            // 展开/收起箭头
+            Icon(
+                imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                contentDescription = if (isExpanded) "收起" else "展开",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(24.dp)
+            )
         }
         
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // 三个选项
-        BlurIntensityOption(
-            title = "轻盈",
-            description = "通透感强，性能最佳",
-            isSelected = selectedIntensity == BlurIntensity.ULTRA_THIN,
-            onClick = { onIntensityChange(BlurIntensity.ULTRA_THIN) }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        BlurIntensityOption(
-            title = "标准",
-            description = "平衡美观与性能（推荐）",
-            isSelected = selectedIntensity == BlurIntensity.THIN,
-            onClick = { onIntensityChange(BlurIntensity.THIN) }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        BlurIntensityOption(
-            title = "浓郁",
-            description = "强烈磨砂质感",
-            isSelected = selectedIntensity == BlurIntensity.THICK,
-            onClick = { onIntensityChange(BlurIntensity.THICK) }
-        )
+        // 展开后的选项 - 带动画
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isExpanded,
+            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+        ) {
+            Column(modifier = Modifier.padding(start = 40.dp, top = 4.dp, bottom = 8.dp)) {
+                BlurIntensityOption(
+                    title = "轻盈",
+                    description = "通透感强，性能最佳",
+                    isSelected = selectedIntensity == BlurIntensity.ULTRA_THIN,
+                    onClick = { 
+                        onIntensityChange(BlurIntensity.ULTRA_THIN)
+                        isExpanded = false
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                BlurIntensityOption(
+                    title = "标准",
+                    description = "平衡美观与性能（推荐）",
+                    isSelected = selectedIntensity == BlurIntensity.THIN,
+                    onClick = { 
+                        onIntensityChange(BlurIntensity.THIN)
+                        isExpanded = false
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                BlurIntensityOption(
+                    title = "浓郁",
+                    description = "强烈磨砂质感",
+                    isSelected = selectedIntensity == BlurIntensity.THICK,
+                    onClick = { 
+                        onIntensityChange(BlurIntensity.THICK)
+                        isExpanded = false
+                    }
+                )
+            }
+        }
     }
 }
 

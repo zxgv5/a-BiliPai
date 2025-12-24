@@ -162,12 +162,62 @@ fun HomeScreen(
     // 🔥 当前选中的导航项
     var currentNavItem by remember { mutableStateOf(BottomNavItem.HOME) }
     
-    // 🔥🔥 [新增] 底栏可见性状态
-    var bottomBarVisible by remember { mutableStateOf(true) }  // 🔥 默认可见
+    // 🔥🔥 [新增] 底栏显示模式设置
+    val bottomBarVisibilityMode by SettingsManager.getBottomBarVisibilityMode(context).collectAsState(
+        initial = SettingsManager.BottomBarVisibilityMode.ALWAYS_VISIBLE
+    )
     
-    // 🔥🔥 [修复] 跟踪是否正在导航到/从视频页
-    // 如果为 true，底栏使用 overlay（即使可见也使用，因为返回动画需要）
+    // 🔥🔥 [新增] 底栏可见性状态（根据模式初始化）
+    var bottomBarVisible by remember { mutableStateOf(true) }
+    
+    // 🔥🔥 [修复] 跟踪是否正在导航到/从视频页 - 必须在 LaunchedEffect 之前声明
     var isVideoNavigating by remember { mutableStateOf(false) }
+    
+    // 🔥🔥 [新增] 滚动方向检测状态（用于上滑隐藏模式）
+    var lastScrollOffset by remember { mutableIntStateOf(0) }
+    var lastFirstVisibleItem by remember { mutableIntStateOf(0) }
+    
+    // 🔥🔥 [新增] 滚动方向检测逻辑
+    LaunchedEffect(gridState, bottomBarVisibilityMode) {
+        if (bottomBarVisibilityMode != SettingsManager.BottomBarVisibilityMode.SCROLL_HIDE) {
+            // 非滚动隐藏模式时，根据设置决定底栏可见性
+            bottomBarVisible = bottomBarVisibilityMode == SettingsManager.BottomBarVisibilityMode.ALWAYS_VISIBLE
+            return@LaunchedEffect
+        }
+        
+        // 上滑隐藏模式：监听滚动方向
+        snapshotFlow {
+            Pair(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset)
+        }
+        .distinctUntilChanged()
+        .collect { (firstVisibleItem, scrollOffset) ->
+            // 视频导航期间不处理滚动隐藏
+            if (isVideoNavigating) return@collect
+            
+            // 滚动到顶部时始终显示
+            if (firstVisibleItem == 0 && scrollOffset < 100) {
+                bottomBarVisible = true
+            } else {
+                // 计算滚动方向
+                val isScrollingDown = when {
+                    firstVisibleItem > lastFirstVisibleItem -> true
+                    firstVisibleItem < lastFirstVisibleItem -> false
+                    else -> scrollOffset > lastScrollOffset + 30 // 阈值30px
+                }
+                val isScrollingUp = when {
+                    firstVisibleItem < lastFirstVisibleItem -> true
+                    firstVisibleItem > lastFirstVisibleItem -> false
+                    else -> scrollOffset < lastScrollOffset - 30
+                }
+                
+                if (isScrollingDown) bottomBarVisible = false
+                else if (isScrollingUp) bottomBarVisible = true
+            }
+            
+            lastFirstVisibleItem = firstVisibleItem
+            lastScrollOffset = scrollOffset
+        }
+    }
     
     // 🔥🔥 [修复] 用于取消延迟协程的 Job 引用
     var bottomBarRestoreJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }

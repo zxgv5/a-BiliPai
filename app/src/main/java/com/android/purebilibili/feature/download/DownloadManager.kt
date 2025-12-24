@@ -41,14 +41,41 @@ object DownloadManager {
     // 下载目录
     private var downloadDir: File? = null
     private var tasksFile: File? = null
+    private var appContext: Context? = null
     
     /**
      * 初始化（在 Application 中调用）
      */
     fun init(context: Context) {
+        appContext = context.applicationContext
+        // 默认路径
         downloadDir = File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
         tasksFile = File(context.filesDir, "download_tasks.json")
         loadTasks()
+        
+        // 监听路径变化
+        scope.launch {
+            com.android.purebilibili.core.store.SettingsManager.getDownloadPath(context)
+                .collect { customPath ->
+                    downloadDir = if (customPath != null) {
+                        // 使用 SAF URI 转换为可写路径
+                        try {
+                            val uri = android.net.Uri.parse(customPath)
+                            val docFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                            if (docFile?.canWrite() == true) {
+                                // SAF 路径需要特殊处理
+                                File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
+                            } else {
+                                File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
+                            }
+                        } catch (e: Exception) {
+                            File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
+                        }
+                    } else {
+                        File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
+                    }
+                }
+        }
     }
     
     /**

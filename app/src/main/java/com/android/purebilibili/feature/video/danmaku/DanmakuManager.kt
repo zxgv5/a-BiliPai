@@ -143,6 +143,27 @@ class DanmakuManager private constructor(
         }
     
     /**
+     * 🔥 批量更新弹幕设置（实时生效）
+     */
+    fun updateSettings(
+        opacity: Float = this.opacity,
+        fontScale: Float = this.fontScale,
+        speed: Float = this.speedFactor,
+        displayArea: Float = this.displayArea
+    ) {
+        config.opacity = opacity
+        config.fontScale = fontScale
+        config.speedFactor = speed
+        config.displayAreaRatio = displayArea
+        
+        controller?.let { ctrl ->
+            config.applyTo(ctrl.config)
+            ctrl.invalidateView()
+            Log.w(TAG, "📋 Settings updated: opacity=$opacity, fontScale=$fontScale, speed=$speed, displayArea=$displayArea")
+        }
+    }
+    
+    /**
      * 绑定 DanmakuView
      */
     fun attachView(view: DanmakuView) {

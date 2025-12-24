@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
@@ -147,7 +149,7 @@ fun SpeedSelectionMenu(
     onSpeedSelected: (Float) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val speedOptions = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+    val speedOptions = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f)
     
     Box(
         modifier = Modifier
@@ -162,13 +164,18 @@ fun SpeedSelectionMenu(
         Surface(
             modifier = Modifier
                 .widthIn(min = 180.dp, max = 240.dp)
+                .heightIn(max = 400.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .clickable(enabled = false) {},
             color = Color(0xFF2B2B2B),
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 8.dp
         ) {
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
                     text = "\u64ad\u653e\u901f\u5ea6",
                     color = Color.White,

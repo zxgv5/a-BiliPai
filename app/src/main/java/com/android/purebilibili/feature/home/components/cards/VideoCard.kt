@@ -208,7 +208,9 @@ fun ElegantVideoCard(
                                else FormatUtils.formatProgress(video.progress, video.duration),
                         color = Color.White,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
                 
@@ -223,7 +225,9 @@ fun ElegantVideoCard(
                         Text(
                             text = FormatUtils.formatStat(video.stat.danmaku.toLong()),
                             color = Color.White.copy(0.9f),
-                            fontSize = 11.sp
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }

@@ -232,7 +232,97 @@ fun SettingsScreen(
             // ═══════════════════════════════════════════════════
             item { SettingsSectionTitle("数据与存储") }
             item {
+                val scope = rememberCoroutineScope()
+                val customDownloadPath by com.android.purebilibili.core.store.SettingsManager
+                    .getDownloadPath(context).collectAsState(initial = null)
+                val defaultPath = remember { 
+                    com.android.purebilibili.core.store.SettingsManager.getDefaultDownloadPath(context) 
+                }
+                
+                // SAF 目录选择器
+                val directoryPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+                    contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+                ) { uri ->
+                    uri?.let { selectedUri ->
+                        // 持久化权限
+                        val takeFlags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        context.contentResolver.takePersistableUriPermission(selectedUri, takeFlags)
+                        
+                        // 保存路径
+                        scope.launch {
+                            com.android.purebilibili.core.store.SettingsManager
+                                .setDownloadPath(context, selectedUri.toString())
+                        }
+                        Toast.makeText(context, "下载路径已更新", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                
+                var showPathDialog by remember { mutableStateOf(false) }
+                
+                // 路径选择对话框
+                if (showPathDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showPathDialog = false },
+                        title = { Text("下载位置", color = MaterialTheme.colorScheme.onSurface) },
+                        text = { 
+                            Column {
+                                Text(
+                                    "默认位置（应用私有目录）：",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    defaultPath.substringAfterLast("Android/"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "💡 默认位置随应用卸载而删除，选择自定义位置可保留下载文件",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = iOSOrange
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showPathDialog = false
+                                    directoryPicker.launch(null)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) { Text("选择自定义目录") }
+                        },
+                        dismissButton = { 
+                            TextButton(
+                                onClick = { 
+                                    scope.launch {
+                                        com.android.purebilibili.core.store.SettingsManager
+                                            .setDownloadPath(context, null)
+                                    }
+                                    showPathDialog = false
+                                    Toast.makeText(context, "已重置为默认路径", Toast.LENGTH_SHORT).show()
+                                }
+                            ) { 
+                                Text("使用默认", color = MaterialTheme.colorScheme.onSurfaceVariant) 
+                            } 
+                        },
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                }
+                
                 SettingsGroup {
+                    // 下载位置
+                    SettingClickableItem(
+                        icon = Icons.Outlined.Folder,
+                        title = "下载位置",
+                        value = if (customDownloadPath != null) "自定义" else "默认",
+                        onClick = { showPathDialog = true },
+                        iconTint = iOSBlue
+                    )
+                    Divider()
+                    // 清除缓存
                     SettingClickableItem(
                         icon = Icons.Outlined.DeleteOutline,
                         title = "清除缓存",
@@ -291,6 +381,17 @@ fun SettingsScreen(
                         value = "${com.android.purebilibili.core.plugin.PluginManager.getEnabledCount()} 个已启用",
                         onClick = onPluginsClick,
                         iconTint = iOSPurple
+                    )
+                    Divider()
+                    // 📋 导出日志
+                    SettingClickableItem(
+                        icon = Icons.Outlined.Share,
+                        title = "导出日志",
+                        value = "用于反馈问题",
+                        onClick = { 
+                            com.android.purebilibili.core.util.LogCollector.exportAndShare(context)
+                        },
+                        iconTint = iOSTeal
                     )
                 }
             }
@@ -451,10 +552,16 @@ fun SettingClickableItem(
             }
             Spacer(modifier = Modifier.width(14.dp))
         }
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (value != null) {
-                Text(text = value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = value, 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
             }
             if (onClick != null) {
                 Spacer(modifier = Modifier.width(6.dp))

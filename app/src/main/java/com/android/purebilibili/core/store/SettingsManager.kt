@@ -544,4 +544,70 @@ object SettingsManager {
             .getInt("mode", MiniPlayerMode.IN_APP_ONLY.value)
         return MiniPlayerMode.fromValue(value)
     }
+    
+    // ========== 🔥 底栏显示模式 ==========
+    
+    private val KEY_BOTTOM_BAR_VISIBILITY_MODE = intPreferencesKey("bottom_bar_visibility_mode")
+    
+    /**
+     * 🔥 底栏显示模式
+     * - SCROLL_HIDE: 上滑隐藏，下滑显示
+     * - ALWAYS_VISIBLE: 始终显示（默认）
+     * - ALWAYS_HIDDEN: 永久隐藏
+     */
+    enum class BottomBarVisibilityMode(val value: Int, val label: String, val description: String) {
+        SCROLL_HIDE(0, "上滑隐藏", "上滑时隐藏底栏，下滑时显示"),
+        ALWAYS_VISIBLE(1, "始终显示", "底栏始终可见"),
+        ALWAYS_HIDDEN(2, "永久隐藏", "完全隐藏底栏");
+        
+        companion object {
+            fun fromValue(value: Int): BottomBarVisibilityMode = entries.find { it.value == value } ?: ALWAYS_VISIBLE
+        }
+    }
+    
+    // --- 底栏显示模式设置 ---
+    fun getBottomBarVisibilityMode(context: Context): Flow<BottomBarVisibilityMode> = context.settingsDataStore.data
+        .map { preferences -> 
+            BottomBarVisibilityMode.fromValue(preferences[KEY_BOTTOM_BAR_VISIBILITY_MODE] ?: BottomBarVisibilityMode.ALWAYS_VISIBLE.value)
+        }
+
+    suspend fun setBottomBarVisibilityMode(context: Context, mode: BottomBarVisibilityMode) {
+        context.settingsDataStore.edit { preferences -> 
+            preferences[KEY_BOTTOM_BAR_VISIBILITY_MODE] = mode.value 
+        }
+    }
+    
+    // ========== 📥 下载路径设置 ==========
+    
+    private val KEY_DOWNLOAD_PATH = stringPreferencesKey("download_path")
+    
+    /**
+     * 🔥 获取用户自定义下载路径
+     * 返回 null 表示使用默认路径
+     */
+    fun getDownloadPath(context: Context): Flow<String?> = context.settingsDataStore.data
+        .map { preferences -> 
+            preferences[KEY_DOWNLOAD_PATH]
+        }
+    
+    /**
+     * 🔥 设置自定义下载路径
+     * 传入 null 重置为默认路径
+     */
+    suspend fun setDownloadPath(context: Context, path: String?) {
+        context.settingsDataStore.edit { preferences -> 
+            if (path != null) {
+                preferences[KEY_DOWNLOAD_PATH] = path
+            } else {
+                preferences.remove(KEY_DOWNLOAD_PATH)
+            }
+        }
+    }
+    
+    /**
+     * 🔥 获取默认下载路径描述
+     */
+    fun getDefaultDownloadPath(context: Context): String {
+        return context.getExternalFilesDir(null)?.absolutePath + "/downloads"
+    }
 }

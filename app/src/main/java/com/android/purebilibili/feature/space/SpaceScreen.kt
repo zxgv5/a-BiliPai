@@ -187,58 +187,14 @@ private fun SpaceHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
+            .padding(top = 8.dp)  // 🔥 减少顶部间距
     ) {
-        // 头图 + 头像
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-        ) {
-            // 头图
-            if (userInfo.topPhoto.isNotEmpty()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(FormatUtils.fixImageUrl(userInfo.topPhoto))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                // 默认渐变背景
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(BiliPink.copy(alpha = 0.8f), BiliPink.copy(alpha = 0.4f))
-                            )
-                        )
-                )
-            }
-            
-            // 渐变遮罩
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface)
-                        )
-                    )
-            )
-        }
-        
-        // 头像和信息
+        // 🔥 头像和基本信息区域（紧凑布局）
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-30).dp)
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // 头像
             AsyncImage(
@@ -294,6 +250,7 @@ private fun SpaceHeader(
         
         // 签名
         if (userInfo.sign.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = userInfo.sign,
                 fontSize = 13.sp,
@@ -302,17 +259,17 @@ private fun SpaceHeader(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-16).dp)
                     .padding(horizontal = 16.dp)
             )
         }
+        
+        Spacer(Modifier.height(12.dp))
         
         // 数据统计
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = if (userInfo.sign.isNotEmpty()) (-8).dp else (-16).dp)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // 关注
@@ -325,8 +282,9 @@ private fun SpaceHeader(
             StatItem(label = "播放", value = (upStat?.archive?.view ?: 0).toInt())
         }
         
+        Spacer(Modifier.height(12.dp))
+        
         HorizontalDivider(
-            modifier = Modifier.offset(y = if (userInfo.sign.isNotEmpty()) 0.dp else (-8).dp),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         )
     }

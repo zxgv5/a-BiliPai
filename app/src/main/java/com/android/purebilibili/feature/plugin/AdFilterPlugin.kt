@@ -60,6 +60,10 @@ class AdFilterPlugin : FeedPlugin {
     private var config: AdFilterConfig = AdFilterConfig()
     private var filteredCount = 0
     
+    // 🔥 配置版本号，用于检测是否需要重载
+    @Volatile
+    private var configVersion = 0
+    
     // 🔥 内置广告关键词（强化版）
     private val AD_KEYWORDS = listOf(
         // 商业合作类
@@ -97,15 +101,18 @@ class AdFilterPlugin : FeedPlugin {
     }
     
     override fun shouldShowItem(item: VideoItem): Boolean {
+        // 🔥 每次过滤前确保配置是最新的
+        reloadConfigSync()
+        
         val title = item.title
         val upName = item.owner.name
         val upMid = item.owner.mid
         val viewCount = item.stat.view
         
-        // 1️⃣ 检查UP主拉黑列表（按名称）
-        if (config.blockedUpNames.any { it.equals(upName, ignoreCase = true) }) {
+        // 1️⃣ 检查UP主拉黑列表（按名称） - 支持模糊匹配和简繁体
+        if (isUpNameBlocked(upName)) {
             filteredCount++
-            Logger.d(TAG, "🚫 拉黑UP主[名称]: $upName - $title")
+            Logger.d(TAG, "🚫 拉黑UP主[名称]: $upName - $title (列表: ${config.blockedUpNames})")
             return false
         }
         
@@ -153,6 +160,51 @@ class AdFilterPlugin : FeedPlugin {
         }
         
         return true
+    }
+    
+    /**
+     * 🔥 检查UP主名称是否在拉黑列表中
+     * 支持：精确匹配、模糊匹配(contains)、简繁体转换
+     */
+    private fun isUpNameBlocked(upName: String): Boolean {
+        val normalizedUpName = normalizeChineseChars(upName.lowercase())
+        
+        return config.blockedUpNames.any { blockedName ->
+            val normalizedBlocked = normalizeChineseChars(blockedName.lowercase())
+            
+            // 精确匹配（忽略大小写和简繁体）
+            normalizedUpName == normalizedBlocked ||
+            // 模糊匹配：UP名包含拉黑词
+            normalizedUpName.contains(normalizedBlocked) ||
+            // 模糊匹配：拉黑词包含UP名
+            normalizedBlocked.contains(normalizedUpName)
+        }
+    }
+    
+    /**
+     * 🔥 简繁体字符转换表
+     * 常用字符的简体→繁体映射，方便双向比较
+     */
+    private val SIMPLIFIED_TO_TRADITIONAL = mapOf(
+        '说' to '說', '话' to '話', '语' to '語', '请' to '請', '让' to '讓',
+        '这' to '這', '那' to '那', '哪' to '哪', '谁' to '誰', '什' to '什',
+        '时' to '時', '间' to '間', '门' to '門', '网' to '網', '电' to '電',
+        '视' to '視', '频' to '頻', '机' to '機', '会' to '會', '员' to '員',
+        '学' to '學', '习' to '習', '写' to '寫', '画' to '畫', '图' to '圖',
+        '书' to '書', '读' to '讀', '听' to '聽', '看' to '看', '见' to '見',
+        '现' to '現', '发' to '發', '开' to '開', '关' to '關', '头' to '頭',
+        '脑' to '腦', '乐' to '樂', '欢' to '歡', '爱' to '愛', '国' to '國',
+        '华' to '華', '东' to '東', '车' to '車', '马' to '馬', '鸟' to '鳥'
+    )
+    
+    /**
+     * 将字符串中的繁体字统一转换为简体字（用于比较）
+     */
+    private fun normalizeChineseChars(text: String): String {
+        val traditionalToSimplified = SIMPLIFIED_TO_TRADITIONAL.entries.associate { it.value to it.key }
+        return text.map { char ->
+            traditionalToSimplified[char] ?: char
+        }.joinToString("")
     }
     
     // 🔥 公开方法：添加UP主到拉黑列表
@@ -210,6 +262,28 @@ class AdFilterPlugin : FeedPlugin {
                     Logger.e(TAG, "Failed to decode config", e)
                 }
             }
+        }
+    }
+    
+    /**
+     * 🔥 同步重载配置
+     * 确保每次过滤使用最新的拉黑列表
+     */
+    private fun reloadConfigSync() {
+        try {
+            val context = PluginManager.getContext()
+            val jsonStr = runBlocking { PluginStore.getConfigJson(context, id) }
+            if (jsonStr != null) {
+                val newConfig = Json.decodeFromString<AdFilterConfig>(jsonStr)
+                // 只有配置真的变了才更新
+                if (newConfig != config) {
+                    config = newConfig
+                    configVersion++
+                    Logger.d(TAG, "🔄 配置已重载 v$configVersion: 拉黑UP主=${config.blockedUpNames}")
+                }
+            }
+        } catch (e: Exception) {
+            // 静默失败，使用现有配置
         }
     }
     

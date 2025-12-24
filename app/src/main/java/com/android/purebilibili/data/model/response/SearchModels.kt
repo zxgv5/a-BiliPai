@@ -104,6 +104,23 @@ data class SearchVideoItem(
     }
 }
 
+// 🔥🔥 [新增] UP主搜索响应模型
+@Serializable
+data class SearchUpResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val data: SearchUpData? = null
+)
+
+@Serializable
+data class SearchUpData(
+    val page: Int = 1,
+    val pagesize: Int = 20,
+    val numResults: Int = 0,
+    val numPages: Int = 0,
+    val result: List<SearchUpItem>? = null  // 直接返回 UP 主列表
+)
+
 // --- 3. 🔥 UP主 搜索结果模型 ---
 @Serializable
 data class SearchUpItem(

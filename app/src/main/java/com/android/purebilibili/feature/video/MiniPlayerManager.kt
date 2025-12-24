@@ -69,10 +69,51 @@ class MiniPlayerManager private constructor(private val context: Context) {
                 }
             }
         }
+        
+        // 🔥🔥 [新增] 媒体控制常量
+        const val ACTION_MEDIA_CONTROL = "com.android.purebilibili.MEDIA_CONTROL"
+        const val EXTRA_CONTROL_TYPE = "control_type"
+        const val ACTION_PREVIOUS = 1
+        const val ACTION_PLAY_PAUSE = 2
+        const val ACTION_NEXT = 3
     }
 
     // --- 协程作用域 ---
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    // 🔥🔥 [新增] 媒体控制广播接收器
+    private val mediaControlReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_MEDIA_CONTROL) {
+                when (intent.getIntExtra(EXTRA_CONTROL_TYPE, 0)) {
+                    ACTION_PREVIOUS -> {
+                        Logger.d(TAG, "🔔 通知栏: 上一曲")
+                        playPrevious()
+                    }
+                    ACTION_PLAY_PAUSE -> {
+                        Logger.d(TAG, "🔔 通知栏: 播放/暂停")
+                        togglePlayPause()
+                    }
+                    ACTION_NEXT -> {
+                        Logger.d(TAG, "🔔 通知栏: 下一曲")
+                        playNext()
+                    }
+                }
+            }
+        }
+    }
+    
+    init {
+        // 🔥 注册媒体控制广播接收器
+        val filter = android.content.IntentFilter(ACTION_MEDIA_CONTROL)
+        androidx.core.content.ContextCompat.registerReceiver(
+            context,
+            mediaControlReceiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        Logger.d(TAG, "✅ 媒体控制广播接收器已注册")
+    }
 
     // --- 播放器状态 (可观察) ---
     var isActive by mutableStateOf(false)
@@ -402,6 +443,62 @@ class MiniPlayerManager private constructor(private val context: Context) {
     fun seekTo(position: Long) {
         player?.seekTo(position)
     }
+    
+    // ========== 🔥🔥 [新增] 播放列表控制 ==========
+    
+    /**
+     * 🔥 播放下一曲
+     */
+    fun playNext(): Boolean {
+        val nextItem = PlaylistManager.playNext()
+        if (nextItem != null) {
+            if (nextItem.isBangumi) {
+                // 番剧需要特殊处理，通过事件通知
+                Logger.d(TAG, "⏭️ 下一集是番剧，需要特殊处理")
+                return false  // TODO: 实现番剧切换
+            } else {
+                // 普通视频：通过回调通知 ViewModel 加载
+                Logger.d(TAG, "⏭️ 播放下一曲: ${nextItem.title}")
+                onPlayNextCallback?.invoke(nextItem)
+                return true
+            }
+        }
+        return false
+    }
+    
+    /**
+     * 🔥 播放上一曲
+     */
+    fun playPrevious(): Boolean {
+        val prevItem = PlaylistManager.playPrevious()
+        if (prevItem != null) {
+            if (prevItem.isBangumi) {
+                Logger.d(TAG, "⏮️ 上一集是番剧，需要特殊处理")
+                return false  // TODO: 实现番剧切换
+            } else {
+                Logger.d(TAG, "⏮️ 播放上一曲: ${prevItem.title}")
+                onPlayPreviousCallback?.invoke(prevItem)
+                return true
+            }
+        }
+        return false
+    }
+    
+    /**
+     * 🔥 切换播放模式
+     */
+    fun togglePlayMode(): PlayMode {
+        return PlaylistManager.togglePlayMode()
+    }
+    
+    /**
+     * 🔥 获取当前播放模式
+     */
+    fun getPlayMode(): PlayMode = PlaylistManager.playMode.value
+    
+    // 回调函数（由 PlayerViewModel 设置）
+    var onPlayNextCallback: ((PlaylistItem) -> Unit)? = null
+    var onPlayPreviousCallback: ((PlaylistItem) -> Unit)? = null
 
 
     /**
@@ -501,7 +598,7 @@ class MiniPlayerManager private constructor(private val context: Context) {
 
         val style = androidx.media.app.NotificationCompat.MediaStyle()
             .setMediaSession(mediaSession?.sessionCompatToken)
-            .setShowActionsInCompactView(0)
+            .setShowActionsInCompactView(0, 1, 2)  // 🔥 显示前三个按钮
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -515,6 +612,51 @@ class MiniPlayerManager private constructor(private val context: Context) {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOnlyAlertOnce(true)
             .setContentIntent(mediaSession?.sessionActivity)
+        
+        // 🔥🔥 [新增] 添加控制按钮
+        // 上一曲按钮
+        val prevIntent = android.app.PendingIntent.getBroadcast(
+            context, ACTION_PREVIOUS,
+            android.content.Intent(ACTION_MEDIA_CONTROL).putExtra(EXTRA_CONTROL_TYPE, ACTION_PREVIOUS),
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        builder.addAction(
+            NotificationCompat.Action.Builder(
+                android.R.drawable.ic_media_previous,
+                "上一曲",
+                prevIntent
+            ).build()
+        )
+        
+        // 播放/暂停按钮
+        val playPauseIntent = android.app.PendingIntent.getBroadcast(
+            context, ACTION_PLAY_PAUSE,
+            android.content.Intent(ACTION_MEDIA_CONTROL).putExtra(EXTRA_CONTROL_TYPE, ACTION_PLAY_PAUSE),
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val playPauseIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+        val playPauseText = if (isPlaying) "暂停" else "播放"
+        builder.addAction(
+            NotificationCompat.Action.Builder(
+                playPauseIcon,
+                playPauseText,
+                playPauseIntent
+            ).build()
+        )
+        
+        // 下一曲按钮
+        val nextIntent = android.app.PendingIntent.getBroadcast(
+            context, ACTION_NEXT,
+            android.content.Intent(ACTION_MEDIA_CONTROL).putExtra(EXTRA_CONTROL_TYPE, ACTION_NEXT),
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        builder.addAction(
+            NotificationCompat.Action.Builder(
+                android.R.drawable.ic_media_next,
+                "下一曲",
+                nextIntent
+            ).build()
+        )
 
         try {
             notificationManager.notify(NOTIFICATION_ID, builder.build())

@@ -569,7 +569,64 @@ object VideoRepository {
             android.util.Log.w("VideoRepo", "[LoggedIn] Legacy API failed: ${e.message}")
         }
         
+        // 🔥🔥🔥 [终极修复] 所有方法都失败了，尝试以游客身份获取（无登录凭证）
+        // 这是为了解决"登录后反而看不了视频"的问题
+        com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥🔥 [LoggedIn] All auth methods failed! Trying GUEST fallback (no auth)...")
+        val guestResult = fetchAsGuestFallback(bvid, cid)
+        if (guestResult != null) {
+            com.android.purebilibili.core.util.Logger.d("VideoRepo", "✅ [LoggedIn->Guest] Guest fallback success: quality=${guestResult.quality}")
+            return guestResult
+        }
+        
         android.util.Log.e("VideoRepo", "❌ [LoggedIn] All attempts failed for bvid=$bvid")
+        return null
+    }
+    
+    // 🔥🔥 [新增] 以游客身份获取视频（忽略登录凭证）
+    private suspend fun fetchAsGuestFallback(bvid: String, cid: Long): PlayUrlData? {
+        try {
+            com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 fetchAsGuestFallback: bvid=$bvid, cid=$cid")
+            
+            // 直接使用 Legacy API，这个 API 对登录状态更宽容
+            val legacyResult = api.getPlayUrlLegacy(
+                bvid = bvid, 
+                cid = cid, 
+                qn = 64,  // 降低画质要求，提高成功率
+                fnval = 1,  // MP4 格式
+                platform = "html5",  // HTML5 平台
+                highQuality = 1
+            )
+            
+            if (legacyResult.code == 0 && legacyResult.data != null) {
+                val data = legacyResult.data
+                if (!data.durl.isNullOrEmpty()) {
+                    com.android.purebilibili.core.util.Logger.d("VideoRepo", "✅ Guest fallback (Legacy 64p) success")
+                    return data
+                }
+            }
+            
+            // 🔥 如果 64p 也失败，尝试更低画质 32p
+            val lowQualityResult = api.getPlayUrlLegacy(
+                bvid = bvid, 
+                cid = cid, 
+                qn = 32,
+                fnval = 1,
+                platform = "html5",
+                highQuality = 0
+            )
+            
+            if (lowQualityResult.code == 0 && lowQualityResult.data != null) {
+                val data = lowQualityResult.data
+                if (!data.durl.isNullOrEmpty()) {
+                    com.android.purebilibili.core.util.Logger.d("VideoRepo", "✅ Guest fallback (Legacy 32p) success")
+                    return data
+                }
+            }
+            
+        } catch (e: Exception) {
+            android.util.Log.w("VideoRepo", "Guest fallback failed: ${e.message}")
+        }
+        
         return null
     }
     

@@ -72,44 +72,30 @@ object SearchRepository {
             val imgKey = wbiImg?.img_url?.substringAfterLast("/")?.substringBefore(".") ?: ""
             val subKey = wbiImg?.sub_url?.substringAfterLast("/")?.substringBefore(".") ?: ""
 
+            // 🔥🔥 [修复] 使用 search/type API，search_type = bili_user
             val params = mapOf(
                 "keyword" to keyword,
-                "search_type" to "bili_user" // UP主 搜索类型
+                "search_type" to "bili_user",  // UP主搜索类型
+                "page" to "1",
+                "pagesize" to "30"
             )
             val signedParams = if (imgKey.isNotEmpty()) WbiUtils.sign(params, imgKey, subKey) else params
 
-            // 🔥🔥 [修复] UP主搜索使用 searchAll 端点
-            val response = api.searchAll(signedParams)
+            com.android.purebilibili.core.util.Logger.d("SearchRepo", "🔍 UP Search params: $signedParams")
+
+            val response = api.searchUp(signedParams)
             
-            // 提取 bili_user 分类的数据
+            // 🔥 直接从 response.data.result 获取 UP 主列表
             val upList = response.data?.result
-                ?.find { it.result_type == "bili_user" }
-                ?.let { category ->
-                    // 使用 Json 解析 data 字段 (因为 data 是 List<SearchVideoItem>，需要重新解析为 SearchUpItem)
-                    // 由于现有模型的限制，这里使用反射/手动解析
-                    @Suppress("UNCHECKED_CAST")
-                    try {
-                        // 简化处理：从原始响应中提取用户数据
-                        category.data?.mapNotNull { videoItem ->
-                            // SearchVideoItem 的字段不完全匹配 UP主，需要一个更通用的方式
-                            // 暂时使用已有字段进行映射
-                            SearchUpItem(
-                                mid = videoItem.id,
-                                uname = videoItem.title.replace(Regex("<.*?>"), ""),
-                                upic = if (videoItem.pic.startsWith("//")) "https:${videoItem.pic}" else videoItem.pic,
-                                fans = 0, // API 需要调整才能获取
-                                videos = 0
-                            )
-                        } ?: emptyList()
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
-                }
+                ?.map { it.cleanupFields() }
                 ?: emptyList()
+            
+            com.android.purebilibili.core.util.Logger.d("SearchRepo", "🔍 UP Search result: ${upList.size} UPs found")
 
             Result.success(upList)
         } catch (e: Exception) {
             e.printStackTrace()
+            com.android.purebilibili.core.util.Logger.e("SearchRepo", "UP Search failed", e)
             Result.failure(e)
         }
     }

@@ -29,6 +29,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import com.android.purebilibili.feature.video.PlaylistManager
+import com.android.purebilibili.feature.video.PlaylistItem
+import com.android.purebilibili.feature.video.PlayMode
 
 // ========== UI State ==========
 sealed class PlayerUiState {
@@ -131,6 +134,47 @@ class PlayerViewModel : ViewModel() {
         exoPlayer = player
         playbackUseCase.attachPlayer(player)
         player.volume = 1.0f
+        
+        // 🔥🔥 [新增] 添加播放完成监听器
+        player.addListener(playbackEndListener)
+    }
+    
+    // 🔥🔥 [新增] 播放完成监听器
+    private val playbackEndListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                // 播放完成，自动播放推荐视频
+                playNextRecommended()
+            }
+        }
+    }
+    
+    /**
+     * 🔥🔥 [新增] 自动播放推荐视频（使用 PlaylistManager）
+     */
+    fun playNextRecommended() {
+        // 使用 PlaylistManager 获取下一曲
+        val nextItem = PlaylistManager.playNext()
+        
+        if (nextItem != null) {
+            viewModelScope.launch {
+                toast("正在播放: ${nextItem.title}")
+            }
+            // 加载新视频
+            loadVideo(nextItem.bvid)
+        } else {
+            // 根据播放模式显示不同提示
+            val mode = PlaylistManager.playMode.value
+            when (mode) {
+                PlayMode.SEQUENTIAL -> toast("🎬 播放列表结束")
+                PlayMode.REPEAT_ONE -> {
+                    // 单曲循环：重新播放当前视频
+                    exoPlayer?.seekTo(0)
+                    exoPlayer?.play()
+                }
+                else -> toast("没有更多视频")
+            }
+        }
     }
     
     fun loadVideo(bvid: String) {
@@ -201,6 +245,9 @@ class PlayerViewModel : ViewModel() {
                         coinCount = result.coinCount
                     )
                     
+                    // 🔥🔥 [新增] 更新播放列表
+                    updatePlaylist(result.info, result.related)
+                    
                     startHeartbeat()
                     
                     // 🔌 通知插件系统：视频已加载
@@ -223,6 +270,37 @@ class PlayerViewModel : ViewModel() {
                 }
             }
         }
+    }
+    
+    /**
+     * 🔥🔥 [新增] 更新播放列表
+     */
+    private fun updatePlaylist(currentInfo: com.android.purebilibili.data.model.response.ViewInfo, related: List<com.android.purebilibili.data.model.response.RelatedVideo>) {
+        // 创建当前视频的播放项
+        val currentItem = PlaylistItem(
+            bvid = currentInfo.bvid,
+            title = currentInfo.title,
+            cover = currentInfo.pic,
+            owner = currentInfo.owner.name,
+            duration = (currentInfo.stat.view / 1000).toLong()  // 使用播放量作为临时替代
+        )
+        
+        // 转换推荐视频为播放项
+        val relatedItems = related.map { video ->
+            PlaylistItem(
+                bvid = video.bvid,
+                title = video.title,
+                cover = video.pic,
+                owner = video.owner.name,
+                duration = video.duration.toLong()  // Int -> Long
+            )
+        }
+        
+        // 设置播放列表：当前视频 + 推荐视频
+        val playlist = listOf(currentItem) + relatedItems
+        PlaylistManager.setPlaylist(playlist, 0)
+        
+        Logger.d("PlayerVM", "📋 播放列表已更新: 1 + ${relatedItems.size} 项")
     }
     
     fun retry() {

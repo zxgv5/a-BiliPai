@@ -67,6 +67,7 @@ fun SearchScreen(
     userFace: String = "",
     onBack: () -> Unit,
     onVideoClick: (String, Long) -> Unit,
+    onUpClick: (Long) -> Unit,  // 🔥 新增：点击UP主跳转到空间
     onAvatarClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -115,33 +116,67 @@ fun SearchScreen(
                     )
                 } else {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // 🔥 筛选条件栏
+                        // 🔥 筛选条件栏 (含类型切换)
                         Spacer(modifier = Modifier.height(contentTopPadding + 4.dp))
                         SearchFilterBar(
+                            currentType = state.searchType,
                             currentOrder = state.searchOrder,
                             currentDuration = state.searchDuration,
+                            onTypeChange = { viewModel.setSearchType(it) },
                             onOrderChange = { viewModel.setSearchOrder(it) },
                             onDurationChange = { viewModel.setSearchDuration(it) }
                         )
                         
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            state = resultGridState,
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp, start = 8.dp, end = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            itemsIndexed(state.searchResults) { index, video ->
-                                // 🔥🔥 使用首页卡片组件，支持动画和过渡
-                                ElegantVideoCard(
-                                    video = video,
-                                    index = index,
-                                    animationEnabled = cardAnimationEnabled,
-                                    transitionEnabled = cardTransitionEnabled,
-                                    showPublishTime = true,  // 搜索结果显示发布时间
-                                    onClick = { bvid, _ -> onVideoClick(bvid, 0) }
-                                )
+                        // 🔥 根据搜索类型显示不同结果
+                        when (state.searchType) {
+                            com.android.purebilibili.data.model.response.SearchType.VIDEO -> {
+                                // 视频搜索结果
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(2),
+                                    state = resultGridState,
+                                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp, start = 8.dp, end = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    itemsIndexed(state.searchResults) { index, video ->
+                                        ElegantVideoCard(
+                                            video = video,
+                                            index = index,
+                                            animationEnabled = cardAnimationEnabled,
+                                            transitionEnabled = cardTransitionEnabled,
+                                            showPublishTime = true,
+                                            onClick = { bvid, _ -> onVideoClick(bvid, 0) }
+                                        )
+                                    }
+                                }
+                            }
+                            com.android.purebilibili.data.model.response.SearchType.UP -> {
+                                // 🔥 UP主搜索结果
+                                LazyColumn(
+                                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(state.upResults) { upItem ->
+                                        UpSearchResultCard(
+                                            upItem = upItem,
+                                            onClick = { onUpClick(upItem.mid) }
+                                        )
+                                    }
+                                }
+                            }
+                            else -> {
+                                // 其他类型暂未支持
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "该搜索类型暂未支持",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -636,24 +671,55 @@ fun QuickCategory(
 }
 
 /**
- * 🔥 搜索筛选条件栏
+ * 🔥 搜索筛选条件栏 (含类型切换)
  */
 @Composable
 fun SearchFilterBar(
+    currentType: com.android.purebilibili.data.model.response.SearchType,
     currentOrder: SearchOrder,
     currentDuration: SearchDuration,
+    onTypeChange: (com.android.purebilibili.data.model.response.SearchType) -> Unit,
     onOrderChange: (SearchOrder) -> Unit,
     onDurationChange: (SearchDuration) -> Unit
 ) {
     var showOrderMenu by remember { mutableStateOf(false) }
     var showDurationMenu by remember { mutableStateOf(false) }
     
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
+        // 🔥 搜索类型切换 Tab
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                com.android.purebilibili.data.model.response.SearchType.VIDEO to "视频",
+                com.android.purebilibili.data.model.response.SearchType.UP to "UP主"
+            ).forEach { (type, label) ->
+                val isSelected = currentType == type
+                Surface(
+                    onClick = { onTypeChange(type) },
+                    color = if (isSelected) BiliPink else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 13.sp,
+                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
+        
+        // 🔥 只有视频类型才显示排序和时长筛选
+        if (currentType == com.android.purebilibili.data.model.response.SearchType.VIDEO) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
         // 排序选择
         Box {
             Surface(
@@ -763,7 +829,9 @@ fun SearchFilterBar(
                         }
                     )
                 }
+                }
             }
+        }
         }
     }
 }
@@ -899,6 +967,110 @@ fun SearchResultCard(
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
+            }
+        }
+    }
+}
+
+/**
+ * 🔥 UP主搜索结果卡片
+ */
+@Composable
+fun UpSearchResultCard(
+    upItem: com.android.purebilibili.data.model.response.SearchUpItem,
+    onClick: () -> Unit
+) {
+    val cleanedItem = remember(upItem.mid) { upItem.cleanupFields() }
+    
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 头像
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(cleanedItem.upic)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = cleanedItem.uname,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            // UP主信息
+            Column(modifier = Modifier.weight(1f)) {
+                // 名称 + 认证标志
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = cleanedItem.uname,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    
+                    // 认证标志
+                    cleanedItem.official_verify?.let { verify ->
+                        if (verify.type >= 0) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Surface(
+                                color = if (verify.type == 0) Color(0xFFFFB300) else Color(0xFF2196F3),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = if (verify.type == 0) "个人" else "机构",
+                                    fontSize = 10.sp,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // 个性签名
+                if (cleanedItem.usign.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = cleanedItem.usign,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // 粉丝数 + 视频数
+                Row {
+                    Text(
+                        text = "粉丝 ${FormatUtils.formatStat(cleanedItem.fans.toLong())}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "视频 ${cleanedItem.videos}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }

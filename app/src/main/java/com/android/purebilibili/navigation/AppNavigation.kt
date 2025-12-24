@@ -353,6 +353,7 @@ fun AppNavigation(
                     userFace = homeState.user.face, // 传入头像 URL
                     onBack = { navController.popBackStack() },
                     onVideoClick = { bvid, cid -> navigateToVideo(bvid, cid, "") },
+                    onUpClick = { mid -> navController.navigate(ScreenRoutes.Space.createRoute(mid)) },  // 🔥 点击UP主跳转到空间
                     onAvatarClick = {
                         // 如果已登录 -> 去个人中心，未登录 -> 去登录页
                         if (homeState.user.isLogin) {

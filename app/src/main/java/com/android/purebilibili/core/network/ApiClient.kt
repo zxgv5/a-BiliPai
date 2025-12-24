@@ -284,6 +284,14 @@ interface SearchApi {
     @GET("x/web-interface/wbi/search/type")
     suspend fun search(@QueryMap params: Map<String, String>): SearchTypeResponse
     
+    // 🔥🔥 [新增] UP主搜索 - 专用解析
+    @GET("x/web-interface/wbi/search/type")
+    suspend fun searchUp(@QueryMap params: Map<String, String>): com.android.purebilibili.data.model.response.SearchUpResponse
+    
+    // 🔥🔥 [新增] 番剧搜索 - search_type=media_bangumi
+    @GET("x/web-interface/wbi/search/type")
+    suspend fun searchBangumi(@QueryMap params: Map<String, String>): com.android.purebilibili.data.model.response.BangumiSearchResponse
+    
     // 🔥 搜索建议/联想
     @GET("https://s.search.bilibili.com/main/suggest")
     suspend fun getSearchSuggest(
@@ -353,11 +361,11 @@ interface BangumiApi {
         @Query("type") type: Int = 1
     ): com.android.purebilibili.data.model.response.BangumiIndexResponse
     
-    // 番剧详情
+    // 番剧详情 - 🔥🔥 返回 ResponseBody 自行解析，防止 OOM
     @GET("pgc/view/web/season")
     suspend fun getSeasonDetail(
         @Query("season_id") seasonId: Long
-    ): com.android.purebilibili.data.model.response.BangumiDetailResponse
+    ): ResponseBody
     
     // 番剧播放地址
     @GET("pgc/player/web/v2/playurl")
@@ -384,6 +392,16 @@ interface BangumiApi {
         @retrofit2.http.Field("season_id") seasonId: Long,
         @retrofit2.http.Field("csrf") csrf: String
     ): com.android.purebilibili.data.model.response.SimpleApiResponse
+    
+    // 🔥🔥 [新增] 我的追番列表
+    @GET("x/space/bangumi/follow/list")
+    suspend fun getMyFollowBangumi(
+        @Query("vmid") vmid: Long,          // 用户 mid (登录用户的 mid)
+        @Query("type") type: Int = 1,        // 1=追番 2=追剧
+        @Query("pn") pn: Int = 1,
+        @Query("ps") ps: Int = 30,
+        @Query("follow_status") followStatus: Int = 0  // 0=全部
+    ): com.android.purebilibili.data.model.response.MyFollowBangumiResponse
 }
 
 interface PassportApi {
@@ -544,11 +562,15 @@ object NetworkModule {
                             .build())
                     }
                     
+                    // 🔥🔥 [修复] 使用 bilibili.com 域名，确保 Cookie 在所有子域名生效
+                    // OkHttp 会自动处理子域名匹配（不需要前导点）
+                    val biliBiliDomain = if (url.host.endsWith("bilibili.com")) "bilibili.com" else url.host
+                    
                     // 🔥 如果有 SESSDATA，添加它
                     val sessData = TokenManager.sessDataCache
                     if (!sessData.isNullOrEmpty() && cookies.none { it.name == "SESSDATA" }) {
                         cookies.add(okhttp3.Cookie.Builder()
-                            .domain(url.host)
+                            .domain(biliBiliDomain)
                             .name("SESSDATA")
                             .value(sessData)
                             .build())
@@ -558,16 +580,16 @@ object NetworkModule {
                     val biliJct = TokenManager.csrfCache
                     if (!biliJct.isNullOrEmpty() && cookies.none { it.name == "bili_jct" }) {
                         cookies.add(okhttp3.Cookie.Builder()
-                            .domain(url.host)
+                            .domain(biliBiliDomain)
                             .name("bili_jct")
                             .value(biliJct)
                             .build())
                     }
                     
                     // 🔥🔥 [调试] 输出 Cookie 信息以便排查 VIP 画质问题
-                    if (url.encodedPath.contains("playurl")) {
+                    if (url.encodedPath.contains("playurl") || url.encodedPath.contains("pgc/view")) {
                         com.android.purebilibili.core.util.Logger.d("CookieJar", 
-                            "🔥 PlayUrl request cookies: SESSDATA=${sessData?.take(10)}..., bili_jct=${biliJct?.take(10)}..., isVip=${TokenManager.isVipCache}")
+                            "🔥 ${url.encodedPath} request: domain=$biliBiliDomain, SESSDATA=${sessData?.take(10)}..., bili_jct=${biliJct?.take(10)}...")
                     }
                     
                     return cookies

@@ -24,6 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PureBiliBili"
         android:usesCleartextTraffic="true"
+        android:largeHeap="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mnc|colorMode|density"
         tools:targetApi="31">
@@ -33,7 +34,8 @@
             android:exported="true"
             android:enabled="true"
             android:theme="@style/Theme.PureBiliBili"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mnc|colorMode|density">
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mnc|colorMode|density|smallestScreenSize|uiMode"
+            android:supportsPictureInPicture="true">
             <!-- 🔥 不在 Launcher 显示，只通过 activity-alias 启动 -->
             <!-- Android Studio 需要在 Run Configuration 中选择 "Default Activity" -->
             <intent-filter>
@@ -217,6 +219,17 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+
+        <!-- 📋 FileProvider for log export sharing -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

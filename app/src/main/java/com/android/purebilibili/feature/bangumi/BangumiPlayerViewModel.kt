@@ -61,11 +61,54 @@ class BangumiPlayerViewModel : BasePlayerViewModel() {
         }
     }
     
+    // 🔥🔥 [新增] 播放完成监听器
+    private val playbackEndListener = object : androidx.media3.common.Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == androidx.media3.common.Player.STATE_ENDED) {
+                // 播放完成，自动播放下一集
+                playNextEpisode()
+            }
+        }
+    }
+    
+    /**
+     * 🔥🔥 [新增] 自动播放下一集
+     */
+    fun playNextEpisode() {
+        val currentState = _uiState.value as? BangumiPlayerState.Success ?: return
+        val episodes = currentState.seasonDetail.episodes ?: return
+        val currentIndex = currentState.currentEpisodeIndex
+        
+        // 检查是否有下一集
+        if (currentIndex < episodes.size - 1) {
+            val nextEpisode = episodes[currentIndex + 1]
+            viewModelScope.launch {
+                _toastEvent.send("正在播放下一集: ${nextEpisode.title ?: nextEpisode.longTitle ?: "第${currentIndex + 2}集"}")
+            }
+            switchEpisode(nextEpisode)
+        } else {
+            // 已经是最后一集
+            viewModelScope.launch {
+                _toastEvent.send("已是最后一集")
+            }
+        }
+    }
+    
     /**
      * 绑定播放器
      */
     override fun attachPlayer(player: ExoPlayer) {
         super.attachPlayer(player)
+        // 🔥🔥 [新增] 添加播放完成监听
+        player.addListener(playbackEndListener)
+    }
+    
+    /**
+     * 🔥🔥 [新增] 清理时移除监听器
+     */
+    override fun onCleared() {
+        super.onCleared()
+        // 监听器会随 player 一起清理，无需手动移除
     }
     
     /**
@@ -245,11 +288,17 @@ class BangumiPlayerViewModel : BasePlayerViewModel() {
             }
             
             if (result.isSuccess) {
-                // 重新加载详情以更新追番状态
-                val newDetail = BangumiRepository.getSeasonDetail(currentState.seasonDetail.seasonId).getOrNull()
-                if (newDetail != null) {
-                    _uiState.value = currentState.copy(seasonDetail = newDetail)
-                }
+                // 🔥🔥 [修复] 立即更新本地状态，不等待重新获取
+                val newFollowStatus = if (isFollowing) 0 else 1
+                val updatedUserStatus = currentState.seasonDetail.userStatus?.copy(follow = newFollowStatus)
+                    ?: com.android.purebilibili.data.model.response.UserStatus(follow = newFollowStatus)
+                val updatedDetail = currentState.seasonDetail.copy(userStatus = updatedUserStatus)
+                _uiState.value = currentState.copy(seasonDetail = updatedDetail)
+                
+                // 🔥 显示 Toast 反馈
+                _toastEvent.send(if (isFollowing) "已取消追番" else "追番成功")
+            } else {
+                _toastEvent.send("操作失败，请重试")
             }
         }
     }

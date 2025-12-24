@@ -77,8 +77,10 @@ object TokenManager {
                 val dsSess = prefs[SESSDATA_KEY]
                 val dsBuvid = prefs[BUVID3_KEY]
 
-                // 更新内存
-                sessDataCache = dsSess
+                // 更新内存 - 🔥🔥 [修复] 只有 DataStore 有值时才更新，避免覆盖 SP 的备份值
+                if (!dsSess.isNullOrEmpty()) {
+                    sessDataCache = dsSess
+                }
                 
                 if (dsBuvid == null) {
                     val newBuvid = generateBuvid3()
@@ -128,6 +130,7 @@ object TokenManager {
 
     suspend fun saveCookies(context: Context, sessData: String) {
         sessDataCache = sessData
+        com.android.purebilibili.core.util.Logger.d("TokenManager", "🔥 saveCookies: ${sessData.take(10)}..., cache updated to: ${sessDataCache?.take(10)}...")
         
         // 1. 存入 SP (同步/快速)
         context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE)

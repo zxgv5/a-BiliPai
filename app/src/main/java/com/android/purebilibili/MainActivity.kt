@@ -203,15 +203,19 @@ class MainActivity : ComponentActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         
-        Logger.d(TAG, "👋 onUserLeaveHint 触发, isInVideoDetail=$isInVideoDetail")
+        Logger.d(TAG, "👋 onUserLeaveHint 触发, isInVideoDetail=$isInVideoDetail, isMiniMode=${miniPlayerManager.isMiniMode}")
         
         // 🔥🔥 [重构] 使用新的模式判断方法
         val shouldEnterPip = miniPlayerManager.shouldEnterPip()
         val currentMode = miniPlayerManager.getCurrentMode()
         
-        Logger.d(TAG, "📺 miniPlayerMode=$currentMode, shouldEnterPip=$shouldEnterPip, API=${Build.VERSION.SDK_INT}")
+        // 🔥🔥 [新增] 支持小窗模式下按 Home 键进入系统 PiP
+        // 条件：在视频详情页 或 小窗播放中
+        val shouldTriggerPip = (isInVideoDetail || miniPlayerManager.isMiniMode) && shouldEnterPip
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInVideoDetail && shouldEnterPip) {
+        Logger.d(TAG, "📺 miniPlayerMode=$currentMode, shouldEnterPip=$shouldEnterPip, shouldTriggerPip=$shouldTriggerPip, API=${Build.VERSION.SDK_INT}")
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && shouldTriggerPip) {
             try {
                 Logger.d(TAG, "🎬 尝试进入 PiP 模式...")
                 
@@ -230,7 +234,7 @@ class MainActivity : ComponentActivity() {
                 com.android.purebilibili.core.util.Logger.e(TAG, "❌ 进入 PiP 失败", e)
             }
         } else {
-            Logger.d(TAG, "⏳ 未满足 PiP 条件: API>=${Build.VERSION_CODES.O}=${Build.VERSION.SDK_INT >= Build.VERSION_CODES.O}, inVideoDetail=$isInVideoDetail, shouldEnterPip=$shouldEnterPip")
+            Logger.d(TAG, "⏳ 未满足 PiP 条件: API>=${Build.VERSION_CODES.O}=${Build.VERSION.SDK_INT >= Build.VERSION_CODES.O}, shouldTriggerPip=$shouldTriggerPip")
         }
     }
     

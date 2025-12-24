@@ -121,7 +121,14 @@ private fun BangumiDetailContent(
     onSeasonClick: (Long) -> Unit,
     onToggleFollow: (Boolean) -> Unit
 ) {
-    val isFollowing = detail.userStatus?.follow == 1
+    // 🔥🔥 [修复] 使用 detail 本身作为 key，这样当 ViewModel 更新 detail 时，状态会正确同步
+    val followFromApi = detail.userStatus?.follow == 1
+    var isFollowing by remember(detail.seasonId, followFromApi) { 
+        mutableStateOf(followFromApi) 
+    }
+    
+    // 🔥🔥 [修复] 移除 LaunchedEffect，避免重置用户的点击状态
+    // 状态同步现在通过 remember 的 key 来实现
     
     // 🔥 选集相关状态（必须在函数顶层定义）
     var showEpisodeSheet by remember { mutableStateOf(false) }
@@ -258,26 +265,52 @@ private fun BangumiDetailContent(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // 追番按钮
-                    Button(
-                        onClick = { onToggleFollow(isFollowing) },
-                        colors = if (isFollowing) {
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    if (isFollowing) {
+                        // 🔥 已追番：使用带边框的样式，更清晰可见
+                        OutlinedButton(
+                            onClick = { 
+                                val wasFollowing = isFollowing
+                                isFollowing = !wasFollowing
+                                onToggleFollow(wasFollowing)
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp, 
+                                MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
                             )
-                        } else {
-                            ButtonDefaults.buttonColors(
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("已追番")
+                        }
+                    } else {
+                        // 🔥 未追番：使用填充的主色按钮
+                        Button(
+                            onClick = { 
+                                val wasFollowing = isFollowing
+                                isFollowing = !wasFollowing
+                                onToggleFollow(wasFollowing)
+                            },
+                            colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
                             )
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            if (isFollowing) Icons.Default.Check else Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isFollowing) "已追番" else "追番")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("追番")
+                        }
                     }
                 }
             }

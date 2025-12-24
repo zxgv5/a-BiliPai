@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 日志缓存目录 -->
+    <cache-path
+        name="logs"
+        path="logs/" />
+</paths>

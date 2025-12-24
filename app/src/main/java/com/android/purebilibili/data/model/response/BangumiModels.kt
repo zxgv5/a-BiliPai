@@ -320,3 +320,196 @@ enum class BangumiType(val value: Int, val label: String) {
     VARIETY(7, "综艺")
 }
 
+// ========== 番剧搜索响应 ==========
+
+/**
+ * 番剧搜索响应
+ */
+@Serializable
+data class BangumiSearchResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val data: BangumiSearchData? = null
+)
+
+@Serializable
+data class BangumiSearchData(
+    val numPages: Int = 0,
+    val numResults: Int = 0,
+    val page: Int = 1,
+    @SerialName("pagesize")
+    val pageSize: Int = 20,
+    val result: List<BangumiSearchItem>? = null
+)
+
+@Serializable
+data class BangumiSearchItem(
+    @SerialName("season_id")
+    val seasonId: Long = 0,
+    @SerialName("media_id")
+    val mediaId: Long = 0,
+    val title: String = "",              // 标题 (可能包含高亮标签)
+    @SerialName("org_title")
+    val orgTitle: String = "",           // 原标题
+    val cover: String = "",
+    val areas: String = "",              // 地区
+    val styles: String = "",             // 风格
+    @SerialName("cv")
+    val cv: String = "",                 // 声优
+    val staff: String = "",              // 制作人员
+    @SerialName("season_type_name")
+    val seasonTypeName: String = "",     // "番剧" "电影" 等
+    @SerialName("season_type")
+    val seasonType: Int = 0,
+    val desc: String = "",               // 简介
+    @SerialName("pubtime")
+    val pubTime: Long = 0,
+    @SerialName("media_score")
+    val mediaScore: MediaScore? = null,
+    @SerialName("ep_size")
+    val epSize: Int = 0,                 // 集数
+    @SerialName("is_avid")
+    val isAvid: Boolean = false,
+    val badges: List<BangumiSearchBadge>? = null,
+    @SerialName("goto_url")
+    val gotoUrl: String = "",
+    @SerialName("index_show")
+    val indexShow: String = ""           // "全12话" "更新至第5话"
+)
+
+@Serializable
+data class MediaScore(
+    val score: Float = 0f,
+    @SerialName("user_count")
+    val userCount: Int = 0
+)
+
+@Serializable
+data class BangumiSearchBadge(
+    val text: String = "",
+    @SerialName("text_color")
+    val textColor: String = "",
+    @SerialName("text_color_night")
+    val textColorNight: String = "",
+    @SerialName("bg_color")
+    val bgColor: String = "",
+    @SerialName("bg_color_night")
+    val bgColorNight: String = "",
+    @SerialName("border_color")
+    val borderColor: String = "",
+    @SerialName("border_color_night")
+    val borderColorNight: String = "",
+    @SerialName("bg_style")
+    val bgStyle: Int = 0
+)
+
+// ========== 我的追番列表响应 ==========
+
+/**
+ * 我的追番列表响应
+ */
+@Serializable
+data class MyFollowBangumiResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val data: MyFollowBangumiData? = null
+)
+
+@Serializable
+data class MyFollowBangumiData(
+    val total: Int = 0,
+    val pn: Int = 1,
+    val ps: Int = 30,
+    val list: List<FollowBangumiItem>? = null
+)
+
+@Serializable
+data class FollowBangumiItem(
+    @SerialName("season_id")
+    val seasonId: Long = 0,
+    @SerialName("media_id")
+    val mediaId: Long = 0,
+    val title: String = "",
+    val cover: String = "",
+    @SerialName("square_cover")
+    val squareCover: String = "",
+    val evaluate: String = "",           // 简介
+    val areas: List<AreaInfo>? = null,
+    @SerialName("season_type_name")
+    val seasonTypeName: String = "",
+    @SerialName("season_type")
+    val seasonType: Int = 0,
+    val badge: String = "",              // "会员" "独家"
+    @SerialName("badge_type")
+    val badgeType: Int = 0,
+    @SerialName("new_ep")
+    val newEp: NewEpInfo? = null,
+    val progress: String = "",           // 观看进度文案 "看到第5话"
+    @SerialName("is_finish")
+    val isFinish: Int = 0,               // 是否完结
+    @SerialName("follow_status")
+    val followStatus: Int = 0,           // 追番状态
+    val total: Int = 0,                  // 总集数
+    @SerialName("first_ep")
+    val firstEp: Long = 0,               // 第一集 epId
+    val url: String = ""
+)
+
+// ========== 筛选条件 ==========
+
+/**
+ * 番剧筛选条件
+ */
+data class BangumiFilter(
+    val year: String = "-1",             // 年份，-1=全部
+    val area: Int = -1,                  // 地区，-1=全部
+    val styleId: Int = -1,               // 风格，-1=全部
+    val isFinish: Int = -1,              // 状态，-1=全部, 0=连载, 1=完结
+    val seasonStatus: Int = -1,          // 付费类型，-1=全部
+    val order: Int = 2                   // 排序，2=播放量, 0=更新时间
+) {
+    companion object {
+        val ORDER_OPTIONS = listOf(
+            0 to "更新时间",
+            2 to "播放数量",
+            4 to "追番人数",
+            3 to "最高评分"
+        )
+        
+        val AREA_OPTIONS = listOf(
+            -1 to "全部地区",
+            1 to "中国大陆",
+            2 to "日本",
+            3 to "美国",
+            4 to "英国",
+            5 to "其他"
+        )
+        
+        val STATUS_OPTIONS = listOf(
+            -1 to "全部状态",
+            0 to "连载中",
+            1 to "已完结"
+        )
+        
+        val YEAR_OPTIONS = listOf(
+            "-1" to "全部年份",
+            "2025" to "2025",
+            "2024" to "2024",
+            "2023" to "2023",
+            "2022" to "2022",
+            "2021" to "2021",
+            "2020" to "2020",
+            "2019" to "2019",
+            "2018" to "2018",
+            "2017" to "2017",
+            "2016" to "2016",
+            "2015" to "2015",
+            "2010-2014" to "2010-2014",
+            "2005-2009" to "2005-2009",
+            "2000-2004" to "2000-2004",
+            "90年代" to "90年代",
+            "80年代" to "80年代",
+            "更早" to "更早"
+        )
+    }
+}

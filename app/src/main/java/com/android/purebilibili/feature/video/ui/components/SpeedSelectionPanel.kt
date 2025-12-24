@@ -17,7 +17,7 @@ import com.android.purebilibili.core.theme.BiliPink
  * 播放速度选项
  */
 object PlaybackSpeed {
-    val OPTIONS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+    val OPTIONS = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f)
     
     fun formatSpeed(speed: Float): String {
         return if (speed == 1.0f) "倍速" else "${speed}x"

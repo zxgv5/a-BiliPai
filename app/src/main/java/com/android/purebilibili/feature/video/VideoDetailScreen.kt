@@ -202,6 +202,24 @@ fun VideoDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.initWithContext(context)
     }
+    
+    // 🔥🔥 [新增] 设置系统画中画参数，支持手势返回自动进入 PiP
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            activity?.let { act ->
+                val pipParamsBuilder = android.app.PictureInPictureParams.Builder()
+                    .setAspectRatio(android.util.Rational(16, 9))
+                
+                // Android 12+ 支持手势自动进入 PiP
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    pipParamsBuilder.setAutoEnterEnabled(true)
+                    pipParamsBuilder.setSeamlessResizeEnabled(true)
+                }
+                
+                act.setPictureInPictureParams(pipParamsBuilder.build())
+            }
+        }
+    }
 
     // 初始化播放器状态
     val playerState = rememberVideoPlayerState(
