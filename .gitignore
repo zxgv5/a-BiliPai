@@ -55,3 +55,5 @@ app/release/
 .cursor/
 .claude/
 *.ai.md
+*.txt
+bilipai_log_*.txt
