@@ -164,6 +164,28 @@ data class HistoryPage(
     val bvid: String = ""
 )
 
+// 🔥🔥 [新增] 历史记录响应（支持游标分页）
+@Serializable
+data class HistoryResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val data: HistoryListData? = null
+)
+
+@Serializable
+data class HistoryListData(
+    val list: List<HistoryData>? = null,
+    val cursor: HistoryCursor? = null  // 🔥 游标信息
+)
+
+@Serializable
+data class HistoryCursor(
+    val max: Long = 0,       // 下一页的 max 参数 (oid)
+    val view_at: Long = 0,   // 下一页的 view_at 参数
+    val business: String = "",
+    val ps: Int = 30
+)
+
 // --- 3. 收藏夹相关模型 ---
 // 收藏夹列表响应
 @Serializable

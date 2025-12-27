@@ -10,13 +10,10 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material.icons.rounded.ThumbUp
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -107,14 +104,14 @@ fun LandscapeRightSidebar(
             
             // 分享按钮
             SidebarActionButton(
-                icon = Icons.Default.Share,
+                icon = CupertinoIcons.Default.SquareAndArrowUp,
                 label = "分享",
                 onClick = onShareClick
             )
             
             // 收藏按钮
             SidebarActionButton(
-                icon = Icons.Default.Star,
+                icon = CupertinoIcons.Default.Bookmark,
                 label = FormatUtils.formatStat(favoriteCount),
                 isActive = isFavorited,
                 activeColor = Color(0xFFFFD700), // 金色
@@ -132,7 +129,7 @@ fun LandscapeRightSidebar(
             
             // 点赞按钮
             SidebarActionButton(
-                icon = Icons.Rounded.ThumbUp,
+                icon = CupertinoIcons.Default.Heart,
                 label = FormatUtils.formatStat(likeCount),
                 isActive = isLiked,
                 activeColor = MaterialTheme.colorScheme.primary,
@@ -141,7 +138,7 @@ fun LandscapeRightSidebar(
             
             // 更多按钮
             SidebarActionButton(
-                icon = Icons.Default.MoreVert,
+                icon = CupertinoIcons.Default.Ellipsis,
                 label = "更多",
                 onClick = onMoreClick
             )
@@ -235,7 +232,7 @@ private fun SidebarActionButton(
 }
 
 /**
- * 🔥 投币图标（自定义）
+ * 🪙 投币图标（圆形硬币设计）
  */
 private val CoinIcon: ImageVector
-    get() = Icons.Default.Favorite // 临时使用，后续可替换为自定义投币图标
+    get() = com.android.purebilibili.core.ui.AppIcons.BiliCoin

@@ -15,15 +15,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import coil.compose.AsyncImage
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.foundation.border
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,6 +47,8 @@ import io.github.alexzhirkevich.cupertino.CupertinoSwitch
 import io.github.alexzhirkevich.cupertino.CupertinoSlider
 import io.github.alexzhirkevich.cupertino.CupertinoSliderDefaults
 import io.github.alexzhirkevich.cupertino.theme.CupertinoColors
+import com.android.purebilibili.feature.onboarding.OnboardingBottomSheet
+import dev.chrisbanes.haze.haze
 
 const val GITHUB_URL = "https://github.com/jay3-yy/BiliPai/"
 
@@ -64,7 +61,8 @@ fun SettingsScreen(
     onAppearanceClick: () -> Unit = {},    // 🔥 外观设置
     onPlaybackClick: () -> Unit = {},      // 🔥 播放设置
     onPermissionClick: () -> Unit = {},    // 🔐 权限管理
-    onPluginsClick: () -> Unit = {}        // 🔌 插件中心
+    onPluginsClick: () -> Unit = {},       // 🔌 插件中心
+    mainHazeState: dev.chrisbanes.haze.HazeState? = null // 🔥🔥 接收全局 Haze 状态
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -72,6 +70,9 @@ fun SettingsScreen(
     val state by viewModel.state.collectAsState()
     
     var showCacheDialog by remember { mutableStateOf(false) }
+    
+    // 🔥🔥 [新增] 用于重播新手引导
+    var showOnboardingReplay by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshCacheSize()
@@ -116,320 +117,348 @@ fun SettingsScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("设置", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        // 🔥🔥 [修复] 禁用 Scaffold 默认的 WindowInsets 消耗，避免底部白色填充
-        contentWindowInsets = WindowInsets(0.dp)
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            // 🔥🔥 [修复] 添加底部导航栏内边距，确保沉浸式效果
-            contentPadding = WindowInsets.navigationBars.asPaddingValues()
-        ) {
-            // ═══════════════════════════════════════════════════
-            //  关注作者
-            // ═══════════════════════════════════════════════════
-            item { SettingsSectionTitle("关注作者") }
-            item {
-                SettingsGroup {
-                // 🔥 使用 mono 图标 + iconTint，与其他设置项风格统一，自动支持深浅色
-                SettingClickableItem(
-                    iconPainter = androidx.compose.ui.res.painterResource(com.android.purebilibili.R.drawable.ic_telegram_mono),
-                    title = "Telegram 频道",
-                    value = "@BiliPai",
-                    onClick = { uriHandler.openUri("https://t.me/BiliPai") },
-                    iconTint = Color(0xFF0088CC)  // Telegram 品牌蓝
-                )
-                    Divider()
-                    SettingClickableItem(
-                        icon = AppIcons.Twitter,
-                        title = "Twitter / X",
-                        value = "@YangY_0x00",
-                        onClick = { uriHandler.openUri("https://x.com/YangY_0x00") },
-                        iconTint = Color(0xFF1DA1F2)
-                    )
-                }
-            }
-            
-            // ═══════════════════════════════════════════════════
-            // ⚙️ 常规设置
-            // ═══════════════════════════════════════════════════
-            item { SettingsSectionTitle("常规") }
-            item {
-                SettingsGroup {
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Palette,
-                        title = "外观设置",
-                        value = "主题、图标、模糊效果",
-                        onClick = onAppearanceClick,
-                        iconTint = iOSPink
-                    )
-                    Divider()
-                    SettingClickableItem(
-                        icon = Icons.Outlined.PlayCircleOutline,
-                        title = "播放设置",
-                        value = "解码、手势、后台播放",
-                        onClick = onPlaybackClick,
-                        iconTint = iOSGreen
-                    )
-                }
-            }
-            
-            // ═══════════════════════════════════════════════════
-            // 🔒 隐私与安全
-            // ═══════════════════════════════════════════════════
-            item { SettingsSectionTitle("隐私与安全") }
-            item {
-                val privacyModeEnabled by com.android.purebilibili.core.store.SettingsManager
-                    .getPrivacyModeEnabled(context).collectAsState(initial = false)
-                val scope = rememberCoroutineScope()
-                
-                SettingsGroup {
-                    SettingSwitchItem(
-                        icon = Icons.Outlined.VisibilityOff,
-                        title = "隐私无痕模式",
-                        subtitle = "启用后不记录播放历史和搜索历史",
-                        checked = privacyModeEnabled,
-                        onCheckedChange = { enabled ->
-                            scope.launch {
-                                com.android.purebilibili.core.store.SettingsManager
-                                    .setPrivacyModeEnabled(context, enabled)
-                            }
-                        },
-                        iconTint = iOSPurple
-                    )
-                    Divider()
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Security,
-                        title = "权限管理",
-                        value = "查看应用权限",
-                        onClick = onPermissionClick,
-                        iconTint = iOSTeal
-                    )
-                }
-            }
-            
-            // ═══════════════════════════════════════════════════
-            // 💾 数据与存储
-            // ═══════════════════════════════════════════════════
-            item { SettingsSectionTitle("数据与存储") }
-            item {
-                val scope = rememberCoroutineScope()
-                val customDownloadPath by com.android.purebilibili.core.store.SettingsManager
-                    .getDownloadPath(context).collectAsState(initial = null)
-                val defaultPath = remember { 
-                    com.android.purebilibili.core.store.SettingsManager.getDefaultDownloadPath(context) 
-                }
-                
-                // SAF 目录选择器
-                val directoryPicker = androidx.activity.compose.rememberLauncherForActivityResult(
-                    contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-                ) { uri ->
-                    uri?.let { selectedUri ->
-                        // 持久化权限
-                        val takeFlags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                        context.contentResolver.takePersistableUriPermission(selectedUri, takeFlags)
-                        
-                        // 保存路径
-                        scope.launch {
-                            com.android.purebilibili.core.store.SettingsManager
-                                .setDownloadPath(context, selectedUri.toString())
+    // 🔥🔥 [关键修复] 创建本地 haze 状态用于设置页面的模糊效果
+    // 因为 OnboardingBottomSheet 必须在 haze 源 Box 内部才能使用 hazeChild
+    val settingsHazeState = remember { dev.chrisbanes.haze.HazeState() }
+    
+    // 🔥🔥 整个设置页面包裹在 haze 源 Box 中
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .haze(state = settingsHazeState)
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("设置", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back")
                         }
-                        Toast.makeText(context, "下载路径已更新", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.background,
+            // 🔥🔥 [修复] 禁用 Scaffold 默认的 WindowInsets 消耗，避免底部白色填充
+            contentWindowInsets = WindowInsets(0.dp)
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                // 🔥🔥 [修复] 添加底部导航栏内边距，确保沉浸式效果
+                contentPadding = WindowInsets.navigationBars.asPaddingValues()
+            ) {
+                // ═══════════════════════════════════════════════════
+                //  关注作者
+                // ═══════════════════════════════════════════════════
+                item { SettingsSectionTitle("关注作者") }
+                item {
+                    SettingsGroup {
+                    // 🔥 使用 mono 图标 + iconTint，与其他设置项风格统一，自动支持深浅色
+                    SettingClickableItem(
+                        iconPainter = androidx.compose.ui.res.painterResource(com.android.purebilibili.R.drawable.ic_telegram_mono),
+                        title = "Telegram 频道",
+                        value = "@BiliPai",
+                        onClick = { uriHandler.openUri("https://t.me/BiliPai") },
+                        iconTint = Color(0xFF0088CC)  // Telegram 品牌蓝
+                    )
+                        Divider()
+                        SettingClickableItem(
+                            icon = AppIcons.Twitter,
+                            title = "Twitter / X",
+                            value = "@YangY_0x00",
+                            onClick = { uriHandler.openUri("https://x.com/YangY_0x00") },
+                            iconTint = Color(0xFF1DA1F2)
+                        )
                     }
                 }
                 
-                var showPathDialog by remember { mutableStateOf(false) }
+                // ═══════════════════════════════════════════════════
+                // ⚙️ 常规设置
+                // ═══════════════════════════════════════════════════
+                item { SettingsSectionTitle("常规") }
+                item {
+                    SettingsGroup {
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.Paintpalette,
+                            title = "外观设置",
+                            value = "主题、图标、模糊效果",
+                            onClick = onAppearanceClick,
+                            iconTint = iOSPink
+                        )
+                        Divider()
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.Play,
+                            title = "播放设置",
+                            value = "解码、手势、后台播放",
+                            onClick = onPlaybackClick,
+                            iconTint = iOSGreen
+                        )
+                    }
+                }
                 
-                // 路径选择对话框
-                if (showPathDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showPathDialog = false },
-                        title = { Text("下载位置", color = MaterialTheme.colorScheme.onSurface) },
-                        text = { 
-                            Column {
-                                Text(
-                                    "默认位置（应用私有目录）：",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    defaultPath.substringAfterLast("Android/"),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "💡 默认位置随应用卸载而删除，选择自定义位置可保留下载文件",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = iOSOrange
-                                )
-                            }
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    showPathDialog = false
-                                    directoryPicker.launch(null)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                            ) { Text("选择自定义目录") }
-                        },
-                        dismissButton = { 
-                            TextButton(
-                                onClick = { 
-                                    scope.launch {
-                                        com.android.purebilibili.core.store.SettingsManager
-                                            .setDownloadPath(context, null)
-                                    }
-                                    showPathDialog = false
-                                    Toast.makeText(context, "已重置为默认路径", Toast.LENGTH_SHORT).show()
+                // ═══════════════════════════════════════════════════
+                // 🔒 隐私与安全
+                // ═══════════════════════════════════════════════════
+                item { SettingsSectionTitle("隐私与安全") }
+                item {
+                    val privacyModeEnabled by com.android.purebilibili.core.store.SettingsManager
+                        .getPrivacyModeEnabled(context).collectAsState(initial = false)
+                    val scope = rememberCoroutineScope()
+                    
+                    SettingsGroup {
+                        SettingSwitchItem(
+                            icon = CupertinoIcons.Default.EyeSlash,
+                            title = "隐私无痕模式",
+                            subtitle = "启用后不记录播放历史和搜索历史",
+                            checked = privacyModeEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    com.android.purebilibili.core.store.SettingsManager
+                                        .setPrivacyModeEnabled(context, enabled)
                                 }
-                            ) { 
-                                Text("使用默认", color = MaterialTheme.colorScheme.onSurfaceVariant) 
-                            } 
-                        },
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                            },
+                            iconTint = iOSPurple
+                        )
+                        Divider()
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.Lock,
+                            title = "权限管理",
+                            value = "查看应用权限",
+                            onClick = onPermissionClick,
+                            iconTint = iOSTeal
+                        )
+                    }
                 }
                 
-                SettingsGroup {
-                    // 下载位置
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Folder,
-                        title = "下载位置",
-                        value = if (customDownloadPath != null) "自定义" else "默认",
-                        onClick = { showPathDialog = true },
-                        iconTint = iOSBlue
-                    )
-                    Divider()
-                    // 清除缓存
-                    SettingClickableItem(
-                        icon = Icons.Outlined.DeleteOutline,
-                        title = "清除缓存",
-                        value = state.cacheSize,
-                        onClick = { showCacheDialog = true },
-                        iconTint = iOSPink
-                    )
+                // ═══════════════════════════════════════════════════
+                // 💾 数据与存储
+                // ═══════════════════════════════════════════════════
+                item { SettingsSectionTitle("数据与存储") }
+                item {
+                    val scope = rememberCoroutineScope()
+                    val customDownloadPath by com.android.purebilibili.core.store.SettingsManager
+                        .getDownloadPath(context).collectAsState(initial = null)
+                    val defaultPath = remember { 
+                        com.android.purebilibili.core.store.SettingsManager.getDefaultDownloadPath(context) 
+                    }
+                    
+                    // SAF 目录选择器
+                    val directoryPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+                        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+                    ) { uri ->
+                        uri?.let { selectedUri ->
+                            // 持久化权限
+                            val takeFlags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                            android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            context.contentResolver.takePersistableUriPermission(selectedUri, takeFlags)
+                            
+                            // 保存路径
+                            scope.launch {
+                                com.android.purebilibili.core.store.SettingsManager
+                                    .setDownloadPath(context, selectedUri.toString())
+                            }
+                            Toast.makeText(context, "下载路径已更新", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    
+                    var showPathDialog by remember { mutableStateOf(false) }
+                    
+                    // 路径选择对话框
+                    if (showPathDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showPathDialog = false },
+                            title = { Text("下载位置", color = MaterialTheme.colorScheme.onSurface) },
+                            text = { 
+                                Column {
+                                    Text(
+                                        "默认位置（应用私有目录）：",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        defaultPath.substringAfterLast("Android/"),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "💡 默认位置随应用卸载而删除，选择自定义位置可保留下载文件",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = iOSOrange
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        showPathDialog = false
+                                        directoryPicker.launch(null)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                ) { Text("选择自定义目录") }
+                            },
+                            dismissButton = { 
+                                TextButton(
+                                    onClick = { 
+                                        scope.launch {
+                                            com.android.purebilibili.core.store.SettingsManager
+                                                .setDownloadPath(context, null)
+                                        }
+                                        showPathDialog = false
+                                        Toast.makeText(context, "已重置为默认路径", Toast.LENGTH_SHORT).show()
+                                    }
+                                ) { 
+                                    Text("使用默认", color = MaterialTheme.colorScheme.onSurfaceVariant) 
+                                } 
+                            },
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    }
+                    
+                    SettingsGroup {
+                        // 下载位置
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.FolderBadgePlus,
+                            title = "下载位置",
+                            value = if (customDownloadPath != null) "自定义" else "默认",
+                            onClick = { showPathDialog = true },
+                            iconTint = iOSBlue
+                        )
+                        Divider()
+                        // 清除缓存
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.Trash,
+                            title = "清除缓存",
+                            value = state.cacheSize,
+                            onClick = { showCacheDialog = true },
+                            iconTint = iOSPink
+                        )
+                    }
                 }
-            }
-            
-            // ═══════════════════════════════════════════════════
-            // 🛠 开发者选项
-            // ═══════════════════════════════════════════════════
-            item { SettingsSectionTitle("开发者选项") }
-            item {
-                val crashTrackingEnabled by com.android.purebilibili.core.store.SettingsManager
-                    .getCrashTrackingEnabled(context).collectAsState(initial = true)
-                val analyticsEnabled by com.android.purebilibili.core.store.SettingsManager
-                    .getAnalyticsEnabled(context).collectAsState(initial = true)
-                val scope = rememberCoroutineScope()
                 
-                SettingsGroup {
-                    SettingSwitchItem(
-                        icon = Icons.Outlined.BugReport,
-                        title = "崩溃追踪",
-                        subtitle = "帮助开发者发现和修复问题",
-                        checked = crashTrackingEnabled,
-                        onCheckedChange = { enabled ->
-                            scope.launch {
-                                com.android.purebilibili.core.store.SettingsManager
-                                    .setCrashTrackingEnabled(context, enabled)
-                                com.android.purebilibili.core.util.CrashReporter.setEnabled(enabled)
-                            }
-                        },
-                        iconTint = iOSTeal
-                    )
-                    Divider()
-                    SettingSwitchItem(
-                        icon = Icons.Outlined.Analytics,
-                        title = "使用情况统计",
-                        subtitle = "帮助改进应用体验，不收集个人信息",
-                        checked = analyticsEnabled,
-                        onCheckedChange = { enabled ->
-                            scope.launch {
-                                com.android.purebilibili.core.store.SettingsManager
-                                    .setAnalyticsEnabled(context, enabled)
-                                com.android.purebilibili.core.util.AnalyticsHelper.setEnabled(enabled)
-                            }
-                        },
-                        iconTint = iOSBlue
-                    )
-                    Divider()
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Extension,
-                        title = "插件中心",
-                        value = "${com.android.purebilibili.core.plugin.PluginManager.getEnabledCount()} 个已启用",
-                        onClick = onPluginsClick,
-                        iconTint = iOSPurple
-                    )
-                    Divider()
-                    // 📋 导出日志
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Share,
-                        title = "导出日志",
-                        value = "用于反馈问题",
-                        onClick = { 
-                            com.android.purebilibili.core.util.LogCollector.exportAndShare(context)
-                        },
-                        iconTint = iOSTeal
-                    )
+                // ═══════════════════════════════════════════════════
+                // 🛠 开发者选项
+                // ═══════════════════════════════════════════════════
+                item { SettingsSectionTitle("开发者选项") }
+                item {
+                    val crashTrackingEnabled by com.android.purebilibili.core.store.SettingsManager
+                        .getCrashTrackingEnabled(context).collectAsState(initial = true)
+                    val analyticsEnabled by com.android.purebilibili.core.store.SettingsManager
+                        .getAnalyticsEnabled(context).collectAsState(initial = true)
+                    val scope = rememberCoroutineScope()
+                    
+                    SettingsGroup {
+                        SettingSwitchItem(
+                            icon = CupertinoIcons.Default.ExclamationmarkTriangle,
+                            title = "崩溃追踪",
+                            subtitle = "帮助开发者发现和修复问题",
+                            checked = crashTrackingEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    com.android.purebilibili.core.store.SettingsManager
+                                        .setCrashTrackingEnabled(context, enabled)
+                                    com.android.purebilibili.core.util.CrashReporter.setEnabled(enabled)
+                                }
+                            },
+                            iconTint = iOSTeal
+                        )
+                        Divider()
+                        SettingSwitchItem(
+                            icon = CupertinoIcons.Default.ChartBar,
+                            title = "使用情况统计",
+                            subtitle = "帮助改进应用体验，不收集个人信息",
+                            checked = analyticsEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    com.android.purebilibili.core.store.SettingsManager
+                                        .setAnalyticsEnabled(context, enabled)
+                                    com.android.purebilibili.core.util.AnalyticsHelper.setEnabled(enabled)
+                                }
+                            },
+                            iconTint = iOSBlue
+                        )
+                        Divider()
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.PuzzlepieceExtension,
+                            title = "插件中心",
+                            value = "${com.android.purebilibili.core.plugin.PluginManager.getEnabledCount()} 个已启用",
+                            onClick = onPluginsClick,
+                            iconTint = iOSPurple
+                        )
+                        Divider()
+                        // 📋 导出日志
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.DocTextMagnifyingglass,
+                            title = "导出日志",
+                            value = "用于反馈问题",
+                            onClick = { 
+                                com.android.purebilibili.core.util.LogCollector.exportAndShare(context)
+                            },
+                            iconTint = iOSTeal
+                        )
+                    }
                 }
-            }
-            
-            // ═══════════════════════════════════════════════════
-            // ℹ️ 关于
-            // ═══════════════════════════════════════════════════
-            item { SettingsSectionTitle("关于") }
-            item {
-                SettingsGroup {
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Description,
-                        title = "开源许可证",
-                        value = "License",
-                        onClick = onOpenSourceLicensesClick,
-                        iconTint = iOSOrange
-                    )
-                    Divider()
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Code,
-                        title = "开源主页",
-                        value = "GitHub",
-                        onClick = { uriHandler.openUri(GITHUB_URL) },
-                        iconTint = iOSPurple
-                    )
-                    Divider()
-                    SettingClickableItem(
-                        icon = Icons.Outlined.Info,
-                        title = "版本",
-                        value = "v${com.android.purebilibili.BuildConfig.VERSION_NAME}",
-                        onClick = null,
-                        iconTint = iOSTeal
-                    )
+                
+                // ═══════════════════════════════════════════════════
+                // ℹ️ 关于
+                // ═══════════════════════════════════════════════════
+                item { SettingsSectionTitle("关于") }
+                item {
+                    SettingsGroup {
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.DocText,
+                            title = "开源许可证",
+                            value = "License",
+                            onClick = onOpenSourceLicensesClick,
+                            iconTint = iOSOrange
+                        )
+                        Divider()
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.Link,
+                            title = "开源主页",
+                            value = "GitHub",
+                            onClick = { uriHandler.openUri(GITHUB_URL) },
+                            iconTint = iOSPurple
+                        )
+                        Divider()
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.InfoCircle,
+                            title = "版本",
+                            value = "v${com.android.purebilibili.BuildConfig.VERSION_NAME}",
+                            onClick = null,
+                            iconTint = iOSTeal
+                        )
+                        Divider()
+                        // 🌟 重播新手引导
+                        SettingClickableItem(
+                            icon = CupertinoIcons.Default.Sparkles,
+                            title = "重播新手引导",
+                            value = "了解应用功能",
+                            onClick = { showOnboardingReplay = true },
+                            iconTint = iOSPink
+                        )
+                    }
                 }
+                
+                item { Spacer(modifier = Modifier.height(32.dp)) }
             }
-            
-            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
+        
+        // 🔥🔥 [关键修复] OnboardingBottomSheet 必须在 haze 源 Box 内部
+        // 这样 hazeChild 可以模糊同一个 Box 内的兄弟内容 (Scaffold/LazyColumn)
+        OnboardingBottomSheet(
+            visible = showOnboardingReplay,
+            onDismiss = { showOnboardingReplay = false },
+            mainHazeState = settingsHazeState  // 使用设置页面本地的 haze 状态
+        )
     }
 }
 
@@ -571,7 +600,7 @@ fun SettingClickableItem(
             }
             if (onClick != null) {
                 Spacer(modifier = Modifier.width(6.dp))
-                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f), modifier = Modifier.size(20.dp))
+                Icon(CupertinoIcons.Default.ChevronForward, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f), modifier = Modifier.size(20.dp))
             }
         }
     }

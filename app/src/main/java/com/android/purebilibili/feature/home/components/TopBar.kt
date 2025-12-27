@@ -13,9 +13,10 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Settings
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -128,7 +129,7 @@ fun FluidHomeTopBar(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.Search,
+                            CupertinoIcons.Default.MagnifyingGlass,
                             null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f),
                             modifier = Modifier.size(18.dp)
@@ -152,7 +153,7 @@ fun FluidHomeTopBar(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        Icons.Outlined.Settings,
+                        CupertinoIcons.Outlined.Gearshape,
                         contentDescription = "Settings",
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(22.dp)

@@ -19,10 +19,16 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Brightness7
-import androidx.compose.material.icons.rounded.VolumeUp
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
+// 🌈 Material Icons Extended - 亮度图标
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -224,7 +230,8 @@ fun VideoPlayerSection(
                                         }
                                         gesturePercent = newBrightness
                                     }
-                                    gestureIcon = Icons.Rounded.Brightness7
+                                    // 🔥 亮度图标：CupertinoIcons SunMax (iOS SF Symbols 风格)
+                                    gestureIcon = CupertinoIcons.Default.SunMax
                                 }
                                 VideoGestureMode.Volume -> {
                                     totalDragDistanceY -= dragAmount.y
@@ -235,7 +242,12 @@ fun VideoPlayerSection(
                                     val targetVol = (newVolPercent * maxVolume).toInt()
                                     audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
                                     gesturePercent = newVolPercent
-                                    gestureIcon = Icons.Rounded.VolumeUp
+                                    // 🔥 动态音量图标：3 级
+                                    gestureIcon = when {
+                                        gesturePercent < 0.01f -> CupertinoIcons.Default.SpeakerSlash
+                                        gesturePercent < 0.5f -> CupertinoIcons.Default.Speaker
+                                        else -> CupertinoIcons.Default.SpeakerWave2
+                                    }
                                 }
                                 else -> {}
                             }
@@ -396,7 +408,7 @@ fun VideoPlayerSection(
                         }
                     } else {
                         Icon(
-                            imageVector = gestureIcon ?: Icons.Rounded.Brightness7,
+                            imageVector = gestureIcon ?: CupertinoIcons.Default.SunMax,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(48.dp)

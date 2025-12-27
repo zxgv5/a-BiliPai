@@ -15,9 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -131,18 +132,18 @@ fun BangumiScreen(
                     title = { Text("番剧影视") },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                            Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
                         }
                     },
                     actions = {
                         // 搜索按钮
                         IconButton(onClick = { showSearchBar = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "搜索")
+                            Icon(CupertinoIcons.Default.MagnifyingGlass, contentDescription = "搜索")
                         }
                         // 筛选按钮
                         IconButton(onClick = { showFilter = !showFilter }) {
                             Icon(
-                                Icons.Default.FilterList,
+                                CupertinoIcons.Default.ListBullet,
                                 contentDescription = "筛选",
                                 tint = if (filter != BangumiFilter()) MaterialTheme.colorScheme.primary else LocalContentColor.current
                             )
@@ -302,7 +303,7 @@ private fun BangumiSearchBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
                 }
                 
                 Spacer(modifier = Modifier.width(4.dp))
@@ -318,7 +319,7 @@ private fun BangumiSearchBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Default.Search,
+                        CupertinoIcons.Default.MagnifyingGlass,
                         null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.size(20.dp)
@@ -360,7 +361,7 @@ private fun BangumiSearchBar(
                             modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
-                                Icons.Default.Clear,
+                                CupertinoIcons.Default.XmarkCircle,
                                 null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
@@ -505,7 +506,7 @@ private fun FilterChip(
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Icon(
-                    Icons.Default.KeyboardArrowDown,
+                    CupertinoIcons.Default.ChevronDown,
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
                     tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant

@@ -12,6 +12,84 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
+ * 🍎 iOS 风格 Spring 动画预设
+ * 
+ * 基于 iOS Human Interface Guidelines 的动画参数，
+ * 提供统一的弹性动画效果，让交互更加自然流畅。
+ */
+object iOSSpringSpecs {
+    
+    /**
+     * 按钮点击反馈动画
+     * - 快速响应，轻微回弹
+     * - 适用于 IconButton、ActionButton 等
+     */
+    val ButtonPress: SpringSpec<Float> = SpringSpec(
+        dampingRatio = 0.6f,
+        stiffness = 400f
+    )
+    
+    /**
+     * 页面切换动画
+     * - 无回弹，自然停止
+     * - 适用于导航过渡、页面滑入滑出
+     */
+    val PageTransition: SpringSpec<Float> = SpringSpec(
+        dampingRatio = 1f,  // 临界阻尼，无回弹
+        stiffness = Spring.StiffnessMediumLow
+    )
+    
+    /**
+     * 卡片展开动画
+     * - 适度回弹，有活力感
+     * - 适用于卡片详情展开、BottomSheet 弹出
+     */
+    val CardExpand: SpringSpec<Float> = SpringSpec(
+        dampingRatio = 0.8f,
+        stiffness = 300f
+    )
+    
+    /**
+     * 侧边栏/抽屉动画
+     * - 轻微回弹，快速响应
+     * - 适用于 Sidebar、Drawer 展开收起
+     */
+    val Drawer: SpringSpec<Float> = SpringSpec(
+        dampingRatio = 0.7f,
+        stiffness = 350f
+    )
+    
+    /**
+     * 列表项入场动画
+     * - 中等回弹，Q弹效果
+     * - 适用于 LazyColumn 卡片入场
+     */
+    val ListItem: SpringSpec<Float> = SpringSpec(
+        dampingRatio = 0.65f,
+        stiffness = 300f
+    )
+    
+    /**
+     * 刷新指示器动画
+     * - 轻微回弹
+     * - 适用于下拉刷新旋转动画
+     */
+    val RefreshIndicator: SpringSpec<Float> = SpringSpec(
+        dampingRatio = 0.7f,
+        stiffness = 300f
+    )
+    
+    /**
+     * 缩放动画通用参数
+     * - 适用于 scale 变换的通用预设
+     */
+    val Scale: SpringSpec<Float> = SpringSpec(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium
+    )
+}
+
+/**
  * 🔥 列表项进场动画 (Premium 非线性动画)
  * 
  * 特点：

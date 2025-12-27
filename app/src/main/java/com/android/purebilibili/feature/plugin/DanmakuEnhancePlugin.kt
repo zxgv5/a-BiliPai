@@ -3,8 +3,10 @@ package com.android.purebilibili.feature.plugin
 
 import android.content.Context
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Comment
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -43,7 +45,7 @@ class DanmakuEnhancePlugin : DanmakuPlugin {
     override val description = "关键词屏蔽、同传弹幕高亮"
     override val version = "1.0.0"
     override val author = "YangY"
-    override val icon: ImageVector = Icons.Outlined.Comment
+    override val icon: ImageVector = CupertinoIcons.Default.TextBubble
     
     private var config: DanmakuEnhanceConfig = DanmakuEnhanceConfig()
     private var filteredCount = 0

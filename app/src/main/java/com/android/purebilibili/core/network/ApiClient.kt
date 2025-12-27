@@ -32,7 +32,12 @@ interface BilibiliApi {
     suspend fun getNavStat(): NavStatResponse
 
     @GET("x/web-interface/history/cursor")
-    suspend fun getHistoryList(@Query("ps") ps: Int = 20): ListResponse<HistoryData>
+    suspend fun getHistoryList(
+        @Query("ps") ps: Int = 30,
+        @Query("max") max: Long = 0,         // 🔥 游标: 上一页最后一条的 oid
+        @Query("view_at") viewAt: Long = 0,  // 🔥 游标: 上一页最后一条的 view_at
+        @Query("business") business: String = ""  // 空字符串=全部类型
+    ): HistoryResponse
 
     @GET("x/v3/fav/folder/created/list-all")
     suspend fun getFavFolders(@Query("up_mid") mid: Long): FavFolderResponse
@@ -156,6 +161,17 @@ interface BilibiliApi {
     // 🔥🔥 [核心修改] 改为 wbi 路径，并接收 Map 参数以支持签名
     @GET("x/v2/reply/wbi/main")
     suspend fun getReplyList(@QueryMap params: Map<String, String>): ReplyResponse
+    
+    // 🔥🔥 [新增] 旧版评论 API - 用于时间排序 (sort=0)
+    // 此 API 不需要 WBI 签名，分页更稳定
+    @GET("x/v2/reply")
+    suspend fun getReplyListLegacy(
+        @Query("oid") oid: Long,
+        @Query("type") type: Int = 1,
+        @Query("pn") pn: Int = 1,
+        @Query("ps") ps: Int = 20,
+        @Query("sort") sort: Int = 0  // 0=按时间, 1=按点赞数, 2=按回复数
+    ): ReplyResponse
 
     @GET("x/emote/user/panel/web")
     suspend fun getEmotes(
@@ -352,6 +368,34 @@ interface SpaceApi {
     // 获取UP主播放量/获赞数
     @GET("x/space/upstat")
     suspend fun getUpStat(@Query("mid") mid: Long): com.android.purebilibili.data.model.response.UpStatResponse
+    
+    // 🔥 获取合集和系列列表
+    @GET("x/polymer/web-space/seasons_series_list")
+    suspend fun getSeasonsSeriesList(
+        @Query("mid") mid: Long,
+        @Query("page_num") pageNum: Int = 1,
+        @Query("page_size") pageSize: Int = 20
+    ): com.android.purebilibili.data.model.response.SeasonsSeriesListResponse
+    
+    // 🔥 获取合集内的视频列表
+    @GET("x/polymer/web-space/seasons_archives_list")
+    suspend fun getSeasonArchives(
+        @Query("mid") mid: Long,
+        @Query("season_id") seasonId: Long,
+        @Query("page_num") pageNum: Int = 1,
+        @Query("page_size") pageSize: Int = 30,
+        @Query("sort_reverse") sortReverse: Boolean = false
+    ): com.android.purebilibili.data.model.response.SeasonArchivesResponse
+    
+    // 🔥 获取系列内的视频列表
+    @GET("x/series/archives")
+    suspend fun getSeriesArchives(
+        @Query("mid") mid: Long,
+        @Query("series_id") seriesId: Long,
+        @Query("pn") pn: Int = 1,
+        @Query("ps") ps: Int = 30,
+        @Query("sort") sort: String = "desc"
+    ): com.android.purebilibili.data.model.response.SeriesArchivesResponse
 }
 
 // 🔥🔥 [新增] 番剧/影视 API

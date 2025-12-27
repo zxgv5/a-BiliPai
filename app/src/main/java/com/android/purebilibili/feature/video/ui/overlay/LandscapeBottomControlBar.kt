@@ -4,10 +4,10 @@ package com.android.purebilibili.feature.video.ui.overlay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.SubtitlesOff
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -138,7 +138,7 @@ fun LandscapeBottomControlBar(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        if (isPlaying) CupertinoIcons.Default.Pause else CupertinoIcons.Default.Play,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
@@ -161,7 +161,7 @@ fun LandscapeBottomControlBar(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        if (danmakuEnabled) Icons.Rounded.Subtitles else Icons.Rounded.SubtitlesOff,
+                        if (danmakuEnabled) CupertinoIcons.Default.TextBubble else CupertinoIcons.Default.TextBubble,
                         contentDescription = "弹幕开关",
                         tint = if (danmakuEnabled) MaterialTheme.colorScheme.primary else Color.White.copy(0.6f),
                         modifier = Modifier.size(20.dp)
@@ -201,7 +201,7 @@ fun LandscapeBottomControlBar(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        Icons.Default.FullscreenExit,
+                        CupertinoIcons.Default.ArrowDownRightAndArrowUpLeft,
                         contentDescription = "退出全屏",
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)

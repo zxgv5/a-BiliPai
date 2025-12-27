@@ -50,22 +50,39 @@ object CardPositionManager {
      * @param screenHeight 屏幕高度
      * @param isSingleColumn 是否是单列卡片（故事卡片）
      * @param density 屏幕密度（可选）
+     * @param bottomBarHeightDp 底部导航栏高度（dp），用于裁剪可见区域
      */
     fun recordCardPosition(
         bounds: Rect, 
         screenWidth: Float, 
         screenHeight: Float,
         isSingleColumn: Boolean = false,
-        density: Float = 3f
+        density: Float = 3f,
+        bottomBarHeightDp: Float = 80f  // 🔥 底部导航栏默认高度
     ) {
         lastClickedCardBounds = bounds
+        lastScreenDensity = density
+        isSingleColumnCard = isSingleColumn
+        
+        // 🔥🔥 [修复] 计算可见区域的底边界（屏幕高度减去底部导航栏）
+        val bottomBarHeightPx = bottomBarHeightDp * density
+        val visibleBottomPx = screenHeight - bottomBarHeightPx
+        
+        // 🔥🔥 [修复] 计算卡片可见部分的中心点
+        // 如果卡片底部被导航栏遮挡，使用可见部分的中心
+        val visibleTop = bounds.top
+        val visibleBottom = bounds.bottom.coerceAtMost(visibleBottomPx)
+        val visibleCenterY = if (visibleBottom > visibleTop) {
+            (visibleTop + visibleBottom) / 2
+        } else {
+            bounds.center.y  // 完全不可见时使用原始中心
+        }
+        
         // 计算归一化的中心点坐标 (0-1 范围)
         lastClickedCardCenter = Offset(
             x = bounds.center.x / screenWidth,
-            y = bounds.center.y / screenHeight
+            y = visibleCenterY / screenHeight  // 🔥 使用可见部分的中心 Y
         )
-        isSingleColumnCard = isSingleColumn
-        lastScreenDensity = density
     }
     
     /**

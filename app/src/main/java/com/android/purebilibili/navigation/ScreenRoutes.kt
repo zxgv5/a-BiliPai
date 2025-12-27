@@ -35,6 +35,10 @@ sealed class ScreenRoutes(val route: String) {
     object PermissionSettings : ScreenRoutes("permission_settings")  // 🔐 权限管理
     object PluginsSettings : ScreenRoutes("plugins_settings")  // 🔌 插件中心
     object BottomBarSettings : ScreenRoutes("bottom_bar_settings")  // 🔥 底栏管理
+    // 🔥🔥 [新增] 更多外观设置子页面
+    object ThemeSettings : ScreenRoutes("theme_settings")  // 主题设置
+    object IconSettings : ScreenRoutes("icon_settings")  // 图标设置
+    object AnimationSettings : ScreenRoutes("animation_settings")  // 动画设置
 
     object VideoPlayer : ScreenRoutes("video_player/{bvid}?cid={cid}") {
         fun createRoute(bvid: String, cid: Long = 0): String {

@@ -123,7 +123,8 @@ class VideoPlaybackUseCase(
             
             onProgress("Loading video info...")
             
-            val detailResult = VideoRepository.getVideoDetails(bvid)
+            // 🔥🔥 [关键修复] 将用户画质设置传递给 Repository
+            val detailResult = VideoRepository.getVideoDetails(bvid, defaultQuality)
             val relatedVideos = VideoRepository.getRelatedVideos(bvid)
             val emoteMap = VideoRepository.getEmoteMap()
             
@@ -171,7 +172,13 @@ class VideoPlaybackUseCase(
                     // 🔥🔥 [修复] 合成完整画质列表：API 返回的 accept_quality + DASH 视频流中的实际画质
                     val apiQualities = playData.accept_quality ?: emptyList()
                     val dashVideoIds = playData.dash?.video?.map { it.id }?.distinct() ?: emptyList()
-                    val mergedQualityIds = (apiQualities + dashVideoIds).distinct().sortedDescending()
+                    
+                    // 🔥🔥 [新增] 确保包含所有标准画质选项，用户可以切换到低画质以省流量
+                    // 即使 DASH 流中没有这些画质，也可以通过 API 请求获取
+                    val standardLowQualities = listOf(32, 16) // 480P, 360P
+                    val mergedQualityIds = (apiQualities + dashVideoIds + standardLowQualities)
+                        .distinct()
+                        .sortedDescending()
                     
                     // 🔥🔥 [修复] 生成对应的画质标签 - 使用更短的名称确保竖屏显示完整
                     val qualityLabelMap = mapOf(

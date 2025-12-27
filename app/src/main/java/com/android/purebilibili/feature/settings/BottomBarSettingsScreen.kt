@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,13 +42,13 @@ data class BottomBarTabConfig(
  * 所有可用的底栏项目
  */
 val allBottomBarTabs = listOf(
-    BottomBarTabConfig("HOME", "首页", Icons.Filled.Home, isDefault = true),
-    BottomBarTabConfig("DYNAMIC", "动态", Icons.Outlined.Subscriptions, isDefault = true),
-    BottomBarTabConfig("HISTORY", "历史", Icons.Outlined.History, isDefault = true),
-    BottomBarTabConfig("PROFILE", "我的", Icons.Outlined.AccountCircle, isDefault = true),
-    BottomBarTabConfig("FAVORITE", "收藏", Icons.Outlined.FavoriteBorder, isDefault = false),
-    BottomBarTabConfig("LIVE", "直播", Icons.Outlined.PlayArrow, isDefault = false),
-    BottomBarTabConfig("WATCHLATER", "稍后看", Icons.Outlined.AccessTime, isDefault = false)
+    BottomBarTabConfig("HOME", "首页", CupertinoIcons.Default.House, isDefault = true),
+    BottomBarTabConfig("DYNAMIC", "动态", CupertinoIcons.Default.Newspaper, isDefault = true),
+    BottomBarTabConfig("HISTORY", "历史", CupertinoIcons.Default.Clock, isDefault = true),
+    BottomBarTabConfig("PROFILE", "我的", CupertinoIcons.Default.PersonCircle, isDefault = true),
+    BottomBarTabConfig("FAVORITE", "收藏", CupertinoIcons.Default.Heart, isDefault = false),
+    BottomBarTabConfig("LIVE", "直播", CupertinoIcons.Default.Tv, isDefault = false),
+    BottomBarTabConfig("WATCHLATER", "稍后看", CupertinoIcons.Default.Clock, isDefault = false)
 )
 
 /**
@@ -95,7 +95,7 @@ fun BottomBarSettingsScreen(
                 title = { Text("底栏管理", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -200,7 +200,7 @@ fun BottomBarSettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(CupertinoIcons.Default.ArrowCounterclockwise, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("重置为默认")
                 }
@@ -358,7 +358,7 @@ private fun BottomBarTabItem(
                             Spacer(modifier = Modifier.weight(1f))
                             if (index == colorIndex) {
                                 Icon(
-                                    Icons.Default.Check,
+                                    CupertinoIcons.Default.Checkmark,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)

@@ -10,8 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -97,7 +99,7 @@ fun DanmakuSettingsPanel(
                             .background(Color.White.copy(0.1f), CircleShape)
                     ) {
                         Icon(
-                            Icons.Default.Close,
+                            CupertinoIcons.Default.Xmark,
                             contentDescription = "关闭",
                             tint = Color.White.copy(0.8f),
                             modifier = Modifier.size(18.dp)

@@ -5,8 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BrokenImage
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -92,7 +94,7 @@ fun DrawGridV2(
                             )
                         } else {
                             Icon(
-                                Icons.Default.BrokenImage,
+                                CupertinoIcons.Default.Star,
                                 contentDescription = null,
                                 modifier = Modifier.size(32.dp),
                                 tint = Color.Gray.copy(0.5f)

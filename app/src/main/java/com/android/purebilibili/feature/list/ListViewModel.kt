@@ -44,11 +44,108 @@ abstract class BaseListViewModel(application: Application, private val pageTitle
     abstract suspend fun fetchItems(): List<VideoItem>
 }
 
-// --- 历史记录 ViewModel ---
+// --- 历史记录 ViewModel (支持游标分页加载) ---
 class HistoryViewModel(application: Application) : BaseListViewModel(application, "历史记录") {
+    
+    // 游标分页状态
+    private var cursorMax: Long = 0
+    private var cursorViewAt: Long = 0
+    private var hasMore = true
+    private var isLoadingMore = false
+    
+    // 🔥 暴露加载更多状态
+    private val _isLoadingMoreState = MutableStateFlow(false)
+    val isLoadingMoreState = _isLoadingMoreState.asStateFlow()
+    
+    private val _hasMoreState = MutableStateFlow(true)
+    val hasMoreState = _hasMoreState.asStateFlow()
+    
     override suspend fun fetchItems(): List<VideoItem> {
-        val result = com.android.purebilibili.data.repository.HistoryRepository.getHistoryList()
-        return result.getOrNull()?.map { it.toVideoItem() } ?: emptyList()
+        // 重置游标
+        cursorMax = 0
+        cursorViewAt = 0
+        
+        val result = com.android.purebilibili.data.repository.HistoryRepository.getHistoryList(
+            ps = 30,
+            max = 0,
+            viewAt = 0
+        )
+        
+        val historyResult = result.getOrNull()
+        if (historyResult == null) {
+            hasMore = false
+            _hasMoreState.value = false
+            return emptyList()
+        }
+        
+        // 更新游标
+        historyResult.cursor?.let { cursor ->
+            cursorMax = cursor.max
+            cursorViewAt = cursor.view_at
+        }
+        
+        // 判断是否还有更多
+        hasMore = historyResult.list.isNotEmpty() && historyResult.cursor != null && historyResult.cursor.max > 0
+        _hasMoreState.value = hasMore
+        
+        com.android.purebilibili.core.util.Logger.d("HistoryVM", "🔥 First page: ${historyResult.list.size} items, hasMore=$hasMore, nextMax=$cursorMax")
+        
+        return historyResult.list.map { it.toVideoItem() }
+    }
+    
+    // 🔥 加载更多
+    fun loadMore() {
+        if (isLoadingMore || !hasMore) return
+        
+        viewModelScope.launch {
+            isLoadingMore = true
+            _isLoadingMoreState.value = true
+            
+            try {
+                com.android.purebilibili.core.util.Logger.d("HistoryVM", "🔥 loadMore: max=$cursorMax, viewAt=$cursorViewAt")
+                
+                val result = com.android.purebilibili.data.repository.HistoryRepository.getHistoryList(
+                    ps = 30,
+                    max = cursorMax,
+                    viewAt = cursorViewAt
+                )
+                
+                val historyResult = result.getOrNull()
+                if (historyResult == null || historyResult.list.isEmpty()) {
+                    hasMore = false
+                    _hasMoreState.value = false
+                    return@launch
+                }
+                
+                // 更新游标
+                historyResult.cursor?.let { cursor ->
+                    cursorMax = cursor.max
+                    cursorViewAt = cursor.view_at
+                }
+                
+                // 判断是否还有更多
+                hasMore = historyResult.cursor != null && historyResult.cursor.max > 0
+                _hasMoreState.value = hasMore
+                
+                val newItems = historyResult.list.map { it.toVideoItem() }
+                com.android.purebilibili.core.util.Logger.d("HistoryVM", "🔥 Loaded ${newItems.size} more items, hasMore=$hasMore")
+                
+                if (newItems.isNotEmpty()) {
+                    // 追加到现有列表（过滤重复）
+                    val currentItems = _uiState.value.items
+                    val existingBvids = currentItems.map { it.bvid }.toSet()
+                    val uniqueNewItems = newItems.filter { it.bvid !in existingBvids }
+                    _uiState.value = _uiState.value.copy(items = currentItems + uniqueNewItems)
+                    com.android.purebilibili.core.util.Logger.d("HistoryVM", "🔥 Total items: ${_uiState.value.items.size}")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                com.android.purebilibili.core.util.Logger.e("HistoryVM", "🔥 loadMore failed", e)
+            } finally {
+                isLoadingMore = false
+                _isLoadingMoreState.value = false
+            }
+        }
     }
 }
 

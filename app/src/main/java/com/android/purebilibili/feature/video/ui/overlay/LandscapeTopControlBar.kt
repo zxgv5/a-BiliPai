@@ -4,12 +4,10 @@ package com.android.purebilibili.feature.video.ui.overlay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.rounded.ThumbUp
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -65,7 +63,7 @@ fun LandscapeTopControlBar(
         // 🔥 左侧：返回 + 标题
         IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
             Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
+                CupertinoIcons.Default.ChevronBackward,
                 contentDescription = "返回",
                 tint = Color.White
             )
@@ -104,7 +102,7 @@ fun LandscapeTopControlBar(
         ) {
             // 点赞按钮（带数字）
             TopBarActionButton(
-                icon = Icons.Rounded.ThumbUp,
+                icon = CupertinoIcons.Default.Heart,
                 label = FormatUtils.formatStat(likeCount),
                 isActive = isLiked,
                 activeColor = MaterialTheme.colorScheme.primary,
@@ -123,7 +121,7 @@ fun LandscapeTopControlBar(
             // 分享按钮
             IconButton(onClick = onShareClick, modifier = Modifier.size(36.dp)) {
                 Icon(
-                    Icons.Default.Share,
+                    CupertinoIcons.Default.SquareAndArrowUp,
                     contentDescription = "分享",
                     tint = Color.White,
                     modifier = Modifier.size(22.dp)
@@ -133,7 +131,7 @@ fun LandscapeTopControlBar(
             // 更多按钮
             IconButton(onClick = onMoreClick, modifier = Modifier.size(36.dp)) {
                 Icon(
-                    Icons.Default.MoreVert,
+                    CupertinoIcons.Default.Ellipsis,
                     contentDescription = "更多",
                     tint = Color.White,
                     modifier = Modifier.size(22.dp)
@@ -184,4 +182,4 @@ private fun TopBarActionButton(
 
 // 投币图标占位
 private val CoinIcon: ImageVector
-    get() = Icons.Default.Star
+    get() = CupertinoIcons.Default.Star

@@ -50,6 +50,8 @@ import coil.compose.AsyncImage
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.animation.doOnEnd
 import android.widget.ImageView
+import com.android.purebilibili.feature.onboarding.OnboardingBottomSheet
+import dev.chrisbanes.haze.haze
 
 private const val TAG = "MainActivity"
 private const val PREFS_NAME = "app_welcome"
@@ -118,6 +120,9 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+            
+            // 🔥 全局 Haze 状态，用于实现毛玻璃效果
+            val mainHazeState = remember { dev.chrisbanes.haze.HazeState() }
 
             // 6. 传入参数
             PureBiliBiliTheme(
@@ -125,35 +130,48 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = dynamicColor,
                 themeColorIndex = themeColorIndex // 🔥🔥 传入主题色索引
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        // 🔥 SharedTransitionProvider 包裹导航，启用共享元素过渡
-                        SharedTransitionProvider {
-                            AppNavigation(
-                                navController = navController,
-                                miniPlayerManager = miniPlayerManager,
-                                isInPipMode = isInPipMode,
-                                onVideoDetailEnter = { 
-                                    isInVideoDetail = true
-                                    Logger.d(TAG, "🎬 进入视频详情页")
-                                },
-                                onVideoDetailExit = { 
-                                    isInVideoDetail = false
-                                    Logger.d(TAG, "🔙 退出视频详情页")
-                                }
-                            )
-                        }
-                        
-                        // 🔥 首次启动欢迎弹窗
-                        if (showWelcome) {
-                            WelcomeDialog(
+                        // 🔥🔥 [修复] 将 .haze() 移到 Surface 内部
+                        // 这样 haze 源是 AppNavigation 内容，不会被 Surface 的不透明背景遮挡
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .haze(state = mainHazeState)
+                        ) {
+                            // 🔥 SharedTransitionProvider 包裹导航，启用共享元素过渡
+                            SharedTransitionProvider {
+                                AppNavigation(
+                                    navController = navController,
+                                    miniPlayerManager = miniPlayerManager,
+                                    isInPipMode = isInPipMode,
+                                    onVideoDetailEnter = { 
+                                        isInVideoDetail = true
+                                        Logger.d(TAG, "🎬 进入视频详情页")
+                                    },
+                                    onVideoDetailExit = { 
+                                        isInVideoDetail = false
+                                        Logger.d(TAG, "🔙 退出视频详情页")
+                                    },
+                                    mainHazeState = mainHazeState // 🔥🔥 传递全局 Haze 状态
+                                )
+                            }
+                            
+                            // 🔥🔥 [关键修复] OnboardingBottomSheet 必须在 haze 源 Box 内部
+                            // 这样 hazeChild 可以模糊同一个 Box 内的兄弟内容 (AppNavigation)
+                            // 与 HomeScreen 中 FrostedBottomBar 的工作原理一致
+                            OnboardingBottomSheet(
+                                visible = showWelcome,
                                 onDismiss = {
                                     prefs.edit().putBoolean(KEY_FIRST_LAUNCH, true).apply()
                                     showWelcome = false
-                                }
+                                },
+                                mainHazeState = mainHazeState
                             )
                         }
                     }

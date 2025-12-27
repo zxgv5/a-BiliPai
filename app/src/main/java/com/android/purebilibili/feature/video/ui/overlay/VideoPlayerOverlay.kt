@@ -12,11 +12,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.SubtitlesOff
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,7 +37,7 @@ import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
 import com.android.purebilibili.feature.video.ui.components.AspectRatioMenu
 import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
 import kotlinx.coroutines.delay
-import androidx.compose.material.icons.rounded.Share
+
 import androidx.compose.ui.platform.LocalContext
 import com.android.purebilibili.core.util.ShareUtils
 
@@ -258,9 +257,9 @@ fun VideoPlayerOverlay(
             }
         }
 
-        // --- 5. 中央播放/暂停大图标 ---
+        // --- 5. 中央播放/暂停大图标 (仅全屏模式显示) ---
         AnimatedVisibility(
-            visible = isVisible && !isPlaying && !isQualitySwitching,
+            visible = isVisible && !isPlaying && !isQualitySwitching && isFullscreen,
             modifier = Modifier.align(Alignment.Center),
             enter = scaleIn(tween(250)) + fadeIn(tween(200)),
             exit = scaleOut(tween(200)) + fadeOut(tween(200))
@@ -273,7 +272,7 @@ fun VideoPlayerOverlay(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        Icons.Default.PlayArrow,
+                        CupertinoIcons.Default.Play,
                         contentDescription = "播放",
                         tint = Color.White.copy(alpha = 0.95f),
                         modifier = Modifier.size(42.dp)
@@ -395,7 +394,7 @@ private fun PortraitTopBar(
                 .background(Color.Black.copy(alpha = 0.4f), CircleShape)
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = CupertinoIcons.Default.ChevronBackward,
                 contentDescription = "返回",
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
@@ -410,7 +409,7 @@ private fun PortraitTopBar(
                 .background(Color.Black.copy(alpha = 0.4f), CircleShape)
         ) {
             Icon(
-                imageVector = Icons.Rounded.Share,
+                imageVector = CupertinoIcons.Default.SquareAndArrowUp,
                 contentDescription = "分享",
                 tint = Color.White,
                 modifier = Modifier.size(22.dp)

@@ -1,0 +1,156 @@
+// 文件路径: feature/settings/AnimationSettingsScreen.kt
+package com.android.purebilibili.feature.settings
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.purebilibili.core.theme.*
+import com.android.purebilibili.core.ui.blur.BlurIntensity
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import kotlinx.coroutines.launch
+
+/**
+ * 🎬 动画与效果设置二级页面
+ * 管理卡片动画、过渡效果、磨砂效果等
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AnimationSettingsScreen(
+    viewModel: SettingsViewModel = viewModel(),
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val state by viewModel.state.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("动画与效果", fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0.dp)
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            contentPadding = WindowInsets.navigationBars.asPaddingValues()
+        ) {
+            // 🎬 卡片动画
+            item { SettingsSectionTitle("卡片动画") }
+            item {
+                SettingsGroup {
+                    SettingSwitchItem(
+                        icon = CupertinoIcons.Default.WandAndStars,
+                        title = "进场动画",
+                        subtitle = "首页视频卡片的入场动画效果",
+                        checked = state.cardAnimationEnabled,
+                        onCheckedChange = { viewModel.toggleCardAnimation(it) },
+                        iconTint = iOSPink
+                    )
+                    Divider()
+                    SettingSwitchItem(
+                        icon = CupertinoIcons.Default.ArrowLeftArrowRight,
+                        title = "过渡动画",
+                        subtitle = "点击卡片时的共享元素过渡效果",
+                        checked = state.cardTransitionEnabled,
+                        onCheckedChange = { viewModel.toggleCardTransition(it) },
+                        iconTint = iOSTeal
+                    )
+                }
+            }
+            
+            // ✨ 磨砂效果
+            item { SettingsSectionTitle("磨砂效果") }
+            item {
+                SettingsGroup {
+                    SettingSwitchItem(
+                        icon = CupertinoIcons.Default.Sparkles,
+                        title = "底栏磨砂",
+                        subtitle = "底部导航栏的毛玻璃模糊效果",
+                        checked = state.bottomBarBlurEnabled,
+                        onCheckedChange = { viewModel.toggleBottomBarBlur(it) },
+                        iconTint = iOSBlue
+                    )
+                    
+                    // 模糊强度（仅在开启时显示）
+                    if (state.bottomBarBlurEnabled) {
+                        Divider()
+                        BlurIntensitySelector(
+                            selectedIntensity = state.blurIntensity,
+                            onIntensityChange = { viewModel.setBlurIntensity(it) }
+                        )
+                    }
+                }
+            }
+            
+            // 📐 底栏样式
+            item { SettingsSectionTitle("底栏样式") }
+            item {
+                SettingsGroup {
+                    SettingSwitchItem(
+                        icon = CupertinoIcons.Default.RectangleStack,
+                        title = "悬浮底栏",
+                        subtitle = "关闭后底栏将沉浸式贴底显示",
+                        checked = state.isBottomBarFloating,
+                        onCheckedChange = { viewModel.toggleBottomBarFloating(it) },
+                        iconTint = iOSPurple
+                    )
+                }
+            }
+            
+            // 💡 提示
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            CupertinoIcons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = iOSOrange,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "关闭动画可以减少电量消耗，提升流畅度",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+    }
+}

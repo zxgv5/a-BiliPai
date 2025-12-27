@@ -1,17 +1,21 @@
 // File: feature/video/ui/overlay/BottomControlBar.kt
 package com.android.purebilibili.feature.video.ui.overlay
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.SubtitlesOff
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,7 +98,7 @@ fun BottomControlBar(
                     modifier = Modifier.size(36.dp)  // 🔥 缩小按钮
                 ) {
                     Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        if (isPlaying) CupertinoIcons.Default.Pause else CupertinoIcons.Default.Play,
                         null,
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)  // 🔥 缩小图标
@@ -157,7 +161,7 @@ fun BottomControlBar(
                         modifier = Modifier.size(26.dp)  // 🔥 缩小按钮
                     ) {
                         Icon(
-                            if (danmakuEnabled) Icons.Rounded.Subtitles else Icons.Rounded.SubtitlesOff,
+                            if (danmakuEnabled) CupertinoIcons.Default.TextBubble else CupertinoIcons.Outlined.TextBubble,
                             contentDescription = if (danmakuEnabled) "关闭弹幕" else "开启弹幕",
                             tint = if (danmakuEnabled) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f),
                             modifier = Modifier.size(16.dp)  // 🔥 缩小图标
@@ -192,7 +196,7 @@ fun BottomControlBar(
                 modifier = Modifier.size(36.dp)  // 🔥 缩小按钮
             ) {
                 Icon(
-                    if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                    if (isFullscreen) CupertinoIcons.Default.ArrowDownRightAndArrowUpLeft else CupertinoIcons.Default.ArrowUpLeftAndArrowDownRight,
                     null,
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)  // 🔥 缩小图标
@@ -203,7 +207,7 @@ fun BottomControlBar(
 }
 
 /**
- * Video Progress Bar
+ * Video Progress Bar - 自定义细进度条
  */
 @Composable
 fun VideoProgressBar(
@@ -213,6 +217,7 @@ fun VideoProgressBar(
     onSeek: (Long) -> Unit
 ) {
     val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
+    val bufferedProgress = if (duration > 0) bufferedPosition.toFloat() / duration else 0f
     var tempProgress by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
 
@@ -221,24 +226,78 @@ fun VideoProgressBar(
             tempProgress = progress
         }
     }
+    
+    val displayProgress = if (isDragging) tempProgress else progress
+    val primaryColor = MaterialTheme.colorScheme.primary
 
-    Slider(
-        value = if (isDragging) tempProgress else progress,
-        onValueChange = {
-            isDragging = true
-            tempProgress = it
-        },
-        onValueChangeFinished = {
-            isDragging = false
-            onSeek((tempProgress * duration).toLong())
-        },
-        colors = SliderDefaults.colors(
-            thumbColor = MaterialTheme.colorScheme.primary,
-            activeTrackColor = MaterialTheme.colorScheme.primary,
-            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-        ),
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(24.dp)
-    )
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                    onSeek((newProgress * duration).toLong())
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        isDragging = true
+                        tempProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        tempProgress = (change.position.x / size.width).coerceIn(0f, 1f)
+                    },
+                    onDragEnd = {
+                        isDragging = false
+                        onSeek((tempProgress * duration).toLong())
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                        tempProgress = progress
+                    }
+                )
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        // 背景轨道
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(1.5.dp))
+        )
+        
+        // 缓冲进度
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(bufferedProgress.coerceIn(0f, 1f))
+                .height(3.dp)
+                .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(1.5.dp))
+        )
+        
+        // 当前进度
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(displayProgress.coerceIn(0f, 1f))
+                .height(3.dp)
+                .background(primaryColor, RoundedCornerShape(1.5.dp))
+        )
+        
+        // 滑块（圆点）
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(displayProgress.coerceIn(0f, 1f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(12.dp)
+                    .offset(x = 6.dp)
+                    .background(primaryColor, androidx.compose.foundation.shape.CircleShape)
+            )
+        }
+    }
 }

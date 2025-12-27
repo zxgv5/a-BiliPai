@@ -73,13 +73,28 @@ val ThemeColors = listOf(
     Color(0xFF007AFF),  // 0: iOS 蓝色 (默认)
     Color(0xFFFA7298),  // 1: B站粉色 (BiliPink)
     Color(0xFF00A1D6),  // 2: B站蓝色 (Bilibili Blue)
-    Color(0xFF4CAF50),  // 3: 绿色 (Material Green)
+    Color(0xFF34C759),  // 3: iOS 开关绿色 (iOS Switch Green)
     Color(0xFF9C27B0),  // 4: 紫色 (Material Purple)
     Color(0xFFFF5722),  // 5: 橙色 (Material Deep Orange)
     Color(0xFF607D8B),  // 6: 蓝灰色 (Material Blue Grey)
+    Color(0xFFFF6B6B),  // 7: 珊瑚红 (Coral)
+    Color(0xFF5856D6),  // 8: 靛蓝色 (Indigo)
+    Color(0xFF00BFA5),  // 9: 薄荷绿 (Mint)
 )
 
-val ThemeColorNames = listOf("iOS蓝", "B站粉", "B站蓝", "绿色", "紫色", "橙色", "蓝灰")
+// 🔥 主题颜色名称
+val ThemeColorNames = listOf(
+    "经典蓝",
+    "樱花粉",
+    "天空蓝",
+    "清新绿",
+    "梦幻紫",
+    "活力橙",
+    "蓝灰",
+    "珊瑚红",
+    "靛蓝",
+    "薄荷绿"
+)
 
 // 🔥🔥 --- 底栏项目可选颜色调色板 ---
 /**

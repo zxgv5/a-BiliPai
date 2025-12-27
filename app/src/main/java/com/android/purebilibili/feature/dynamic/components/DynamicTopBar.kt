@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,7 +15,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// 🔥 已改用 MaterialTheme.colorScheme.primary
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
+
+// 🔥 动态页面布局模式
+enum class DynamicDisplayMode {
+    SIDEBAR,     // 侧边栏模式（默认，UP主列表在左侧）
+    HORIZONTAL   // 横向模式（UP主列表在顶部，类似 Telegram）
+}
 
 /**
  * 🔥 带Tab的顶栏
@@ -27,7 +34,9 @@ fun DynamicTopBarWithTabs(
     selectedTab: Int,
     tabs: List<String>,
     onTabSelected: (Int) -> Unit,
-    onBackClick: () -> Unit = {},  // 🔥 返回首页回调
+    displayMode: DynamicDisplayMode = DynamicDisplayMode.SIDEBAR,
+    onDisplayModeChange: (DynamicDisplayMode) -> Unit = {},
+    onBackClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -54,7 +63,7 @@ fun DynamicTopBarWithTabs(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = CupertinoIcons.Default.ChevronBackward,
                         contentDescription = "返回首页",
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(24.dp)
@@ -70,6 +79,26 @@ fun DynamicTopBarWithTabs(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                // 🔥 布局模式切换按钮
+                IconButton(
+                    onClick = {
+                        val newMode = if (displayMode == DynamicDisplayMode.SIDEBAR) 
+                            DynamicDisplayMode.HORIZONTAL else DynamicDisplayMode.SIDEBAR
+                        onDisplayModeChange(newMode)
+                    },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = if (displayMode == DynamicDisplayMode.SIDEBAR)
+                            CupertinoIcons.Default.ListBullet else CupertinoIcons.Default.RectangleStack,
+                        contentDescription = "切换布局模式",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
             
             // Tab栏

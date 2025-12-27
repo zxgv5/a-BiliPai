@@ -23,7 +23,14 @@ sealed class SpaceUiState {
         val hasMoreVideos: Boolean = true,
         // 🔥 视频分类
         val categories: List<SpaceVideoCategory> = emptyList(),
-        val selectedTid: Int = 0  // 0 表示全部
+        val selectedTid: Int = 0,  // 0 表示全部
+        // 🔥 视频排序
+        val sortOrder: VideoSortOrder = VideoSortOrder.PUBDATE,
+        // 🔥 合集和系列
+        val seasons: List<SeasonItem> = emptyList(),
+        val series: List<SeriesItem> = emptyList(),
+        val seasonArchives: Map<Long, List<SeasonArchiveItem>> = emptyMap(),  // season_id -> videos
+        val seriesArchives: Map<Long, List<SeriesArchiveItem>> = emptyMap()   // series_id -> videos
     ) : SpaceUiState()
     data class Error(val message: String) : SpaceUiState()
 }
@@ -84,6 +91,30 @@ class SpaceViewModel : ViewModel() {
                     val categories = extractCategories(videos)
                     com.android.purebilibili.core.util.Logger.d("SpaceVM", "📊 Categories extracted: ${categories.size} - ${categories.map { it.name }}")
                     
+                    // 🔥 加载合集和系列
+                    val seasonsSeriesResult = fetchSeasonsSeriesList(mid)
+                    val seasons = seasonsSeriesResult?.items_lists?.seasons_list ?: emptyList()
+                    val series = seasonsSeriesResult?.items_lists?.series_list ?: emptyList()
+                    com.android.purebilibili.core.util.Logger.d("SpaceVM", "📦 Seasons: ${seasons.size}, Series: ${series.size}")
+                    
+                    // 🔥 预加载每个合集的前几个视频
+                    val seasonArchives = mutableMapOf<Long, List<SeasonArchiveItem>>()
+                    seasons.take(5).forEach { season ->
+                        val archives = fetchSeasonArchives(mid, season.meta.season_id)
+                        if (archives != null) {
+                            seasonArchives[season.meta.season_id] = archives.take(10)
+                        }
+                    }
+                    
+                    // 🔥 预加载每个系列的前几个视频
+                    val seriesArchives = mutableMapOf<Long, List<SeriesArchiveItem>>()
+                    series.take(5).forEach { seriesItem ->
+                        val archives = fetchSeriesArchives(mid, seriesItem.meta.series_id)
+                        if (archives != null) {
+                            seriesArchives[seriesItem.meta.series_id] = archives.take(10)
+                        }
+                    }
+                    
                     _uiState.value = SpaceUiState.Success(
                         userInfo = userInfo,
                         relationStat = relationStat,
@@ -91,7 +122,11 @@ class SpaceViewModel : ViewModel() {
                         videos = videos,
                         totalVideos = videosResult?.page?.count ?: 0,
                         hasMoreVideos = videos.size >= pageSize,
-                        categories = categories
+                        categories = categories,
+                        seasons = seasons,
+                        series = series,
+                        seasonArchives = seasonArchives,
+                        seriesArchives = seriesArchives
                     )
                 } else {
                     _uiState.value = SpaceUiState.Error("获取用户信息失败")
@@ -107,25 +142,31 @@ class SpaceViewModel : ViewModel() {
         val current = _uiState.value as? SpaceUiState.Success ?: return
         if (current.isLoadingMore || !current.hasMoreVideos) return
         
+        android.util.Log.d("SpaceVM", "🔥 loadMoreVideos: page=${currentPage+1}, tid=$currentTid, order=$currentOrder")
+        
         viewModelScope.launch {
             _uiState.value = current.copy(isLoadingMore = true)
             
             try {
                 val nextPage = currentPage + 1
-                val result = fetchSpaceVideos(currentMid, nextPage, cachedImgKey, cachedSubKey)
+                // 🔥 修复: 使用当前的 tid 和 order
+                val result = fetchSpaceVideos(currentMid, nextPage, cachedImgKey, cachedSubKey, currentTid, currentOrder)
                 
                 if (result != null) {
                     currentPage = nextPage
                     val newVideos = current.videos + (result.list.vlist)
+                    android.util.Log.d("SpaceVM", "🔥 loadMoreVideos success: +${result.list.vlist.size} videos, total=${newVideos.size}")
                     _uiState.value = current.copy(
                         videos = newVideos,
                         isLoadingMore = false,
                         hasMoreVideos = result.list.vlist.size >= pageSize
                     )
                 } else {
+                    android.util.Log.e("SpaceVM", "🔥 loadMoreVideos failed: result is null")
                     _uiState.value = current.copy(isLoadingMore = false)
                 }
             } catch (e: Exception) {
+                android.util.Log.e("SpaceVM", "🔥 loadMoreVideos error: ${e.message}", e)
                 _uiState.value = current.copy(isLoadingMore = false)
             }
         }
@@ -179,14 +220,21 @@ class SpaceViewModel : ViewModel() {
         }
     }
     
-    // 🔥 支持 tid 参数的视频获取
-    private suspend fun fetchSpaceVideos(mid: Long, page: Int, imgKey: String, subKey: String, tid: Int = 0): SpaceVideoData? {
+    // 🔥 支持 tid 和 order 参数的视频获取
+    private suspend fun fetchSpaceVideos(
+        mid: Long, 
+        page: Int, 
+        imgKey: String, 
+        subKey: String, 
+        tid: Int = 0,
+        order: VideoSortOrder = VideoSortOrder.PUBDATE
+    ): SpaceVideoData? {
         return try {
             val params = WbiUtils.sign(mutableMapOf(
                 "mid" to mid.toString(),
                 "pn" to page.toString(),
                 "ps" to pageSize.toString(),
-                "order" to "pubdate"  // 按发布时间排序
+                "order" to order.apiValue  // 🔥 使用传入的排序方式
             ).apply {
                 if (tid > 0) put("tid", tid.toString())  // 🔥 添加分类筛选
             }.toMap(), imgKey, subKey)
@@ -200,23 +248,27 @@ class SpaceViewModel : ViewModel() {
     
     // 🔥 分类选择
     private var currentTid = 0
+    private var currentOrder = VideoSortOrder.PUBDATE
     
-    fun selectCategory(tid: Int) {
+    // 🔥 排序选择
+    fun selectSortOrder(order: VideoSortOrder) {
         val current = _uiState.value as? SpaceUiState.Success ?: return
-        if (current.selectedTid == tid) return  // 避免重复选择
+        if (current.sortOrder == order) return
         
-        currentTid = tid
+        android.util.Log.d("SpaceVM", "🔥 selectSortOrder: order=${order.apiValue}, currentTid=$currentTid")
+        
+        currentOrder = order
         currentPage = 1
         
         viewModelScope.launch {
             _uiState.value = current.copy(
-                selectedTid = tid,
+                sortOrder = order,
                 videos = emptyList(),
                 isLoadingMore = true
             )
             
             try {
-                val result = fetchSpaceVideos(currentMid, 1, cachedImgKey, cachedSubKey, tid)
+                val result = fetchSpaceVideos(currentMid, 1, cachedImgKey, cachedSubKey, currentTid, order)
                 val currentState = _uiState.value as? SpaceUiState.Success ?: return@launch
                 
                 if (result != null) {
@@ -230,6 +282,47 @@ class SpaceViewModel : ViewModel() {
                     _uiState.value = currentState.copy(isLoadingMore = false)
                 }
             } catch (e: Exception) {
+                val currentState = _uiState.value as? SpaceUiState.Success ?: return@launch
+                _uiState.value = currentState.copy(isLoadingMore = false)
+            }
+        }
+    }
+    
+    fun selectCategory(tid: Int) {
+        val current = _uiState.value as? SpaceUiState.Success ?: return
+        if (current.selectedTid == tid) return  // 避免重复选择
+        
+        android.util.Log.d("SpaceVM", "🔥 selectCategory: tid=$tid, currentOrder=$currentOrder")
+        
+        currentTid = tid
+        currentPage = 1
+        
+        viewModelScope.launch {
+            _uiState.value = current.copy(
+                selectedTid = tid,
+                videos = emptyList(),
+                isLoadingMore = true
+            )
+            
+            try {
+                // 🔥 修复: 使用当前排序方式
+                val result = fetchSpaceVideos(currentMid, 1, cachedImgKey, cachedSubKey, tid, currentOrder)
+                val currentState = _uiState.value as? SpaceUiState.Success ?: return@launch
+                
+                if (result != null) {
+                    android.util.Log.d("SpaceVM", "🔥 selectCategory success: ${result.list.vlist.size} videos")
+                    _uiState.value = currentState.copy(
+                        videos = result.list.vlist,
+                        totalVideos = result.page.count,
+                        hasMoreVideos = result.list.vlist.size >= pageSize,
+                        isLoadingMore = false
+                    )
+                } else {
+                    android.util.Log.e("SpaceVM", "🔥 selectCategory failed: result is null")
+                    _uiState.value = currentState.copy(isLoadingMore = false)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SpaceVM", "🔥 selectCategory error: ${e.message}", e)
                 val currentState = _uiState.value as? SpaceUiState.Success ?: return@launch
                 _uiState.value = currentState.copy(isLoadingMore = false)
             }
@@ -253,5 +346,53 @@ class SpaceViewModel : ViewModel() {
                 )
             }
             .sortedByDescending { it.count }
+    }
+    
+    // 🔥 获取合集和系列列表
+    private suspend fun fetchSeasonsSeriesList(mid: Long): SeasonsSeriesData? {
+        return try {
+            val response = spaceApi.getSeasonsSeriesList(mid)
+            if (response.code == 0) {
+                response.data
+            } else {
+                android.util.Log.e("SpaceVM", "fetchSeasonsSeriesList failed: ${response.message}")
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SpaceVM", "fetchSeasonsSeriesList error: ${e.message}", e)
+            null
+        }
+    }
+    
+    // 🔥 获取合集内的视频列表
+    private suspend fun fetchSeasonArchives(mid: Long, seasonId: Long): List<SeasonArchiveItem>? {
+        return try {
+            val response = spaceApi.getSeasonArchives(mid, seasonId)
+            if (response.code == 0) {
+                response.data?.archives
+            } else {
+                android.util.Log.e("SpaceVM", "fetchSeasonArchives failed: ${response.message}")
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SpaceVM", "fetchSeasonArchives error: ${e.message}", e)
+            null
+        }
+    }
+    
+    // 🔥 获取系列内的视频列表
+    private suspend fun fetchSeriesArchives(mid: Long, seriesId: Long): List<SeriesArchiveItem>? {
+        return try {
+            val response = spaceApi.getSeriesArchives(mid, seriesId)
+            if (response.code == 0) {
+                response.data?.archives
+            } else {
+                android.util.Log.e("SpaceVM", "fetchSeriesArchives failed: ${response.message}")
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SpaceVM", "fetchSeriesArchives error: ${e.message}", e)
+            null
+        }
     }
 }

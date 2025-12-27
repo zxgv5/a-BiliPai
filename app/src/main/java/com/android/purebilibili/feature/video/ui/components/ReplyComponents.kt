@@ -8,9 +8,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.ThumbUp
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +29,8 @@ import coil.request.ImageRequest
 // 🔥 已改用 MaterialTheme.colorScheme.primary
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.data.model.response.ReplyItem
+import com.android.purebilibili.data.model.response.ReplyPicture
+import androidx.compose.ui.layout.ContentScale
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -62,11 +65,16 @@ fun ReplyHeader(count: Int) {
 @Composable
 fun ReplyItemView(
     item: ReplyItem,
+    upMid: Long = 0,  // 🔥 UP主的 mid，用于显示 UP 标签
+    isPinned: Boolean = false,  // 🔥 是否置顶评论
     emoteMap: Map<String, String> = emptyMap(),
     onClick: () -> Unit,
     onSubClick: (ReplyItem) -> Unit,
-    onTimestampClick: ((Long) -> Unit)? = null  // 🔥 新增：时间戳点击回调
+    onTimestampClick: ((Long) -> Unit)? = null,
+    onImagePreview: ((List<String>, Int) -> Unit)? = null  // 🔥 图片预览回调
 ) {
+    // 判断是否是 UP 主的评论
+    val isUpComment = upMid > 0 && item.mid == upMid
     val localEmoteMap = remember(item.content.emote, emoteMap) {
         val mergedMap = emoteMap.toMutableMap()
         item.content.emote?.forEach { (key, value) -> mergedMap[key] = value.url }
@@ -96,8 +104,13 @@ fun ReplyItemView(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // 🔥 用户名 + 等级 - 统一颜色风格
+                // 🔥 用户名 + 等级 + UP标签 + 置顶标签
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 置顶标签
+                    if (isPinned) {
+                        PinnedTag()
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                     Text(
                         text = item.member.uname,
                         fontSize = 13.sp,
@@ -109,6 +122,11 @@ fun ReplyItemView(
                     Spacer(modifier = Modifier.width(6.dp))
                     // 🔥 优化后的等级标签
                     LevelTag(level = item.member.levelInfo.currentLevel)
+                    // UP标签
+                    if (isUpComment) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        UpTag()
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -122,6 +140,17 @@ fun ReplyItemView(
                     onTimestampClick = onTimestampClick
                 )
 
+                // 🔥 评论图片
+                if (!item.content.pictures.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CommentPictures(
+                        pictures = item.content.pictures,
+                        onImageClick = { images, index ->
+                            onImagePreview?.invoke(images, index)
+                        }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // 🔥 时间 + 点赞 + 回复 - 统一使用浅灰色
@@ -134,7 +163,7 @@ fun ReplyItemView(
                     Spacer(modifier = Modifier.width(20.dp))
 
                     Icon(
-                        imageVector = Icons.Outlined.ThumbUp,
+                        imageVector = CupertinoIcons.Default.Heart,
                         contentDescription = "点赞",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
@@ -151,7 +180,7 @@ fun ReplyItemView(
                     Spacer(modifier = Modifier.width(20.dp))
 
                     Icon(
-                        imageVector = Icons.Outlined.ChatBubbleOutline,
+                        imageVector = CupertinoIcons.Default.Message,
                         contentDescription = "回复",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
@@ -421,4 +450,108 @@ fun formatTime(timestamp: Long): String {
     val date = Date(timestamp * 1000)
     val sdf = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
     return sdf.format(date)
+}
+
+// 🔥🔥 UP 标签组件
+@Composable
+fun UpTag() {
+    Box(
+        modifier = Modifier
+            .background(
+                color = Color(0xFFFF6699),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 4.dp, vertical = 1.dp)
+    ) {
+        Text(
+            text = "UP",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+    }
+}
+
+// 🔥🔥 置顶标签组件
+@Composable
+fun PinnedTag() {
+    Box(
+        modifier = Modifier
+            .background(
+                color = Color(0xFFFFA500),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 4.dp, vertical = 1.dp)
+    ) {
+        Text(
+            text = "置顶",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+    }
+}
+
+// 🔥🔥 评论图片网格组件
+@Composable
+fun CommentPictures(
+    pictures: List<ReplyPicture>,
+    onImageClick: (List<String>, Int) -> Unit
+) {
+    val imageUrls = pictures.map { FormatUtils.fixImageUrl(it.imgSrc) }
+    val context = LocalContext.current
+    
+    // 根据图片数量选择不同的布局
+    when (pictures.size) {
+        1 -> {
+            // 单张图片：限制最大宽度和高度
+            val pic = pictures[0]
+            val aspectRatio = if (pic.imgHeight > 0) pic.imgWidth.toFloat() / pic.imgHeight else 1f
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrls[0])
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .widthIn(max = 200.dp)
+                    .heightIn(max = 200.dp)
+                    .aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onImageClick(imageUrls, 0) }
+            )
+        }
+        else -> {
+            // 多张图片：网格布局 (最多显示 3 列)
+            val columns = minOf(pictures.size, 3)
+            val rows = (pictures.size + columns - 1) / columns
+            
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (row in 0 until rows) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (col in 0 until columns) {
+                            val index = row * columns + col
+                            if (index < pictures.size) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(imageUrls[index])
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable { onImageClick(imageUrls, index) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

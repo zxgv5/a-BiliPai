@@ -13,9 +13,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -137,7 +138,7 @@ fun PlaybackSettingsScreen(
                 title = { Text("播放设置", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -162,7 +163,7 @@ fun PlaybackSettingsScreen(
             item {
                 SettingsGroup {
                     SettingSwitchItem(
-                        icon = Icons.Outlined.Memory,
+                        icon = CupertinoIcons.Default.Cpu,
                         title = "启用硬件解码",
                         subtitle = "减少发热和耗电 (推荐开启)",
                         checked = state.hwDecode,
@@ -188,7 +189,7 @@ fun PlaybackSettingsScreen(
                 SettingsGroup {
                     // 🍎 点击展开模式选择
                     SettingClickableItem(
-                        icon = Icons.Outlined.PictureInPictureAlt,
+                        icon = CupertinoIcons.Default.Pip,
                         title = "小窗模式",
                         value = miniPlayerMode.label,
                         onClick = { isExpanded = !isExpanded },
@@ -249,7 +250,7 @@ fun PlaybackSettingsScreen(
                                     }
                                     if (isSelected) {
                                         Icon(
-                                            Icons.Outlined.Check,
+                                            CupertinoIcons.Default.Checkmark,
                                             contentDescription = "已选择",
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp)
@@ -272,7 +273,7 @@ fun PlaybackSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Outlined.Warning,
+                                CupertinoIcons.Default.ExclamationmarkTriangle,
                                 contentDescription = null,
                                 tint = iOSOrange,
                                 modifier = Modifier.size(22.dp)
@@ -291,7 +292,7 @@ fun PlaybackSettingsScreen(
                                 )
                             }
                             Icon(
-                                Icons.Outlined.ChevronRight,
+                                CupertinoIcons.Default.ChevronForward,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(20.dp)
@@ -308,7 +309,7 @@ fun PlaybackSettingsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Outlined.TouchApp,
+                                CupertinoIcons.Default.HandTap,
                                 contentDescription = null,
                                 tint = iOSOrange,
                                 modifier = Modifier.size(24.dp)
@@ -367,7 +368,7 @@ fun PlaybackSettingsScreen(
             item {
                 SettingsGroup {
                     SettingSwitchItem(
-                        icon = Icons.Outlined.Info,
+                        icon = CupertinoIcons.Default.ChartBar,
                         title = "详细统计信息",
                         subtitle = "显示 Codec、码率等 Geek 信息",
                         checked = isStatsEnabled,
@@ -385,7 +386,7 @@ fun PlaybackSettingsScreen(
             item {
                 SettingsGroup {
                     SettingSwitchItem(
-                        icon = Icons.Outlined.ThumbUp,
+                        icon = CupertinoIcons.Default.HeartCircle,
                         title = "双击点赞",
                         subtitle = "双击视频画面快捷点赞",
                         checked = state.doubleTapLike,
@@ -420,7 +421,7 @@ fun PlaybackSettingsScreen(
                     var wifiExpanded by remember { mutableStateOf(false) }
                     Column {
                         SettingClickableItem(
-                            icon = Icons.Outlined.Wifi,
+                            icon = CupertinoIcons.Default.Wifi,
                             title = "WiFi 默认画质",
                             value = getQualityLabel(wifiQuality),
                             onClick = { wifiExpanded = !wifiExpanded },
@@ -489,7 +490,7 @@ fun PlaybackSettingsScreen(
                     
                     Column {
                         SettingClickableItem(
-                            icon = Icons.Outlined.SignalCellularAlt,
+                            icon = CupertinoIcons.Default.ArrowDownCircle,
                             title = "流量 默认画质",
                             value = getQualityLabel(mobileQuality) + if (isDataSaverActive && mobileQuality > 32) " → $effectiveQualityLabel" else "",
                             onClick = { mobileExpanded = !mobileExpanded },
@@ -575,7 +576,7 @@ fun PlaybackSettingsScreen(
                 SettingsGroup {
                     // 🍎 点击展开模式选择
                     SettingClickableItem(
-                        icon = Icons.Outlined.DataSaverOn,
+                        icon = CupertinoIcons.Default.Leaf,
                         title = "省流量模式",
                         value = dataSaverMode.label,
                         onClick = { isExpanded = !isExpanded },
@@ -630,7 +631,7 @@ fun PlaybackSettingsScreen(
                                     }
                                     if (isSelected) {
                                         Icon(
-                                            Icons.Outlined.Check,
+                                            CupertinoIcons.Default.Checkmark,
                                             contentDescription = "已选择",
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp)
@@ -650,7 +651,7 @@ fun PlaybackSettingsScreen(
                         verticalAlignment = Alignment.Top
                     ) {
                         Icon(
-                            Icons.Outlined.Info,
+                            CupertinoIcons.Default.InfoCircle,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(18.dp)

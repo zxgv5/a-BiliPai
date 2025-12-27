@@ -267,7 +267,7 @@ object VideoRepository {
         }
     }
 
-    suspend fun getVideoDetails(bvid: String): Result<Pair<ViewInfo, PlayUrlData>> = withContext(Dispatchers.IO) {
+    suspend fun getVideoDetails(bvid: String, targetQuality: Int? = null): Result<Pair<ViewInfo, PlayUrlData>> = withContext(Dispatchers.IO) {
         try {
             val viewResp = api.getVideoInfo(bvid)
             val info = viewResp.data ?: throw Exception("视频详情为空: ${viewResp.code}")
@@ -298,13 +298,14 @@ object VideoRepository {
                 true // 出错时默认开启
             }
             
-            val startQuality = when {
+            // 🔥🔥 [关键修复] 优先使用传入的用户画质设置，否则使用内部逻辑
+            val startQuality = targetQuality ?: when {
                 isVip -> 116     // 大会员：优先 1080P+ (HDR)
                 isLogin && auto1080pEnabled -> 80  // 🧪 已登录 + 开启1080p：优先 1080p
                 isLogin -> 64    // 已登录非大会员（关闭1080p设置）：优先 720p
                 else -> 32       // 未登录：优先 480p（避免限制）
             }
-            com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 Selected startQuality=$startQuality (isLogin=$isLogin, isVip=$isVip, auto1080p=$auto1080pEnabled)")
+            com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 Selected startQuality=$startQuality (userSetting=$targetQuality, isLogin=$isLogin, isVip=$isVip, auto1080p=$auto1080pEnabled)")
 
             val playData = fetchPlayUrlRecursive(bvid, cid, startQuality)
                 ?: throw Exception("无法获取任何画质的播放地址")
@@ -401,27 +402,43 @@ object VideoRepository {
     }
 
     // 🔥🔥 [稳定版核心修复] 获取评论列表
-    suspend fun getComments(aid: Long, page: Int, ps: Int = 20): Result<ReplyData> = withContext(Dispatchers.IO) {
+    // 🔥🔥 [重构] 根据排序模式使用不同 API:
+    //   - mode=3 (热度): 使用 WBI API (x/v2/reply/wbi/main)
+    //   - mode=2 (时间): 使用旧版 API (x/v2/reply) 因为 WBI mode=2 只返回1条评论
+    suspend fun getComments(aid: Long, page: Int, ps: Int = 20, mode: Int = 3): Result<ReplyData> = withContext(Dispatchers.IO) {
         try {
             // 🔥🔥 [修复] 确保 buvid3 已初始化，解决未登录用户无法加载评论的问题
             ensureBuvid3FromSpi()
             
-            // 🔥 使用缓存 Keys
-            val (imgKey, subKey) = getWbiKeys()
-            com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 getComments: aid=$aid, page=$page, imgKey=${imgKey.take(8)}..., buvid3=${TokenManager.buvid3Cache?.take(10)}...")
+            val response = if (mode == 2) {
+                // 🔥🔥 [修复] 时间排序使用旧版 API - 这个 API 的 sort=0 才能正确返回按时间排序的评论
+                com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 getComments (Legacy): aid=$aid, page=$page, sort=0 (时间)")
+                api.getReplyListLegacy(
+                    oid = aid,
+                    type = 1,
+                    pn = page,
+                    ps = ps,
+                    sort = 0  // 旧版 API: 0=按时间, 1=按点赞
+                )
+            } else {
+                // 🔥 热度排序使用 WBI API
+                val (imgKey, subKey) = getWbiKeys()
+                com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 getComments (WBI): aid=$aid, page=$page, mode=3 (热度)")
+                
+                val params = TreeMap<String, String>()
+                params["oid"] = aid.toString()
+                params["type"] = "1"
+                params["mode"] = "3"  // WBI API: 3=热度
+                params["next"] = page.toString()
+                params["ps"] = ps.toString()
 
-            // 🔥 使用 TreeMap 保证签名顺序绝对正确
-            val params = TreeMap<String, String>()
-            params["oid"] = aid.toString()
-            params["type"] = "1"     // 1: 视频评论区
-            params["mode"] = "3"     // 3: 按热度排序
-            params["next"] = page.toString()
-            params["ps"] = ps.toString()
-
-            val signedParams = WbiUtils.sign(params, imgKey, subKey)
-            val response = api.getReplyList(signedParams)
+                val signedParams = WbiUtils.sign(params, imgKey, subKey)
+                api.getReplyList(signedParams)
+            }
             
-            com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 getComments response: code=${response.code}, message=${response.message}, replies=${response.data?.replies?.size ?: 0}")
+            // 🔥🔥 [增强日志] 显示排序模式和返回数量
+            val sortLabel = if (mode == 2) "时间" else "热度"
+            com.android.purebilibili.core.util.Logger.d("VideoRepo", "🔥 getComments result: mode=$mode($sortLabel), replies=${response.data?.replies?.size ?: 0}, code=${response.code}")
 
             if (response.code == 0) {
                 Result.success(response.data ?: ReplyData())

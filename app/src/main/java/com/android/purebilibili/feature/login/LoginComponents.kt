@@ -14,13 +14,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.outlined.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -102,7 +99,7 @@ fun TopBar(onClose: () -> Unit) {
                 .background(Color.White.copy(alpha = 0.1f), CircleShape)
         ) {
             Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
+                CupertinoIcons.Default.ChevronBackward,
                 contentDescription = "返回",
                 tint = Color.White
             )
@@ -186,9 +183,9 @@ fun LoginMethodTabs(
                     ) {
                         Icon(
                             imageVector = when (method) {
-                                LoginMethod.QR_CODE -> Icons.Outlined.QrCode2
-                                LoginMethod.PHONE_SMS -> Icons.Outlined.Smartphone
-                                LoginMethod.WEB_LOGIN -> Icons.Outlined.Language
+                                LoginMethod.QR_CODE -> CupertinoIcons.Default.Qrcode
+                                LoginMethod.PHONE_SMS -> CupertinoIcons.Default.Iphone
+                                LoginMethod.WEB_LOGIN -> CupertinoIcons.Default.Network
                             },
                             contentDescription = null,
                             tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
@@ -272,7 +269,7 @@ fun QrCodeLoginContent(
             }
             is LoginState.Error -> {
                 TextButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(CupertinoIcons.Default.ArrowClockwise, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("刷新二维码", color = MaterialTheme.colorScheme.primary)
                 }
@@ -341,7 +338,7 @@ private fun ScannedOverlay(bitmap: Bitmap) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        Icons.Outlined.PhoneAndroid,
+                        CupertinoIcons.Default.Iphone,
                         contentDescription = null,
                         tint = Color(0xFF4CAF50),
                         modifier = Modifier.size(40.dp)
@@ -366,7 +363,7 @@ private fun ErrorQrCode(message: String, onRetry: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            Icons.Outlined.ErrorOutline,
+            CupertinoIcons.Default.XmarkCircle,
             contentDescription = null,
             tint = Color(0xFFFF6B6B),
             modifier = Modifier.size(48.dp)
@@ -402,7 +399,7 @@ private fun SuccessIndicator() {
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    Icons.Default.Check,
+                    CupertinoIcons.Default.Checkmark,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(40.dp)
@@ -428,7 +425,7 @@ private fun QrCodeHint() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.Outlined.PhoneAndroid,
+                CupertinoIcons.Default.Iphone,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
@@ -464,7 +461,7 @@ private fun QrCodeHint() {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        Icons.Outlined.Lightbulb,
+                        CupertinoIcons.Default.Lightbulb,
                         contentDescription = null,
                         tint = Color(0xFFFFD54F),
                         modifier = Modifier.size(16.dp)
@@ -477,7 +474,7 @@ private fun QrCodeHint() {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        if (showTip) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                        if (showTip) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                         contentDescription = null,
                         tint = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier.size(16.dp)
@@ -617,7 +614,7 @@ fun WebLoginContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Outlined.Security,
+                    CupertinoIcons.Default.Checkmark,
                     contentDescription = null,
                     tint = Color(0xFF4CAF50),
                     modifier = Modifier.size(20.dp)
@@ -644,7 +641,7 @@ fun WebLoginContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
-                    Icons.Outlined.Language,
+                    CupertinoIcons.Default.Safari,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(64.dp)
@@ -685,7 +682,7 @@ fun WebLoginContent(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Outlined.Language, contentDescription = null, tint = Color.White)
+                        Icon(CupertinoIcons.Default.Safari, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("打开浏览器登录", color = Color.White)
                     }
@@ -707,7 +704,7 @@ fun WebLoginContent(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("验证中...", color = Color.White)
                         } else {
-                            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = Color.White)
+                            Icon(CupertinoIcons.Default.Checkmark, contentDescription = null, tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("验证登录状态", color = Color.White)
                         }
@@ -794,7 +791,7 @@ fun PhoneLoginContent(
                 verticalAlignment = Alignment.Top
             ) {
                 Icon(
-                    Icons.Outlined.Info,
+                    CupertinoIcons.Default.ExclamationmarkTriangle,
                     contentDescription = null,
                     tint = Color(0xFFFF9800),
                     modifier = Modifier.size(20.dp)
@@ -960,7 +957,7 @@ private fun PhoneInputSection(
     
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
-            Icons.Outlined.Smartphone,
+            CupertinoIcons.Default.Iphone,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(48.dp)
@@ -1038,7 +1035,7 @@ private fun SmsCodeInputSection(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
-            Icons.Outlined.Sms,
+            CupertinoIcons.Default.Envelope,
             contentDescription = null,
             tint = Color(0xFF4CAF50),
             modifier = Modifier.size(48.dp)
@@ -1105,7 +1102,7 @@ private fun ErrorSection(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
-            Icons.Outlined.ErrorOutline,
+            CupertinoIcons.Default.XmarkCircle,
             contentDescription = null,
             tint = Color(0xFFFF6B6B),
             modifier = Modifier.size(48.dp)

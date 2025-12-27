@@ -11,12 +11,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ArrowForward  // 🔥 底栏管理箭头
-import androidx.compose.material.icons.outlined.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,7 +43,10 @@ import kotlinx.coroutines.launch
 fun AppearanceSettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
     onBack: () -> Unit,
-    onNavigateToBottomBarSettings: () -> Unit = {}  // 🔥🔥 [新增] 底栏设置导航
+    onNavigateToBottomBarSettings: () -> Unit = {},  // 🔥 底栏设置导航
+    onNavigateToThemeSettings: () -> Unit = {},  // 🔥🔥 [新增] 主题设置导航
+    onNavigateToIconSettings: () -> Unit = {},  // 🔥🔥 [新增] 图标设置导航
+    onNavigateToAnimationSettings: () -> Unit = {}  // 🔥🔥 [新增] 动画设置导航
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
@@ -120,7 +121,7 @@ fun AppearanceSettingsScreen(
                 title = { Text("外观设置", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -140,6 +141,52 @@ fun AppearanceSettingsScreen(
             // 🔥🔥 [修复] 添加底部导航栏内边距，确保沉浸式效果
             contentPadding = WindowInsets.navigationBars.asPaddingValues()
         ) {
+            // 🔥🔥 [新增] 快速入口
+            item { SettingsSectionTitle("快速入口") }
+            item {
+                SettingsGroup {
+                    // 主题设置
+                    SettingClickableItem(
+                        icon = CupertinoIcons.Default.MoonStars,
+                        title = "主题设置",
+                        value = state.themeMode.label,
+                        onClick = onNavigateToThemeSettings,
+                        iconTint = iOSBlue
+                    )
+                    Divider()
+                    // 图标设置
+                    SettingClickableItem(
+                        icon = CupertinoIcons.Default.SquareStack3dUp,
+                        title = "应用图标",
+                        value = when(state.appIcon) {
+                            "3D" -> "3D立体"
+                            "Blue" -> "经典蓝"
+                            "Retro" -> "复古怀旧"
+                            "Flat" -> "扁平现代"
+                            "Flat Material" -> "扁平材质"
+                            "Neon" -> "霓虹"
+                            "Telegram Blue" -> "纸飞机蓝"
+                            "Pink" -> "樱花粉"
+                            "Purple" -> "香芋紫"
+                            "Green" -> "薄荷绿"
+                            "Dark" -> "暗夜蓝"
+                            else -> "默认"
+                        },
+                        onClick = onNavigateToIconSettings,
+                        iconTint = iOSPurple
+                    )
+                    Divider()
+                    // 动画设置
+                    SettingClickableItem(
+                        icon = CupertinoIcons.Default.WandAndStars,
+                        title = "动画与效果",
+                        value = if (state.cardAnimationEnabled) "已开启" else "已关闭",
+                        onClick = onNavigateToAnimationSettings,
+                        iconTint = iOSPink
+                    )
+                }
+            }
+            
             // 🍎 首页展示 - 抽屉式选择
             item { SettingsSectionTitle("首页展示") }
             item {
@@ -161,7 +208,7 @@ fun AppearanceSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Outlined.GridView,
+                                CupertinoIcons.Default.SquareOnSquare,
                                 contentDescription = null,
                                 tint = iOSBlue,
                                 modifier = Modifier.size(24.dp)
@@ -180,7 +227,7 @@ fun AppearanceSettingsScreen(
                                 )
                             }
                             Icon(
-                                imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                imageVector = if (isExpanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.size(24.dp)
@@ -230,7 +277,7 @@ fun AppearanceSettingsScreen(
                                         }
                                         if (isSelected) {
                                             Icon(
-                                                Icons.Outlined.Check,
+                                                CupertinoIcons.Default.Checkmark,
                                                 contentDescription = "已选择",
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(20.dp)
@@ -244,221 +291,6 @@ fun AppearanceSettingsScreen(
                 }
             }
 
-            // 🍎 深色模式
-            item { SettingsSectionTitle("主题") }
-            item {
-                SettingsGroup {
-                    SettingClickableItem(
-                        icon = Icons.Outlined.DarkMode,
-                        title = "深色模式",
-                        value = state.themeMode.label,
-                        onClick = { showThemeDialog = true },
-                        iconTint = iOSBlue
-                    )
-                    
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Divider()
-                        SettingSwitchItem(
-                            icon = Icons.Outlined.Palette,
-                            title = "动态取色 (Material You)",
-                            subtitle = "跟随系统壁纸变换应用主题色",
-                            checked = state.dynamicColor,
-                            onCheckedChange = { viewModel.toggleDynamicColor(it) },
-                            iconTint = iOSPink
-                        )
-                        
-                        // 🔥🔥 [新增] 动态取色预览
-                        if (state.dynamicColor) {
-                            DynamicColorPreview()
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    // 主题色选择器
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Outlined.ColorLens,
-                                contentDescription = null,
-                                tint = iOSPink,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    text = "主题色",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (state.dynamicColor) "已启用动态取色，此设置无效" 
-                                           else "选择应用主色调",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            com.android.purebilibili.core.theme.ThemeColors.forEachIndexed { index, color ->
-                                val isSelected = state.themeColorIndex == index && !state.dynamicColor
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                        .then(
-                                            if (isSelected) Modifier.border(
-                                                3.dp, 
-                                                MaterialTheme.colorScheme.onSurface,
-                                                CircleShape
-                                            ) else Modifier
-                                        )
-                                        .clickable(enabled = !state.dynamicColor) { 
-                                            viewModel.setThemeColorIndex(index) 
-                                        }
-                                        .graphicsLayer { 
-                                            alpha = if (state.dynamicColor) 0.4f else 1f 
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // 🍎 应用图标
-            item { SettingsSectionTitle("图标") }
-            item {
-                SettingsGroup {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Outlined.Apps,
-                                contentDescription = null,
-                                tint = iOSPurple,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    text = "应用图标",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "切换个性化启动图标",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        data class IconOption(val key: String, val name: String, val desc: String)
-                        val iconOptions = listOf(
-                            IconOption("3D", "3D立体", "默认"),
-                            IconOption("Blue", "经典蓝", "原版"),
-                            IconOption("Retro", "复古怀旧", "80年代"),
-                            IconOption("Flat", "扁平现代", "Material"),
-                            IconOption("Flat Material", "扁平材质", "Material You"),
-                            IconOption("Neon", "霓虹", "夜间"),
-                            IconOption("Telegram Blue", "纸飞机蓝", "Telegram"),
-                            IconOption("Pink", "樱花粉", "可爱"),
-                            IconOption("Purple", "香芋紫", "梦幻"),
-                            IconOption("Green", "薄荷绿", "清新"),
-                            IconOption("Dark", "暗夜蓝", "深色模式")
-                        )
-                        
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp)
-                        ) {
-                            items(iconOptions.size) { index ->
-                                val option = iconOptions[index]
-                                val isSelected = state.appIcon == option.key
-                                
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(56.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .clickable { 
-                                                if (!isSelected) {
-                                                    Toast.makeText(context, "正在切换图标...", Toast.LENGTH_SHORT).show()
-                                                    viewModel.setAppIcon(option.key)
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        val iconRes = when(option.key) {
-                                            "3D" -> com.android.purebilibili.R.mipmap.ic_launcher_3d
-                                            "Blue" -> com.android.purebilibili.R.mipmap.ic_launcher_blue
-                                            "Retro" -> com.android.purebilibili.R.mipmap.ic_launcher_retro
-                                            "Flat" -> com.android.purebilibili.R.mipmap.ic_launcher_flat
-                                            "Flat Material" -> com.android.purebilibili.R.mipmap.ic_launcher_flat_material
-                                            "Neon" -> com.android.purebilibili.R.mipmap.ic_launcher_neon
-                                            "Telegram Blue" -> com.android.purebilibili.R.mipmap.ic_launcher_telegram_blue
-                                            "Pink" -> com.android.purebilibili.R.mipmap.ic_launcher_telegram_pink
-                                            "Purple" -> com.android.purebilibili.R.mipmap.ic_launcher_telegram_purple
-                                            "Green" -> com.android.purebilibili.R.mipmap.ic_launcher_telegram_green
-                                            "Dark" -> com.android.purebilibili.R.mipmap.ic_launcher_telegram_dark
-                                            else -> com.android.purebilibili.R.mipmap.ic_launcher
-                                        }
-                                        AsyncImage(
-                                            model = iconRes,
-                                            contentDescription = option.name,
-                                            modifier = Modifier.size(48.dp)
-                                        )
-                                        
-                                        if (isSelected) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .matchParentSize()
-                                                    .background(Color.Black.copy(alpha = 0.3f))
-                                            )
-                                            Icon(
-                                                Icons.Filled.CheckCircle,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = option.name,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                    Text(
-                                        text = option.desc,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
             // 🍎 界面效果
             item { SettingsSectionTitle("界面效果") }
             item {
@@ -485,7 +317,7 @@ fun AppearanceSettingsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Outlined.Dashboard,
+                                CupertinoIcons.Default.Menucard,
                                 contentDescription = null,
                                 tint = iOSBlue,
                                 modifier = Modifier.size(20.dp)
@@ -505,7 +337,7 @@ fun AppearanceSettingsScreen(
                             )
                         }
                         Icon(
-                            Icons.Filled.ArrowForward,
+                            CupertinoIcons.Default.ChevronForward,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
@@ -527,7 +359,7 @@ fun AppearanceSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Outlined.Visibility,
+                                CupertinoIcons.Default.Eye,
                                 contentDescription = null,
                                 tint = com.android.purebilibili.core.theme.iOSOrange,
                                 modifier = Modifier.size(24.dp)
@@ -546,7 +378,7 @@ fun AppearanceSettingsScreen(
                                 )
                             }
                             Icon(
-                                imageVector = if (visibilityModeExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                imageVector = if (visibilityModeExpanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.size(24.dp)
@@ -599,7 +431,7 @@ fun AppearanceSettingsScreen(
                                         }
                                         if (isSelected) {
                                             Icon(
-                                                Icons.Outlined.Check,
+                                                CupertinoIcons.Default.Checkmark,
                                                 contentDescription = "已选择",
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(20.dp)
@@ -617,7 +449,7 @@ fun AppearanceSettingsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Outlined.Dashboard,
+                                CupertinoIcons.Default.Tag,
                                 contentDescription = null,
                                 tint = iOSPurple,
                                 modifier = Modifier.size(24.dp)
@@ -648,9 +480,9 @@ fun AppearanceSettingsScreen(
                         ) {
                             // 三种模式选择按钮
                             listOf(
-                                Triple(0, "图标+文字", Icons.Outlined.Dashboard),
-                                Triple(1, "仅图标", Icons.Outlined.Apps),
-                                Triple(2, "仅文字", Icons.Outlined.TextFields)
+                                Triple(0, "图标+文字", CupertinoIcons.Default.House),
+                                Triple(1, "仅图标", CupertinoIcons.Default.Heart),
+                                Triple(2, "仅文字", CupertinoIcons.Default.Character)
                             ).forEach { (mode, label, icon) ->
                                 val isSelected = state.bottomBarLabelMode == mode
                                 Column(
@@ -690,7 +522,7 @@ fun AppearanceSettingsScreen(
                     
                     // 🔥 悬浮底栏开关
                     SettingSwitchItem(
-                        icon = Icons.Outlined.ViewStream,
+                        icon = CupertinoIcons.Default.RectangleStack,
                         title = "悬浮底栏",
                         subtitle = "关闭后底栏将沉浸式贴底显示",
                         checked = state.isBottomBarFloating,
@@ -702,7 +534,7 @@ fun AppearanceSettingsScreen(
                     
                     // 🔥 底栏磨砂效果开关
                     SettingSwitchItem(
-                        icon = Icons.Outlined.BlurCircular,
+                        icon = CupertinoIcons.Default.Sparkles,
                         title = "底栏磨砂效果",
                         subtitle = "底部导航栏的毛玻璃模糊",
                         checked = state.bottomBarBlurEnabled,
@@ -723,7 +555,7 @@ fun AppearanceSettingsScreen(
                     
                     // 🔥 卡片进场动画开关
                     SettingSwitchItem(
-                        icon = Icons.Outlined.Animation,
+                        icon = CupertinoIcons.Default.WandAndStars,
                         title = "卡片进场动画",
                         subtitle = "首页视频卡片的入场动画效果",
                         checked = state.cardAnimationEnabled,
@@ -735,7 +567,7 @@ fun AppearanceSettingsScreen(
                     
                     // 🔥 卡片过渡动画开关
                     SettingSwitchItem(
-                        icon = Icons.Outlined.SwapHoriz,
+                        icon = CupertinoIcons.Default.ArrowLeftArrowRight,
                         title = "卡片过渡动画",
                         subtitle = "点击卡片时的共享元素过渡效果",
                         checked = state.cardTransitionEnabled,
@@ -776,7 +608,7 @@ fun BlurIntensitySelector(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.Outlined.BlurOn,
+                CupertinoIcons.Default.Sparkles,
                 contentDescription = null,
                 tint = iOSBlue,
                 modifier = Modifier.size(24.dp)
@@ -796,7 +628,7 @@ fun BlurIntensitySelector(
             }
             // 展开/收起箭头
             Icon(
-                imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                imageVector = if (isExpanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                 contentDescription = if (isExpanded) "收起" else "展开",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.size(24.dp)
@@ -811,6 +643,8 @@ fun BlurIntensitySelector(
         ) {
             Column(modifier = Modifier.padding(start = 40.dp, top = 4.dp, bottom = 8.dp)) {
                 BlurIntensityOption(
+                    icon = CupertinoIcons.Default.Drop,
+                    iconTint = iOSTeal,
                     title = "轻盈",
                     description = "通透感强，性能最佳",
                     isSelected = selectedIntensity == BlurIntensity.ULTRA_THIN,
@@ -821,6 +655,8 @@ fun BlurIntensitySelector(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 BlurIntensityOption(
+                    icon = CupertinoIcons.Default.CheckmarkCircle,
+                    iconTint = iOSBlue,
                     title = "标准",
                     description = "平衡美观与性能（推荐）",
                     isSelected = selectedIntensity == BlurIntensity.THIN,
@@ -831,6 +667,8 @@ fun BlurIntensitySelector(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 BlurIntensityOption(
+                    icon = CupertinoIcons.Default.Sparkle,
+                    iconTint = iOSPurple,
                     title = "浓郁",
                     description = "强烈磨砂质感",
                     isSelected = selectedIntensity == BlurIntensity.THICK,
@@ -846,6 +684,8 @@ fun BlurIntensitySelector(
 
 @Composable
 fun BlurIntensityOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
     title: String,
     description: String,
     isSelected: Boolean,
@@ -869,6 +709,13 @@ fun BlurIntensityOption(
             colors = RadioButtonDefaults.colors(
                 selectedColor = MaterialTheme.colorScheme.primary
             )
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {

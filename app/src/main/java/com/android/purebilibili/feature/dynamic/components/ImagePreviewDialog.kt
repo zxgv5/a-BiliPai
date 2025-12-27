@@ -10,11 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Download
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -122,7 +121,7 @@ fun ImagePreviewDialog(
                             )
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                imageVector = CupertinoIcons.Default.ChevronBackward,
                                 contentDescription = "上一张",
                                 tint = Color.White
                             )
@@ -140,7 +139,7 @@ fun ImagePreviewDialog(
                             )
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                imageVector = CupertinoIcons.Default.ChevronForward,
                                 contentDescription = "下一张",
                                 tint = Color.White
                             )
@@ -174,7 +173,7 @@ fun ImagePreviewDialog(
                 // 关闭按钮
                 IconButton(onClick = onDismiss) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = CupertinoIcons.Default.Xmark,
                         contentDescription = "关闭",
                         tint = Color.White
                     )
@@ -215,7 +214,7 @@ fun ImagePreviewDialog(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.Download,
+                            imageVector = CupertinoIcons.Default.ArrowDownCircle,
                             contentDescription = "保存图片",
                             tint = Color.White
                         )

@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +27,7 @@ import coil.request.ImageRequest
 // 🔥 已改用 MaterialTheme.colorScheme.primary
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.data.model.response.ViewInfo
+import com.android.purebilibili.data.model.response.VideoTag
 
 /**
  * Video Info Section Components
@@ -76,7 +79,7 @@ fun VideoTitleSection(
             )
             Spacer(Modifier.width(4.dp))
             Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                imageVector = if (expanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(18.dp)
@@ -97,10 +100,13 @@ fun VideoTitleSection(
 
 /**
  * Video Title with Description (Official layout: title + stats + description)
+ * 🔥 Description and tags hidden by default, shown on expand
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun VideoTitleWithDesc(
-    info: ViewInfo
+    info: ViewInfo,
+    videoTags: List<VideoTag> = emptyList()  // 🔥 视频标签
 ) {
     var expanded by remember { mutableStateOf(false) }
     
@@ -132,7 +138,7 @@ fun VideoTitleWithDesc(
             )
             Spacer(Modifier.width(4.dp))
             Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                imageVector = if (expanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp)
@@ -153,20 +159,53 @@ fun VideoTitleWithDesc(
             )
         }
         
-        // Description (dynamic) - follows stats
-        if (info.desc.isNotBlank()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = info.desc,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                maxLines = if (expanded) Int.MAX_VALUE else 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.animateContentSize()
-            )
+        // 🔥🔥 Description - 默认隐藏，展开后显示
+        androidx.compose.animation.AnimatedVisibility(
+            visible = expanded && info.desc.isNotBlank(),
+            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+        ) {
+            Column {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = info.desc,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    modifier = Modifier.animateContentSize()
+                )
+            }
+        }
+        
+        // 🔥🔥 Tags - 默认隐藏，展开后显示
+        androidx.compose.animation.AnimatedVisibility(
+            visible = expanded && videoTags.isNotEmpty(),
+            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+        ) {
+            Column {
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    videoTags.take(10).forEach { tag ->
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text(
+                                text = tag.tag_name,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -245,7 +284,7 @@ fun UpInfoSection(
             ) {
                 if (!isFollowing) {
                     Icon(
-                        Icons.Default.Add,
+                        CupertinoIcons.Default.Plus,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(14.dp)
@@ -310,7 +349,7 @@ fun DescriptionSection(desc: String) {
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Icon(
-                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        imageVector = if (expanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)

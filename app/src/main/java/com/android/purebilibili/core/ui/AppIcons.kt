@@ -182,4 +182,96 @@ object AppIcons {
             return _twitter!!
         }
     private var _twitter: ImageVector? = null
+
+    /**
+     * 🪙 硬币图标 - 圆形硬币 + 中心"币"字
+     */
+    val BiliCoin: ImageVector
+        get() {
+            if (_biliCoin != null) return _biliCoin!!
+            _biliCoin = ImageVector.Builder(
+                name = "BiliCoin",
+                defaultWidth = 24.0.dp,
+                defaultHeight = 24.0.dp,
+                viewportWidth = 24.0f,
+                viewportHeight = 24.0f
+            ).apply {
+                // 外圈 (硬币边缘)
+                path(
+                    fill = null,
+                    stroke = SolidColor(Color(0xFF000000)),
+                    strokeLineWidth = 2f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                    pathFillType = PathFillType.NonZero
+                ) {
+                    moveTo(12f, 2f)
+                    arcTo(10f, 10f, 0f, true, true, 12f, 22f)
+                    arcTo(10f, 10f, 0f, true, true, 12f, 2f)
+                    close()
+                }
+                // 币字 - 上横
+                path(
+                    fill = null,
+                    stroke = SolidColor(Color(0xFF000000)),
+                    strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                    pathFillType = PathFillType.NonZero
+                ) {
+                    moveTo(8f, 8f)
+                    lineTo(16f, 8f)
+                }
+                // 币字 - 中竖
+                path(
+                    fill = null,
+                    stroke = SolidColor(Color(0xFF000000)),
+                    strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                    pathFillType = PathFillType.NonZero
+                ) {
+                    moveTo(12f, 6f)
+                    lineTo(12f, 18f)
+                }
+                // 币字 - 下横
+                path(
+                    fill = null,
+                    stroke = SolidColor(Color(0xFF000000)),
+                    strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                    pathFillType = PathFillType.NonZero
+                ) {
+                    moveTo(8f, 12f)
+                    lineTo(16f, 12f)
+                }
+                // 币字 - 左撇
+                path(
+                    fill = null,
+                    stroke = SolidColor(Color(0xFF000000)),
+                    strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                    pathFillType = PathFillType.NonZero
+                ) {
+                    moveTo(8f, 12f)
+                    lineTo(7f, 16f)
+                }
+                // 币字 - 右捺
+                path(
+                    fill = null,
+                    stroke = SolidColor(Color(0xFF000000)),
+                    strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                    pathFillType = PathFillType.NonZero
+                ) {
+                    moveTo(16f, 12f)
+                    lineTo(17f, 16f)
+                }
+            }.build()
+            return _biliCoin!!
+        }
+    private var _biliCoin: ImageVector? = null
 }

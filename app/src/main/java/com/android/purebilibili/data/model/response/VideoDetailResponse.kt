@@ -38,7 +38,8 @@ data class ViewInfo(
     val owner: Owner = Owner(),
     val stat: Stat = Stat(),
     val pages: List<Page> = emptyList(),
-    val dimension: Dimension? = null  // 🔥 视频尺寸信息
+    val dimension: Dimension? = null,  // 🔥 视频尺寸信息
+    val ugc_season: UgcSeason? = null  // 🔥🔥 [新增] 视频合集信息
 )
 
 @Serializable
@@ -74,4 +75,42 @@ data class VideoTagCount(
     val view: Int = 0,
     val use: Int = 0,
     val atten: Int = 0
+)
+
+// 🔥🔥 [新增] 视频合集 (UGC Season) 数据结构
+@Serializable
+data class UgcSeason(
+    val id: Long = 0,
+    val title: String = "",
+    val cover: String = "",
+    val mid: Long = 0,
+    val ep_count: Int = 0,  // 总集数
+    val sections: List<UgcSection> = emptyList()
+)
+
+@Serializable
+data class UgcSection(
+    val season_id: Long = 0,
+    val id: Long = 0,
+    val title: String = "",
+    val episodes: List<UgcEpisode> = emptyList()
+)
+
+@Serializable
+data class UgcEpisode(
+    val id: Long = 0,
+    val aid: Long = 0,
+    val bvid: String = "",
+    val cid: Long = 0,
+    val title: String = "",
+    val arc: UgcEpisodeArc? = null
+)
+
+@Serializable
+data class UgcEpisodeArc(
+    val aid: Long = 0,
+    val pic: String = "",
+    val title: String = "",
+    val duration: Int = 0,
+    val stat: Stat? = null
 )

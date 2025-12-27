@@ -21,13 +21,16 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.rounded.Brightness7
-import androidx.compose.material.icons.rounded.VolumeUp
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
+// 🌈 Material Icons Extended - 亮度图标
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,9 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.ui.PlayerView
-// 🔥 已改用 MaterialTheme.colorScheme.primary
 import com.android.purebilibili.core.util.FormatUtils
-// Refactored gesture components
 import com.android.purebilibili.feature.video.ui.gesture.GestureMode
 import com.android.purebilibili.feature.video.ui.gesture.GestureIndicator
 import com.android.purebilibili.feature.video.ui.gesture.rememberPlayerGestureState
@@ -57,9 +58,6 @@ import androidx.compose.runtime.collectAsState
 import com.android.purebilibili.feature.video.ui.components.DanmakuSettingsPanel
 import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
 import com.android.purebilibili.feature.video.ui.components.PlaybackSpeed
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.SubtitlesOff
 
 private const val AUTO_HIDE_DELAY = 4000L
 
@@ -373,7 +371,7 @@ fun FullscreenPlayerOverlay(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         IconButton(onClick = onNavigateToDetail) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回详情页", tint = Color.White)
+                            Icon(CupertinoIcons.Default.ChevronBackward, "返回详情页", tint = Color.White)
                         }
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -389,7 +387,7 @@ fun FullscreenPlayerOverlay(
                         // 🔥🔥 [新增] 弹幕开关按钮
                         IconButton(onClick = { danmakuManager.isEnabled = !danmakuManager.isEnabled }) {
                             Icon(
-                                if (danmakuEnabled) Icons.Rounded.Subtitles else Icons.Rounded.SubtitlesOff,
+                                if (danmakuEnabled) CupertinoIcons.Default.TextBubble else CupertinoIcons.Default.TextBubble,
                                 contentDescription = "弹幕开关",
                                 tint = if (danmakuEnabled) MaterialTheme.colorScheme.primary else Color.White.copy(0.5f)
                             )
@@ -397,7 +395,7 @@ fun FullscreenPlayerOverlay(
                         
                         // 🔥🔥 [新增] 弹幕设置按钮
                         IconButton(onClick = { showDanmakuSettings = true }) {
-                            Icon(Icons.Rounded.Settings, "弹幕设置", tint = Color.White)
+                            Icon(CupertinoIcons.Default.Gear, "弹幕设置", tint = Color.White)
                         }
                     }
                 }
@@ -430,7 +428,7 @@ fun FullscreenPlayerOverlay(
                                 color = Color.Transparent
                             ) {
                                 Icon(
-                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    imageVector = if (isPlaying) CupertinoIcons.Default.Pause else CupertinoIcons.Default.Play,
                                     contentDescription = if (isPlaying) "暂停" else "播放",
                                     tint = Color.White,
                                     modifier = Modifier.size(32.dp)
@@ -595,14 +593,21 @@ private fun GestureIndicator(
         ) {
             when (mode) {
                 FullscreenGestureMode.Brightness -> {
-                    Icon(Icons.Rounded.Brightness7, null, tint = Color.White, modifier = Modifier.size(36.dp))
+                    // 🔥 亮度图标：CupertinoIcons SunMax (iOS SF Symbols 风格)
+                    Icon(CupertinoIcons.Default.SunMax, null, tint = Color.White, modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("亮度", color = Color.White, fontSize = 14.sp)
                     Spacer(Modifier.height(4.dp))
                     Text("${(value * 100).toInt()}%", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
                 FullscreenGestureMode.Volume -> {
-                    Icon(Icons.Rounded.VolumeUp, null, tint = Color.White, modifier = Modifier.size(36.dp))
+                    // 🔥 动态音量图标：3 级
+                    val volumeIcon = when {
+                        value < 0.01f -> CupertinoIcons.Default.SpeakerSlash
+                        value < 0.5f -> CupertinoIcons.Default.Speaker
+                        else -> CupertinoIcons.Default.SpeakerWave2
+                    }
+                    Icon(volumeIcon, null, tint = Color.White, modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("音量", color = Color.White, fontSize = 14.sp)
                     Spacer(Modifier.height(4.dp))

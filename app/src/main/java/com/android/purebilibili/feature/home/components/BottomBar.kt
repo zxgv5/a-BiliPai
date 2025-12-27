@@ -11,12 +11,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,9 +35,13 @@ import com.android.purebilibili.core.theme.iOSSystemGray
 import com.android.purebilibili.core.theme.BottomBarColors  // 🔥 统一底栏颜色配置
 import com.android.purebilibili.core.theme.BottomBarColorPalette  // 🔥 调色板
 import kotlinx.coroutines.launch  // 🔥 延迟导航
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 
 /**
- * 底部导航项枚举
+ * 底部导航项枚举 - 🍎 使用 iOS SF Symbols 风格图标
  */
 enum class BottomNavItem(
     val label: String,
@@ -52,38 +50,38 @@ enum class BottomNavItem(
 ) {
     HOME(
         "首页",
-        { Icon(Icons.Filled.Home, null) },
-        { Icon(Icons.Outlined.Home, null) }
+        { Icon(CupertinoIcons.Filled.House, null) },
+        { Icon(CupertinoIcons.Outlined.House, null) }
     ),
     DYNAMIC(
         "动态",
-        { Icon(Icons.Outlined.Subscriptions, null) },
-        { Icon(Icons.Outlined.Subscriptions, null) }
+        { Icon(CupertinoIcons.Filled.BellBadge, null) },
+        { Icon(CupertinoIcons.Outlined.Bell, null) }
     ),
     HISTORY(
         "历史",
-        { Icon(Icons.Outlined.History, null) },
-        { Icon(Icons.Outlined.History, null) }
+        { Icon(CupertinoIcons.Filled.Clock, null) },
+        { Icon(CupertinoIcons.Outlined.Clock, null) }
     ),
     PROFILE(
         "我的",
-        { Icon(Icons.Outlined.AccountCircle, null) },
-        { Icon(Icons.Outlined.AccountCircle, null) }
+        { Icon(CupertinoIcons.Filled.PersonCircle, null) },
+        { Icon(CupertinoIcons.Outlined.Person, null) }
     ),
     FAVORITE(
         "收藏",
-        { Icon(Icons.Outlined.Home, null) },
-        { Icon(Icons.Outlined.Home, null) }
+        { Icon(CupertinoIcons.Filled.Star, null) },
+        { Icon(CupertinoIcons.Outlined.Star, null) }
     ),
     LIVE(
         "直播",
-        { Icon(Icons.Outlined.Subscriptions, null) },
-        { Icon(Icons.Outlined.Subscriptions, null) }
+        { Icon(CupertinoIcons.Filled.Video, null) },
+        { Icon(CupertinoIcons.Outlined.Video, null) }
     ),
     WATCHLATER(
         "稍后看",
-        { Icon(Icons.Outlined.History, null) },
-        { Icon(Icons.Outlined.History, null) }
+        { Icon(CupertinoIcons.Filled.Bookmark, null) },
+        { Icon(CupertinoIcons.Outlined.Bookmark, null) }
     )
 }
 

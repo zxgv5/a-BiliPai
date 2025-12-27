@@ -8,9 +8,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Settings
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.input.pointer.pointerInput
@@ -177,7 +178,7 @@ fun iOSHomeHeader(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.Search,
+                            CupertinoIcons.Default.MagnifyingGlass,
                             null,
                             tint = iOSSystemGray,
                             modifier = Modifier.size(18.dp)
@@ -205,7 +206,7 @@ fun iOSHomeHeader(
                     modifier = Modifier.size(34.dp)
                 ) {
                     Icon(
-                        Icons.Outlined.Settings,
+                        CupertinoIcons.Outlined.Gearshape,
                         contentDescription = "Settings",
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(20.dp)

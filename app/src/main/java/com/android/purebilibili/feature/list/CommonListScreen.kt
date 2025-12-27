@@ -6,8 +6,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,12 +35,25 @@ fun CommonListScreen(
     val state by viewModel.uiState.collectAsState()
     val gridState = rememberLazyGridState()
     
-    // 🔥 收藏分页：检测滚动到底部
+    // 🔥🔥 [修复] 分页支持：收藏 + 历史记录
     val favoriteViewModel = viewModel as? FavoriteViewModel
-    val isLoadingMore by favoriteViewModel?.isLoadingMoreState?.collectAsState() 
+    val historyViewModel = viewModel as? HistoryViewModel
+    
+    // 收藏分页状态
+    val isLoadingMoreFav by favoriteViewModel?.isLoadingMoreState?.collectAsState() 
         ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    val hasMore by favoriteViewModel?.hasMoreState?.collectAsState() 
-        ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    val hasMoreFav by favoriteViewModel?.hasMoreState?.collectAsState() 
+        ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    // 🔥 历史记录分页状态
+    val isLoadingMoreHis by historyViewModel?.isLoadingMoreState?.collectAsState() 
+        ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val hasMoreHis by historyViewModel?.hasMoreState?.collectAsState() 
+        ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    // 🔥 统一分页状态
+    val isLoadingMore = isLoadingMoreFav || isLoadingMoreHis
+    val hasMore = hasMoreFav || hasMoreHis
     
     // 🔥 使用 derivedStateOf 来高效检测滚动位置
     val shouldLoadMore = androidx.compose.runtime.remember {
@@ -54,6 +69,7 @@ fun CommonListScreen(
     LaunchedEffect(shouldLoadMore.value, hasMore, isLoadingMore) {
         if (shouldLoadMore.value && hasMore && !isLoadingMore) {
             favoriteViewModel?.loadMore()
+            historyViewModel?.loadMore()  // 🔥 历史记录加载更多
         }
     }
 
@@ -63,7 +79,7 @@ fun CommonListScreen(
                 title = { Text(state.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)

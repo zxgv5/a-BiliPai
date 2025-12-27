@@ -5,11 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Save
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,7 +42,7 @@ fun JsonPluginEditorScreen(
                 title = { Text("编辑插件", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
                     }
                 },
                 actions = {
@@ -56,7 +55,7 @@ fun JsonPluginEditorScreen(
                         onSave(updated)
                         onBack()
                     }) {
-                        Icon(Icons.Filled.Save, contentDescription = "保存", tint = iOSBlue)
+                        Icon(CupertinoIcons.Default.CheckmarkCircle, contentDescription = "保存", tint = iOSBlue)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -122,7 +121,7 @@ fun JsonPluginEditorScreen(
                             action = "hide"
                         )).toMutableList()
                     }) {
-                        Icon(Icons.Filled.Add, contentDescription = "添加规则", tint = iOSBlue)
+                        Icon(CupertinoIcons.Default.Plus, contentDescription = "添加规则", tint = iOSBlue)
                     }
                 }
             }
@@ -199,7 +198,7 @@ private fun RuleEditor(
                 )
                 IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
                     Icon(
-                        Icons.Filled.Delete,
+                        CupertinoIcons.Default.Trash,
                         contentDescription = "删除",
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp)

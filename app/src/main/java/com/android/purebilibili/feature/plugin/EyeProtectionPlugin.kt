@@ -5,11 +5,10 @@ import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Nightlight
-import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material.icons.outlined.Brightness6
-import androidx.compose.material.icons.outlined.WbSunny
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -59,7 +58,7 @@ class EyeProtectionPlugin : Plugin {
     override val description = "护眼提醒、自动降低亮度和蓝光过滤"
     override val version = "1.0.0"
     override val author = "YangY"
-    override val icon: ImageVector = Icons.Outlined.Nightlight
+    override val icon: ImageVector = CupertinoIcons.Default.Moon
     
     private var config: EyeProtectionConfig = EyeProtectionConfig()
     
@@ -265,7 +264,7 @@ class EyeProtectionPlugin : Plugin {
         ) {
             // ========== 手动开关 ==========
             com.android.purebilibili.feature.settings.SettingSwitchItem(
-                icon = Icons.Outlined.Brightness6,
+                icon = CupertinoIcons.Default.Star,
                 title = "立即开启护眼模式",
                 subtitle = "手动强制开启，不受时间段限制",
                 checked = forceEnabled,
@@ -282,7 +281,7 @@ class EyeProtectionPlugin : Plugin {
             
             // ========== 定时护眼模式 ==========
             com.android.purebilibili.feature.settings.SettingSwitchItem(
-                icon = Icons.Outlined.Nightlight,
+                icon = CupertinoIcons.Default.Moon,
                 title = "定时护眼模式",
                 subtitle = "${nightModeStartHour}:00 - ${nightModeEndHour}:00 自动开启",
                 checked = nightModeEnabled,
@@ -356,7 +355,7 @@ class EyeProtectionPlugin : Plugin {
             
             // ========== 使用时长提醒 ==========
             com.android.purebilibili.feature.settings.SettingSwitchItem(
-                icon = Icons.Outlined.Timer,
+                icon = CupertinoIcons.Default.Clock,
                 title = "使用时长提醒",
                 subtitle = "每 ${usageDurationMinutes} 分钟提醒休息",
                 checked = usageReminderEnabled,
@@ -412,7 +411,7 @@ class EyeProtectionPlugin : Plugin {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Outlined.Brightness6,
+                            CupertinoIcons.Default.Star,
                             contentDescription = null,
                             tint = Color(0xFFFFB74D),
                             modifier = Modifier.size(24.dp)
@@ -452,7 +451,7 @@ class EyeProtectionPlugin : Plugin {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Outlined.WbSunny,
+                            CupertinoIcons.Default.SunMax,
                             contentDescription = null,
                             tint = Color(0xFFFF7043),
                             modifier = Modifier.size(24.dp)

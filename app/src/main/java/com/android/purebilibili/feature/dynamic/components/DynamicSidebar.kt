@@ -8,9 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,8 +68,8 @@ fun DynamicSidebar(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        if (isExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft 
-                        else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        if (isExpanded) CupertinoIcons.Default.ChevronBackward 
+                        else CupertinoIcons.Default.ChevronForward,
                         contentDescription = if (isExpanded) "收起" else "展开",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

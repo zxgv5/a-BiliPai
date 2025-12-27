@@ -5,11 +5,10 @@ import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.outlined.RocketLaunch
-import androidx.compose.material.icons.outlined.FlashOn
-import androidx.compose.material.icons.outlined.Info
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -48,7 +47,7 @@ class SponsorBlockPlugin : PlayerPlugin {
     override val description = "自动跳过视频中的广告、赞助、片头片尾等片段"
     override val version = "1.0.0"
     override val author = "YangY"
-    override val icon: ImageVector = Icons.Outlined.RocketLaunch
+    override val icon: ImageVector = CupertinoIcons.Default.Paperplane
     
     // 当前视频的跳过片段
     private var segments: List<SponsorSegment> = emptyList()
@@ -201,7 +200,7 @@ class SponsorBlockPlugin : PlayerPlugin {
         ) {
             // 使用原设置组件 - 自动跳过
             com.android.purebilibili.feature.settings.SettingSwitchItem(
-                icon = Icons.Outlined.FlashOn,
+                icon = CupertinoIcons.Default.Bolt,
                 title = "自动跳过",
                 subtitle = "关闭后将显示手动跳过按钮而非自动跳过",
                 checked = autoSkip,
@@ -222,7 +221,7 @@ class SponsorBlockPlugin : PlayerPlugin {
             
             // 使用原设置组件 - 关于空降助手
             com.android.purebilibili.feature.settings.SettingClickableItem(
-                icon = Icons.Outlined.Info,
+                icon = CupertinoIcons.Default.InfoCircle,
                 title = "关于空降助手",
                 value = "BilibiliSponsorBlock",
                 onClick = { uriHandler.openUri("https://github.com/hanydd/BilibiliSponsorBlock") },

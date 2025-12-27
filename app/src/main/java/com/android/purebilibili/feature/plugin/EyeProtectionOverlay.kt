@@ -9,9 +9,10 @@ import androidx.compose.foundation.Canvas
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Nightlight
-import androidx.compose.material.icons.outlined.SelfImprovement
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -117,7 +118,7 @@ private fun RestReminderDialog(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Outlined.SelfImprovement,
+                    CupertinoIcons.Default.Moon,
                     contentDescription = null,
                     tint = Color(0xFF7E57C2),
                     modifier = Modifier.size(36.dp)

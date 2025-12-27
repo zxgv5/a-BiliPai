@@ -10,10 +10,16 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
+// 🌈 Material Icons Extended - 亮度图标
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -284,7 +290,7 @@ fun BangumiPlayerView(
                         .align(Alignment.TopStart)
                         .padding(8.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = Color.White)
+                    Icon(CupertinoIcons.Default.ChevronBackward, "返回", tint = Color.White)
                 }
                 
                 // 顶部右侧按钮组
@@ -305,7 +311,7 @@ fun BangumiPlayerView(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                         ) {
                             Icon(
-                                if (danmakuEnabled) Icons.Default.Subtitles else Icons.Default.SubtitlesOff,
+                                if (danmakuEnabled) CupertinoIcons.Default.TextBubble else CupertinoIcons.Default.TextBubble,
                                 contentDescription = "弹幕",
                                 tint = if (danmakuEnabled) MaterialTheme.colorScheme.primary else Color.White.copy(0.7f),
                                 modifier = Modifier.size(16.dp)
@@ -328,7 +334,7 @@ fun BangumiPlayerView(
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Icon(
-                                Icons.Default.Settings,
+                                CupertinoIcons.Default.Gear,
                                 contentDescription = "弹幕设置",
                                 tint = Color.White.copy(0.9f),
                                 modifier = Modifier
@@ -375,7 +381,7 @@ fun BangumiPlayerView(
                         .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(32.dp))
                 ) {
                     Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        if (isPlaying) CupertinoIcons.Default.Pause else CupertinoIcons.Default.Play,
                         contentDescription = if (isPlaying) "暂停" else "播放",
                         tint = Color.White,
                         modifier = Modifier.size(40.dp)
@@ -434,7 +440,7 @@ fun BangumiPlayerView(
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, 
+                                if (isFullscreen) CupertinoIcons.Default.ArrowDownRightAndArrowUpLeft else CupertinoIcons.Default.ArrowUpLeftAndArrowDownRight, 
                                 "全屏", 
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp)
@@ -533,14 +539,21 @@ fun BangumiGestureIndicator(
         ) {
             when (mode) {
                 BangumiGestureMode.Brightness -> {
-                    Icon(Icons.Default.LightMode, null, tint = Color.White, modifier = Modifier.size(36.dp))
+                    // 🔥 亮度图标：CupertinoIcons SunMax (iOS SF Symbols 风格)
+                    Icon(CupertinoIcons.Default.SunMax, null, tint = Color.White, modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("亮度", color = Color.White, fontSize = 14.sp)
                     Spacer(Modifier.height(4.dp))
                     Text("${(value * 100).toInt()}%", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
                 BangumiGestureMode.Volume -> {
-                    Icon(Icons.Default.VolumeUp, null, tint = Color.White, modifier = Modifier.size(36.dp))
+                    // 🔥 动态音量图标：3 级
+                    val volumeIcon = when {
+                        value < 0.01f -> CupertinoIcons.Default.SpeakerSlash
+                        value < 0.5f -> CupertinoIcons.Default.Speaker
+                        else -> CupertinoIcons.Default.SpeakerWave2
+                    }
+                    Icon(volumeIcon, null, tint = Color.White, modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("音量", color = Color.White, fontSize = 14.sp)
                     Spacer(Modifier.height(4.dp))
@@ -725,7 +738,7 @@ fun BangumiQualityMenu(
                         
                         if (isSelected) {
                             Icon(
-                                Icons.Default.Check,
+                                CupertinoIcons.Default.Checkmark,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)

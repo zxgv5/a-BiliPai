@@ -15,14 +15,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Fullscreen  // 🔥 横屏全屏
-import androidx.compose.material.icons.filled.FullscreenExit  // 🔥 退出全屏
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -226,7 +222,7 @@ fun LivePlayerScreen(
                     color = Color.Black.copy(alpha = 0.6f)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
+                        imageVector = CupertinoIcons.Default.Play,
                         contentDescription = "播放",
                         tint = Color.White,
                         modifier = Modifier
@@ -253,7 +249,7 @@ fun LivePlayerScreen(
                 modifier = Modifier.clickable { onBack() }
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = CupertinoIcons.Default.ChevronBackward,
                     contentDescription = "返回",
                     tint = Color.White,
                     modifier = Modifier.padding(8.dp)
@@ -310,7 +306,7 @@ fun LivePlayerScreen(
                     .clickable { toggleFullscreen() }
             ) {
                 Icon(
-                    imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                    imageVector = if (isFullscreen) CupertinoIcons.Default.ArrowDownRightAndArrowUpLeft else CupertinoIcons.Default.ArrowUpLeftAndArrowDownRight,
                     contentDescription = if (isFullscreen) "退出全屏" else "全屏",
                     tint = Color.White,
                     modifier = Modifier.padding(8.dp)
@@ -326,7 +322,7 @@ fun LivePlayerScreen(
                 }
             ) {
                 Icon(
-                    imageVector = Icons.Default.Refresh,
+                    imageVector = CupertinoIcons.Default.ArrowClockwise,
                     contentDescription = "刷新",
                     tint = Color.White,
                     modifier = Modifier.padding(8.dp)
@@ -449,7 +445,7 @@ private fun LiveQualityMenu(
                         
                         if (isSelected) {
                             Icon(
-                                Icons.Default.Check,
+                                CupertinoIcons.Default.Checkmark,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)

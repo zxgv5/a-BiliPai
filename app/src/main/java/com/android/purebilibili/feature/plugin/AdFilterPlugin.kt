@@ -6,13 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.PersonOff
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.FilterAlt
-import androidx.compose.material.icons.filled.Close
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,7 +52,7 @@ class AdFilterPlugin : FeedPlugin {
     override val description = "过滤广告、拉黑UP主、屏蔽关键词"
     override val version = "2.0.0"
     override val author = "YangY"
-    override val icon: ImageVector = Icons.Outlined.Block
+    override val icon: ImageVector = CupertinoIcons.Default.Xmark
     
     private var config: AdFilterConfig = AdFilterConfig()
     private var filteredCount = 0
@@ -321,7 +318,7 @@ class AdFilterPlugin : FeedPlugin {
             
             // 商业合作过滤
             com.android.purebilibili.feature.settings.SettingSwitchItem(
-                icon = Icons.Outlined.Block,
+                icon = CupertinoIcons.Default.Xmark,
                 title = "过滤广告推广",
                 subtitle = "隐藏商业合作、恰饭、推广等内容",
                 checked = filterSponsored,
@@ -337,7 +334,7 @@ class AdFilterPlugin : FeedPlugin {
             
             // 标题党过滤
             com.android.purebilibili.feature.settings.SettingSwitchItem(
-                icon = Icons.Outlined.FilterAlt,
+                icon = CupertinoIcons.Default.Star,
                 title = "过滤标题党",
                 subtitle = "隐藏震惊体、夸张标题视频",
                 checked = filterClickbait,
@@ -353,7 +350,7 @@ class AdFilterPlugin : FeedPlugin {
             
             // 低质量过滤
             com.android.purebilibili.feature.settings.SettingSwitchItem(
-                icon = Icons.Outlined.Block,
+                icon = CupertinoIcons.Default.Xmark,
                 title = "过滤低播放量",
                 subtitle = "隐藏播放量低于1000的视频",
                 checked = filterLowQuality,
@@ -393,7 +390,7 @@ class AdFilterPlugin : FeedPlugin {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            Icons.Outlined.PersonOff,
+                            CupertinoIcons.Default.Person,
                             contentDescription = null,
                             tint = Color(0xFFE91E63),
                             modifier = Modifier.size(20.dp)
@@ -413,7 +410,7 @@ class AdFilterPlugin : FeedPlugin {
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                Icons.Default.Close,
+                                CupertinoIcons.Default.Xmark,
                                 contentDescription = "移除",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
@@ -428,7 +425,7 @@ class AdFilterPlugin : FeedPlugin {
                 onClick = { showAddUpDialog = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(CupertinoIcons.Default.Plus, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("添加UP主拉黑")
             }
@@ -472,7 +469,7 @@ class AdFilterPlugin : FeedPlugin {
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
-                                    Icons.Default.Close,
+                                    CupertinoIcons.Default.Xmark,
                                     contentDescription = "移除",
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier
@@ -502,7 +499,7 @@ class AdFilterPlugin : FeedPlugin {
                 onClick = { showAddKeywordDialog = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(CupertinoIcons.Default.Plus, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("添加屏蔽关键词")
             }

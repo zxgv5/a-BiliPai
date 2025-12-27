@@ -13,11 +13,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.OpenInFull
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -314,7 +313,7 @@ fun MiniPlayerOverlay(
                             color = Color.Black.copy(alpha = 0.5f)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.OpenInFull,
+                                imageVector = CupertinoIcons.Default.ArrowUpLeftAndArrowDownRight,
                                 contentDescription = "展开",
                                 tint = Color.White,
                                 modifier = Modifier.padding(5.dp).size(14.dp)
@@ -329,7 +328,7 @@ fun MiniPlayerOverlay(
                             color = Color.Red.copy(alpha = 0.7f)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = CupertinoIcons.Default.Xmark,
                                 contentDescription = "关闭",
                                 tint = Color.White,
                                 modifier = Modifier.padding(4.dp).size(16.dp)
@@ -364,7 +363,7 @@ fun MiniPlayerOverlay(
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
                     ) {
                         Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            imageVector = if (isPlaying) CupertinoIcons.Default.Pause else CupertinoIcons.Default.Play,
                             contentDescription = if (isPlaying) "暂停" else "播放",
                             tint = Color.White,
                             modifier = Modifier.padding(10.dp).size(28.dp)

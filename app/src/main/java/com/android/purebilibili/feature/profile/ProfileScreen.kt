@@ -8,12 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Login
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -130,12 +128,12 @@ fun ProfileScreen(
                         title = { },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
+                                Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                             }
                         },
                         actions = {
                             IconButton(onClick = onSettingsClick) {
-                                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(CupertinoIcons.Default.Gearshape, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -189,10 +187,10 @@ fun GuestProfileContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back", tint = Color.White)
             }
             IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                Icon(CupertinoIcons.Default.Gearshape, contentDescription = "Settings", tint = Color.White)
             }
         }
         
@@ -243,7 +241,7 @@ fun GuestProfileContent(
             BiliGradientButton(
                 text = "安全登录",
                 onClick = onGoToLogin,
-                leadingIcon = Icons.Outlined.Login,
+                leadingIcon = CupertinoIcons.Outlined.PersonCropCircleBadgePlus,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -257,7 +255,7 @@ fun GuestProfileContent(
                 modifier = Modifier.alpha(0.5f)
             ) {
                 Icon(
-                    Icons.Outlined.Lock,
+                    CupertinoIcons.Outlined.Lock,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(14.dp)
@@ -427,16 +425,16 @@ fun ServicesSection(
             modifier = Modifier.padding(16.dp)
         )
 
-        ServiceItem(Icons.Default.Download, "离线缓存", MaterialTheme.colorScheme.primary, onClick = onDownloadClick)
+        ServiceItem(CupertinoIcons.Default.ArrowDownCircle, "离线缓存", MaterialTheme.colorScheme.primary, onClick = onDownloadClick)
         Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(start = 56.dp))
 
-        ServiceItem(Icons.Default.History, "历史记录", iOSBlue, onClick = onHistoryClick)
+        ServiceItem(CupertinoIcons.Default.Clock, "历史记录", iOSBlue, onClick = onHistoryClick)
         Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(start = 56.dp))
 
-        ServiceItem(Icons.Default.FavoriteBorder, "我的收藏", iOSYellow, onClick = onFavoriteClick)
+        ServiceItem(CupertinoIcons.Default.Bookmark, "我的收藏", iOSYellow, onClick = onFavoriteClick)
         Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(start = 56.dp))
 
-        ServiceItem(Icons.Default.Schedule, "稍后再看", iOSGreen) { /* TODO */ }
+        ServiceItem(CupertinoIcons.Default.Bookmark, "稍后再看", iOSGreen) { /* TODO */ }
     }
 }
 
@@ -459,6 +457,6 @@ fun ServiceItem(
         // 🔥 修复：文字颜色
         Text(text = title, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         // 🔥 修复：箭头颜色
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+        Icon(CupertinoIcons.Default.ChevronForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
     }
 }

@@ -5,11 +5,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.SubtitlesOff
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -54,7 +53,7 @@ fun TopControlBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back", tint = Color.White)
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
@@ -82,7 +81,7 @@ fun TopControlBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (danmakuEnabled) Icons.Rounded.Subtitles else Icons.Rounded.SubtitlesOff,
+                    imageVector = if (danmakuEnabled) CupertinoIcons.Default.TextBubble else CupertinoIcons.Outlined.TextBubble,
                     contentDescription = if (danmakuEnabled) "Disable danmaku" else "Enable danmaku",
                     tint = if (danmakuEnabled) Color(0xFFFB7299) else Color.White.copy(alpha = 0.6f),
                     modifier = Modifier.size(20.dp)
@@ -101,7 +100,7 @@ fun TopControlBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Settings,
+                    imageVector = CupertinoIcons.Default.Gearshape,
                     contentDescription = "弹幕设置",
                     tint = Color.White.copy(alpha = 0.8f),
                     modifier = Modifier.size(16.dp)

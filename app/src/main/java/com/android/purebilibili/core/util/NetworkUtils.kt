@@ -46,11 +46,14 @@ object NetworkUtils {
      */
     fun getDefaultQualityId(context: Context): Int {
         val prefs = context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
-        return if (isWifi(context)) {
+        val isOnWifi = isWifi(context)
+        val quality = if (isOnWifi) {
             prefs.getInt("wifi_quality", 80)  // 默认 WiFi=1080P
         } else {
             prefs.getInt("mobile_quality", 64)  // 默认流量=720P
         }
+        Logger.d("NetworkUtils", "🎬 获取默认画质: isWifi=$isOnWifi, quality=$quality")
+        return quality
     }
     
     /**

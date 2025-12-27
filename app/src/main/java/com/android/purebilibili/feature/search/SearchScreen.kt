@@ -20,18 +20,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Search
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -58,7 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -67,11 +67,14 @@ fun SearchScreen(
     userFace: String = "",
     onBack: () -> Unit,
     onVideoClick: (String, Long) -> Unit,
-    onUpClick: (Long) -> Unit,  // 🔥 新增：点击UP主跳转到空间
+    onUpClick: (Long) -> Unit,  // 🔥 点击UP主跳转到空间
     onAvatarClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
+    
+    // 🔥 自动聚焦搜索框
+    val searchFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 
     // 1. 滚动状态监听 (用于列表)
     val historyListState = rememberLazyListState()
@@ -377,6 +380,7 @@ fun SearchScreen(
                     keyboardController?.hide()
                 },
                 onClearQuery = { viewModel.onQueryChange("") },
+                focusRequester = searchFocusRequester,  // 🔥 传递 focusRequester
                 modifier = Modifier.align(Alignment.TopCenter)
             )
             
@@ -407,7 +411,7 @@ fun SearchScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    Icons.Default.Search,
+                                    CupertinoIcons.Default.MagnifyingGlass,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f),
                                     modifier = Modifier.size(18.dp)
@@ -435,10 +439,17 @@ fun SearchTopBar(
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
     onClearQuery: () -> Unit,
+    focusRequester: androidx.compose.ui.focus.FocusRequester = remember { androidx.compose.ui.focus.FocusRequester() },
     modifier: Modifier = Modifier
 ) {
     // 🔥 Focus 状态追踪
     var isFocused by remember { mutableStateOf(false) }
+    
+    // 🔥 自动聚焦并弹出键盘
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(100)  // 等待页面加载完成
+        focusRequester.requestFocus()
+    }
     
     // 🔥 边框宽度动画
     val borderWidth by animateDpAsState(
@@ -471,7 +482,7 @@ fun SearchTopBar(
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
+                        CupertinoIcons.Default.ChevronBackward,
                         contentDescription = "Back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -495,7 +506,7 @@ fun SearchTopBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Default.Search,
+                        CupertinoIcons.Default.MagnifyingGlass,
                         null,
                         tint = searchIconColor,
                         modifier = Modifier.size(20.dp)
@@ -508,6 +519,7 @@ fun SearchTopBar(
                         onValueChange = onQueryChange,
                         modifier = Modifier
                             .weight(1f)
+                            .focusRequester(focusRequester)  // 🔥 应用 focusRequester
                             .onFocusChanged { isFocused = it.isFocused },
                         textStyle = TextStyle(
                             color = MaterialTheme.colorScheme.onSurface,
@@ -539,7 +551,7 @@ fun SearchTopBar(
                             modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
-                                Icons.Default.Clear,
+                                CupertinoIcons.Default.XmarkCircle,
                                 null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
@@ -585,7 +597,7 @@ fun HistoryChip(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.Default.History,
+                CupertinoIcons.Default.Clock,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f),
                 modifier = Modifier.size(16.dp)
@@ -602,7 +614,7 @@ fun HistoryChip(
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(
-                    Icons.Default.Close,
+                    CupertinoIcons.Default.Xmark,
                     contentDescription = "删除",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f),
                     modifier = Modifier.size(14.dp)
@@ -626,11 +638,11 @@ fun HistoryItem(
             .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f), modifier = Modifier.size(20.dp))
+        Icon(CupertinoIcons.Default.Clock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f), modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Text(text = history.keyword, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, modifier = Modifier.weight(1f))
         IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-            Icon(Icons.Default.Close, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f), modifier = Modifier.size(16.dp))
+            Icon(CupertinoIcons.Default.Xmark, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f), modifier = Modifier.size(16.dp))
         }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
@@ -744,7 +756,7 @@ fun SearchFilterBar(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        Icons.Default.KeyboardArrowDown,
+                        CupertinoIcons.Default.ChevronDown,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = if (currentOrder != SearchOrder.TOTALRANK) 
@@ -800,7 +812,7 @@ fun SearchFilterBar(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        Icons.Default.KeyboardArrowDown,
+                        CupertinoIcons.Default.ChevronDown,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = if (currentDuration != SearchDuration.ALL) 

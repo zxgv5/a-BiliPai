@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -68,13 +70,18 @@ fun QualitySelectionMenu(
         Surface(
             modifier = Modifier
                 .widthIn(min = 200.dp, max = 280.dp)
+                .heightIn(max = 400.dp)  // 🔥🔥 [修复] 限制最大高度，允许滚动
                 .clip(RoundedCornerShape(12.dp))
                 .clickable(enabled = false) {},
             color = Color(0xFF2B2B2B),
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 8.dp
         ) {
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .verticalScroll(rememberScrollState())  // 🔥🔥 [修复] 添加垂直滚动
+            ) {
                 Text(
                     text = "画质选择",
                     color = Color.White,
@@ -129,7 +136,7 @@ fun QualitySelectionMenu(
                         Spacer(modifier = Modifier.weight(1f))
                         
                         if (isSelected) {
-                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Icon(CupertinoIcons.Default.Checkmark, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -177,7 +184,7 @@ fun SpeedSelectionMenu(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = "\u64ad\u653e\u901f\u5ea6",
+                    text = "播放速度",
                     color = Color.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
@@ -195,14 +202,14 @@ fun SpeedSelectionMenu(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (speed == 1.0f) "\u6b63\u5e38" else "${speed}x",
+                            text = if (speed == 1.0f) "正常" else "${speed}x",
                             color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(0.9f),
                             fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         if (isSelected) {
-                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Icon(CupertinoIcons.Default.Checkmark, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         }
                     }
                 }

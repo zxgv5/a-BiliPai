@@ -57,9 +57,11 @@ fun AppNavigation(
     // 🔥 小窗管理器
     miniPlayerManager: MiniPlayerManager? = null,
     // 🔥 PiP 支持参数
+    // 🔥 PiP 支持参数
     isInPipMode: Boolean = false,
     onVideoDetailEnter: () -> Unit = {},
-    onVideoDetailExit: () -> Unit = {}
+    onVideoDetailExit: () -> Unit = {},
+    mainHazeState: dev.chrisbanes.haze.HazeState? = null // 🔥🔥 全局 Haze 状态
 ) {
     val homeViewModel: HomeViewModel = viewModel()
     
@@ -408,7 +410,8 @@ fun AppNavigation(
                 onAppearanceClick = { navController.navigate(ScreenRoutes.AppearanceSettings.route) },
                 onPlaybackClick = { navController.navigate(ScreenRoutes.PlaybackSettings.route) },
                 onPermissionClick = { navController.navigate(ScreenRoutes.PermissionSettings.route) },
-                onPluginsClick = { navController.navigate(ScreenRoutes.PluginsSettings.route) }
+                onPluginsClick = { navController.navigate(ScreenRoutes.PluginsSettings.route) },
+                mainHazeState = mainHazeState // 🔥🔥 传递全局 Haze 状态
             )
         }
 
@@ -445,7 +448,43 @@ fun AppNavigation(
         ) {
             AppearanceSettingsScreen(
                 onBack = { navController.popBackStack() },
-                onNavigateToBottomBarSettings = { navController.navigate(ScreenRoutes.BottomBarSettings.route) }
+                onNavigateToBottomBarSettings = { navController.navigate(ScreenRoutes.BottomBarSettings.route) },
+                onNavigateToThemeSettings = { navController.navigate(ScreenRoutes.ThemeSettings.route) },
+                onNavigateToIconSettings = { navController.navigate(ScreenRoutes.IconSettings.route) },
+                onNavigateToAnimationSettings = { navController.navigate(ScreenRoutes.AnimationSettings.route) }
+            )
+        }
+        
+        // --- 🎨 主题设置页面 ---
+        composable(
+            route = ScreenRoutes.ThemeSettings.route,
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(animDuration)) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(animDuration)) }
+        ) {
+            com.android.purebilibili.feature.settings.ThemeSettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        
+        // --- 🎨 图标设置页面 ---
+        composable(
+            route = ScreenRoutes.IconSettings.route,
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(animDuration)) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(animDuration)) }
+        ) {
+            com.android.purebilibili.feature.settings.IconSettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        
+        // --- 🎬 动画设置页面 ---
+        composable(
+            route = ScreenRoutes.AnimationSettings.route,
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(animDuration)) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(animDuration)) }
+        ) {
+            com.android.purebilibili.feature.settings.AnimationSettingsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
         

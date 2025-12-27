@@ -396,8 +396,10 @@ object SettingsManager {
     suspend fun setWifiQuality(context: Context, value: Int) {
         context.settingsDataStore.edit { preferences -> preferences[KEY_WIFI_QUALITY] = value }
         // 🔥 同步到 SharedPreferences，供 NetworkUtils 同步读取
-        context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
-            .edit().putInt("wifi_quality", value).apply()
+        // 使用 commit() 确保立即写入
+        val success = context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .edit().putInt("wifi_quality", value).commit()
+        com.android.purebilibili.core.util.Logger.d("SettingsManager", "📶 WiFi 画质已设置: $value (写入成功: $success)")
     }
     
     // --- 流量默认画质 (默认 64 = 720P) ---
@@ -407,8 +409,10 @@ object SettingsManager {
     suspend fun setMobileQuality(context: Context, value: Int) {
         context.settingsDataStore.edit { preferences -> preferences[KEY_MOBILE_QUALITY] = value }
         // 🔥 同步到 SharedPreferences，供 NetworkUtils 同步读取
-        context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
-            .edit().putInt("mobile_quality", value).apply()
+        // 使用 commit() 确保立即写入
+        val success = context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .edit().putInt("mobile_quality", value).commit()
+        com.android.purebilibili.core.util.Logger.d("SettingsManager", "📱 流量画质已设置: $value (写入成功: $success)")
     }
     
     // 🔥 同步读取画质设置（用于 PlayerViewModel）

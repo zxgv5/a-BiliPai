@@ -88,7 +88,8 @@ fun SubReplySheet(
                         isEnd = state.isEnd,
                         emoteMap = emoteMap,
                         onLoadMore = onLoadMore,
-                        onTimestampClick = onTimestampClick
+                        onTimestampClick = onTimestampClick,
+                        upMid = state.rootReply!!.oid  // 🔥 传递 UP 主 mid
                     )
                 }
             }
@@ -104,7 +105,8 @@ fun SubReplyList(
     isEnd: Boolean,
     emoteMap: Map<String, String>,
     onLoadMore: () -> Unit,
-    onTimestampClick: ((Long) -> Unit)? = null  // 🔥🔥 [新增]
+    onTimestampClick: ((Long) -> Unit)? = null,
+    upMid: Long = 0  // 🔥 UP主 mid 用于 UP 标签
 ) {
     val listState = rememberLazyListState()
     val shouldLoadMore by remember {
@@ -134,21 +136,23 @@ fun SubReplyList(
         ) {
             item {
                 ReplyItemView(
-                    item = rootReply, 
+                    item = rootReply,
+                    upMid = upMid,  // 🔥 传递 UP 主 mid
                     emoteMap = emoteMap, 
                     onClick = {}, 
                     onSubClick = {},
-                    onTimestampClick = onTimestampClick  // 🔥 传递
+                    onTimestampClick = onTimestampClick
                 )
                 HorizontalDivider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceContainerHigh)
             }
             items(subReplies) { item ->
                 ReplyItemView(
-                    item = item, 
+                    item = item,
+                    upMid = upMid,  // 🔥 传递 UP 主 mid
                     emoteMap = emoteMap, 
                     onClick = {}, 
                     onSubClick = {},
-                    onTimestampClick = onTimestampClick  // 🔥 传递
+                    onTimestampClick = onTimestampClick
                 )
             }
             item {

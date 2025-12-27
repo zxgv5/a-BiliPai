@@ -147,6 +147,13 @@ dependencies {
     // 提供 iOS 风格的 Switch、Button、Picker、Dialog 等组件
     implementation("io.github.alexzhirkevich:cupertino:0.1.0-alpha04")
     implementation("io.github.alexzhirkevich:cupertino-adaptive:0.1.0-alpha04")
+    // 🍎 800+ iOS SF Symbols 风格图标
+    implementation("io.github.alexzhirkevich:cupertino-icons-extended:0.1.0-alpha04")
+    
+    // --- 3.6 Orbital (iOS 风格共享元素动画) ---
+    // 提供流畅的共享元素过渡、尺寸变换、位置移动动画
+    implementation("com.github.skydoves:orbital:0.4.0")
+
 
     // --- 4. Player (视频播放器 Media3) ---
     implementation("androidx.media3:media3-exoplayer:1.3.0")

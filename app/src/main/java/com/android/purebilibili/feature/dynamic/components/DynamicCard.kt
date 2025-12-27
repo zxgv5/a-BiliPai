@@ -5,11 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Repeat
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -92,7 +91,7 @@ fun DynamicCardV2(
                 // 更多按钮
                 IconButton(onClick = { /* TODO: 更多菜单 */ }) {
                     Icon(
-                        Icons.Default.MoreVert,
+                        CupertinoIcons.Default.Ellipsis,
                         contentDescription = "更多",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)
                     )
@@ -169,17 +168,17 @@ fun DynamicCardV2(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ActionButton(
-                    icon = Icons.Default.Repeat,
+                    icon = CupertinoIcons.Default.ArrowTurnUpRight,
                     count = stat.forward.count,
                     label = "转发"
                 )
                 ActionButton(
-                    icon = Icons.Default.ChatBubbleOutline,
+                    icon = CupertinoIcons.Default.Message,
                     count = stat.comment.count,
                     label = "评论"
                 )
                 ActionButton(
-                    icon = Icons.Default.FavoriteBorder,
+                    icon = CupertinoIcons.Default.Heart,
                     count = stat.like.count,
                     label = "点赞",
                     activeColor = MaterialTheme.colorScheme.primary
@@ -227,4 +226,121 @@ fun RichTextContent(
         lineHeight = 22.sp,
         color = MaterialTheme.colorScheme.onSurface
     )
+}
+
+/**
+ * 🔥 紧凑列表卡片 - 单行显示
+ */
+@Composable
+fun DynamicCardCompact(
+    item: DynamicItem,
+    onVideoClick: (String) -> Unit,
+    onUserClick: (Long) -> Unit
+) {
+    val author = item.modules.module_author
+    val content = item.modules.module_dynamic
+    val stat = item.modules.module_stat
+    
+    // 获取内容预览文本
+    val previewText = content?.desc?.text?.take(50) 
+        ?: content?.major?.archive?.title 
+        ?: "动态"
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                // 如果有视频则跳转视频
+                content?.major?.archive?.let { onVideoClick(it.bvid) }
+                    ?: author?.let { onUserClick(it.mid) }
+            }
+            .padding(horizontal = 16.dp, vertical = 12.dp),  // 🔥 优化间距
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 头像
+        if (author != null) {
+            AsyncImage(
+                model = coil.request.ImageRequest.Builder(LocalContext.current)
+                    .data(author.face.let { if (it.startsWith("http://")) it.replace("http://", "https://") else it })
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = author.mid > 0) { onUserClick(author.mid) },
+                contentScale = ContentScale.Crop
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+        
+        // 内容区
+        Column(modifier = Modifier.weight(1f)) {
+            // 用户名 + 时间
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    author?.name ?: "",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    author?.pub_time ?: "",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // 内容预览
+            Text(
+                previewText,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+        
+        // 封面缩略图（如果有视频）
+        content?.major?.archive?.let { archive ->
+            Spacer(modifier = Modifier.width(12.dp))
+            AsyncImage(
+                model = coil.request.ImageRequest.Builder(LocalContext.current)
+                    .data(archive.cover.let { if (it.startsWith("http://")) it.replace("http://", "https://") else it })
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(width = 80.dp, height = 50.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
+                contentScale = ContentScale.Crop
+            )
+        }
+        
+        // 点赞数
+        stat?.like?.let { like ->
+            if (like.count > 0) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        CupertinoIcons.Default.Heart,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        if (like.count > 9999) "${like.count / 10000}万" else like.count.toString(),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)
+                    )
+                }
+            }
+        }
+    }
 }

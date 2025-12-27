@@ -12,9 +12,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -59,7 +60,7 @@ fun BangumiDetailScreen(
                 title = { Text("番剧详情") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -210,7 +211,7 @@ private fun BangumiDetailContent(
                                 if (rating.score > 0) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            Icons.Default.Star,
+                                            CupertinoIcons.Default.Star,
                                             contentDescription = null,
                                             tint = iOSYellow,
                                             modifier = Modifier.size(16.dp)
@@ -283,7 +284,7 @@ private fun BangumiDetailContent(
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                Icons.Default.Check,
+                                CupertinoIcons.Default.Checkmark,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -304,7 +305,7 @@ private fun BangumiDetailContent(
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                Icons.Default.Add,
+                                CupertinoIcons.Default.Plus,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -440,7 +441,7 @@ private fun BangumiDetailContent(
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             Icon(
-                                                Icons.Default.MoreHoriz,
+                                                CupertinoIcons.Default.Ellipsis,
                                                 contentDescription = "更多",
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -671,12 +672,14 @@ private fun EpisodeSelectionSheet(
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null  // 使用自定义标题栏
+        dragHandle = null,  // 使用自定义标题栏
+        contentWindowInsets = { WindowInsets(0.dp) }  // 🔥 沉浸式
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.8f)  // 占屏幕80%高度
+                .navigationBarsPadding()  // 🔥 底部安全区域
         ) {
             // 🔥 标题栏
             Row(
@@ -694,7 +697,7 @@ private fun EpisodeSelectionSheet(
                 
                 IconButton(onClick = onDismiss) {
                     Icon(
-                        Icons.Default.Close,
+                        CupertinoIcons.Default.Xmark,
                         contentDescription = "关闭",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

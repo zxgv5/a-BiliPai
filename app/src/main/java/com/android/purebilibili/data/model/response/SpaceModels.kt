@@ -146,3 +146,146 @@ data class SpaceVideoCategory(
     val name: String,   // 分类名称
     val count: Int      // 该分类下的视频数量
 )
+
+// 🔥 视频排序方式
+enum class VideoSortOrder(val apiValue: String, val displayName: String) {
+    PUBDATE("pubdate", "最新发布"),
+    CLICK("click", "最多播放"),
+    STOW("stow", "最多收藏")
+}
+
+// ========== 🔥 合集和系列 Models ==========
+
+@kotlinx.serialization.Serializable
+data class SeasonsSeriesListResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val data: SeasonsSeriesData? = null
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonsSeriesData(
+    val items_lists: SeasonsSeriesItems? = null
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonsSeriesItems(
+    val seasons_list: List<SeasonItem> = emptyList(),  // 合集列表
+    val series_list: List<SeriesItem> = emptyList()    // 系列列表
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonItem(
+    val meta: SeasonMeta = SeasonMeta(),
+    val recent_aids: List<Long> = emptyList()
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonMeta(
+    val season_id: Long = 0,
+    val name: String = "",
+    val cover: String = "",
+    val total: Int = 0,
+    val description: String = "",
+    val mid: Long = 0
+)
+
+@kotlinx.serialization.Serializable
+data class SeriesItem(
+    val meta: SeriesMeta = SeriesMeta(),
+    val recent_aids: List<Long> = emptyList()
+)
+
+@kotlinx.serialization.Serializable
+data class SeriesMeta(
+    val series_id: Long = 0,
+    val name: String = "",
+    val cover: String = "",
+    val total: Int = 0,
+    val description: String = "",
+    val creator: String = "",
+    val ctime: Long = 0,
+    val mtime: Long = 0,
+    val mid: Long = 0
+)
+
+// 合集/系列内视频列表响应
+@kotlinx.serialization.Serializable
+data class SeasonArchivesResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val data: SeasonArchivesData? = null
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonArchivesData(
+    val aids: List<Long> = emptyList(),
+    val archives: List<SeasonArchiveItem> = emptyList(),
+    val meta: SeasonMeta = SeasonMeta(),
+    val page: SeasonPage = SeasonPage()
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonArchiveItem(
+    val aid: Long = 0,
+    val bvid: String = "",
+    val title: String = "",
+    val pic: String = "",
+    val duration: Int = 0,
+    val pubdate: Long = 0,
+    val stat: SeasonArchiveStat = SeasonArchiveStat()
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonArchiveStat(
+    val view: Long = 0,
+    val danmaku: Long = 0,
+    val reply: Long = 0
+)
+
+@kotlinx.serialization.Serializable
+data class SeasonPage(
+    val page_num: Int = 1,
+    val page_size: Int = 30,
+    val total: Int = 0
+)
+
+// 🔥 系列视频列表响应
+@kotlinx.serialization.Serializable
+data class SeriesArchivesResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val data: SeriesArchivesData? = null
+)
+
+@kotlinx.serialization.Serializable
+data class SeriesArchivesData(
+    val aids: List<Long> = emptyList(),
+    val archives: List<SeriesArchiveItem> = emptyList(),
+    val page: SeriesPage = SeriesPage()
+)
+
+@kotlinx.serialization.Serializable
+data class SeriesArchiveItem(
+    val aid: Long = 0,
+    val bvid: String = "",
+    val title: String = "",
+    val pic: String = "",
+    val duration: Int = 0,
+    val pubdate: Long = 0,
+    val stat: SeriesArchiveStat = SeriesArchiveStat()
+)
+
+@kotlinx.serialization.Serializable
+data class SeriesArchiveStat(
+    val view: Long = 0,
+    val danmaku: Long = 0,
+    val reply: Long = 0
+)
+
+@kotlinx.serialization.Serializable
+data class SeriesPage(
+    val num: Int = 1,
+    val size: Int = 30,
+    val total: Int = 0
+)

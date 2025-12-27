@@ -7,8 +7,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -86,7 +88,7 @@ fun BangumiPlayerContent(
                     }
                 ) {
                     Icon(
-                        if (isFollowing) Icons.Default.Check else Icons.Default.Add,
+                        if (isFollowing) CupertinoIcons.Default.Checkmark else CupertinoIcons.Default.Plus,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )

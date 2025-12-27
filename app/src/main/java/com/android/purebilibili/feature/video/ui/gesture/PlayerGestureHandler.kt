@@ -9,10 +9,16 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Brightness7
-import androidx.compose.material.icons.rounded.VolumeUp
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
+// 🌈 Material Icons Extended - 亮度图标
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -204,16 +210,23 @@ fun GestureIndicator(
         ) {
             when (mode) {
                 GestureMode.Brightness -> {
-                    Icon(Icons.Rounded.Brightness7, null, tint = Color.White, modifier = Modifier.size(36.dp))
+                    // 🔥 亮度图标：CupertinoIcons SunMax (iOS SF Symbols 风格)
+                    Icon(CupertinoIcons.Default.SunMax, null, tint = Color.White, modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
-                    Text("\u4eae\u5ea6", color = Color.White, fontSize = 14.sp)
+                    Text("亮度", color = Color.White, fontSize = 14.sp)
                     Spacer(Modifier.height(4.dp))
                     Text("${(value * 100).toInt()}%", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
                 GestureMode.Volume -> {
-                    Icon(Icons.Rounded.VolumeUp, null, tint = Color.White, modifier = Modifier.size(36.dp))
+                    // 🔥 动态音量图标：3 级
+                    val volumeIcon = when {
+                        value < 0.01f -> CupertinoIcons.Default.SpeakerSlash
+                        value < 0.5f -> CupertinoIcons.Default.Speaker
+                        else -> CupertinoIcons.Default.SpeakerWave2
+                    }
+                    Icon(volumeIcon, null, tint = Color.White, modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
-                    Text("\u97f3\u91cf", color = Color.White, fontSize = 14.sp)
+                    Text("音量", color = Color.White, fontSize = 14.sp)
                     Spacer(Modifier.height(4.dp))
                     Text("${(value * 100).toInt()}%", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }

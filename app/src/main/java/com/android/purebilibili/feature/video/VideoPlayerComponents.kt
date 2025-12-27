@@ -7,9 +7,10 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -74,7 +75,7 @@ fun VideoTitleSection(
             )
             Spacer(Modifier.width(4.dp))
             Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                imageVector = if (expanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(18.dp)
@@ -128,7 +129,7 @@ fun VideoTitleWithDesc(
             )
             Spacer(Modifier.width(4.dp))
             Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                imageVector = if (expanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp)
@@ -233,7 +234,7 @@ fun UpInfoSection(
             ) {
                 if (!isFollowing) {
                     Icon(
-                        Icons.Default.Add,
+                        CupertinoIcons.Default.Plus,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(14.dp)
@@ -274,16 +275,16 @@ fun ActionButtonsRow(
     ) {
         // 🔥 点赞
         BiliActionButton(
-            icon = if (isLiked) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+            icon = if (isLiked) CupertinoIcons.Filled.Heart else CupertinoIcons.Default.Heart,
             text = FormatUtils.formatStat(info.stat.like.toLong()),
             isActive = isLiked,
             activeColor = BiliPink,
             onClick = onLikeClick
         )
 
-        // 🔥 投币
+        // 🪙 投币
         BiliActionButton(
-            icon = if (coinCount > 0) Icons.Filled.MonetizationOn else Icons.Outlined.MonetizationOn,
+            icon = com.android.purebilibili.core.ui.AppIcons.BiliCoin,
             text = FormatUtils.formatStat(info.stat.coin.toLong()),
             isActive = coinCount > 0,
             activeColor = Color(0xFFFFB300),
@@ -292,7 +293,7 @@ fun ActionButtonsRow(
 
         // 🔥 收藏
         BiliActionButton(
-            icon = if (isFavorited) Icons.Filled.Star else Icons.Outlined.Star,
+            icon = if (isFavorited) CupertinoIcons.Filled.Bookmark else CupertinoIcons.Default.Bookmark,
             text = FormatUtils.formatStat(info.stat.favorite.toLong()),
             isActive = isFavorited,
             activeColor = Color(0xFFFFC107),
@@ -301,7 +302,7 @@ fun ActionButtonsRow(
 
         // 🔥 三连（❤心形图标）
         BiliActionButton(
-            icon = Icons.Filled.Favorite,
+            icon = CupertinoIcons.Filled.Heart,
             text = "三连",
             isActive = false,
             activeColor = Color(0xFFE91E63),
@@ -517,7 +518,7 @@ fun DescriptionSection(desc: String) {
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Icon(
-                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        imageVector = if (expanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
@@ -641,7 +642,7 @@ fun RelatedVideoItem(video: RelatedVideo, onClick: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Filled.PlayArrow,
+                        CupertinoIcons.Default.Play,
                         contentDescription = null,
                         tint = Color.White.copy(alpha = 0.9f),
                         modifier = Modifier.size(12.dp)
@@ -707,7 +708,7 @@ fun RelatedVideoItem(video: RelatedVideo, onClick: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            Icons.Filled.PlayArrow,
+                            CupertinoIcons.Default.Play,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(12.dp)
@@ -874,7 +875,7 @@ fun PagesSelector(
                     fontWeight = FontWeight.Medium
                 )
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    imageVector = if (isExpanded) CupertinoIcons.Default.ChevronUp else CupertinoIcons.Default.ChevronDown,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)

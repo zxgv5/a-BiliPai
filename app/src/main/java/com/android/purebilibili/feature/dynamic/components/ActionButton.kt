@@ -10,10 +10,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChatBubble
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Repeat
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,9 +66,9 @@ fun ActionButton(
     
     // 🍎 优雅的图标
     val buttonIcon = when {
-        isLike -> Icons.Outlined.FavoriteBorder
-        isForward -> Icons.Outlined.Repeat
-        isComment -> Icons.Outlined.ChatBubble
+        isLike -> CupertinoIcons.Default.Heart
+        isForward -> CupertinoIcons.Default.ArrowTurnUpRight
+        isComment -> CupertinoIcons.Default.Message
         else -> icon
     }
     

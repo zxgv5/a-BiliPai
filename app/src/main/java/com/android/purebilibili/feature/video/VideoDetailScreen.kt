@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,6 +60,8 @@ import com.android.purebilibili.feature.video.ui.section.ActionButton
 import com.android.purebilibili.feature.video.ui.components.RelatedVideosHeader
 import com.android.purebilibili.feature.video.ui.components.RelatedVideoItem
 import com.android.purebilibili.feature.video.ui.components.CoinDialog
+import com.android.purebilibili.feature.video.ui.components.CollectionRow
+import com.android.purebilibili.feature.video.ui.components.CollectionSheet
 import com.android.purebilibili.feature.video.ui.components.PagesSelector
 // Imports for moved classes
 import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
@@ -69,9 +73,13 @@ import com.android.purebilibili.feature.video.ui.section.VideoPlayerSection
 import com.android.purebilibili.feature.video.ui.components.SubReplySheet
 import com.android.purebilibili.feature.video.ui.components.ReplyHeader
 import com.android.purebilibili.feature.video.ui.components.ReplyItemView
+import com.android.purebilibili.feature.video.ui.components.CommentSortFilterBar  // 🔥 新增
+import com.android.purebilibili.feature.video.viewmodel.CommentSortMode  // 🔥 新增
+import com.android.purebilibili.feature.video.ui.components.ReplyItemView
 import com.android.purebilibili.feature.video.ui.components.LikeBurstAnimation
 import com.android.purebilibili.feature.video.ui.components.TripleSuccessAnimation
 import com.android.purebilibili.feature.video.ui.components.VideoDetailSkeleton
+import com.android.purebilibili.feature.dynamic.components.ImagePreviewDialog  // 🔥 评论图片预览
 import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -119,6 +127,9 @@ fun VideoDetailScreen(
 
     var isPipMode by remember { mutableStateOf(isInPipMode) }
     LaunchedEffect(isInPipMode) { isPipMode = isInPipMode }
+    
+    // 🔥🔥 [PiP修复] 记录视频播放器在屏幕上的位置，用于PiP窗口只显示视频区域
+    var videoPlayerBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
     
     // 🔥 从小窗展开时自动进入横屏全屏
     LaunchedEffect(startInFullscreen) {
@@ -204,12 +215,17 @@ fun VideoDetailScreen(
         viewModel.initWithContext(context)
     }
     
-    // 🔥🔥 [新增] 设置系统画中画参数，支持手势返回自动进入 PiP
-    LaunchedEffect(Unit) {
+    // 🔥🔥 [PiP修复] 当视频播放器位置更新时，同步更新PiP参数
+    LaunchedEffect(videoPlayerBounds) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             activity?.let { act ->
                 val pipParamsBuilder = android.app.PictureInPictureParams.Builder()
                     .setAspectRatio(android.util.Rational(16, 9))
+                
+                // 🔥 设置源矩形区域 - PiP只显示视频播放器区域
+                videoPlayerBounds?.let { bounds ->
+                    pipParamsBuilder.setSourceRectHint(bounds)
+                }
                 
                 // Android 12+ 支持手势自动进入 PiP
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -255,8 +271,8 @@ fun VideoDetailScreen(
             val info = (uiState as PlayerUiState.Success).info
             val success = uiState as PlayerUiState.Success
             
-            // 初始化评论
-            commentViewModel.init(info.aid)
+            // 初始化评论（传入 UP 主 mid 用于筛选）
+            commentViewModel.init(info.aid, info.owner.mid)
             
             playerState.updateMediaMetadata(
                 title = info.title,
@@ -420,6 +436,17 @@ fun VideoDetailScreen(
                             .height(videoHeight + statusBarHeight)  // 🔥 包含状态栏高度
                             .background(Color.Black)  // 黑色背景
                             .clipToBounds()
+                            // 🔥🔥 [PiP修复] 捕获视频播放器在屏幕上的位置
+                            .onGloballyPositioned { layoutCoordinates ->
+                                val position = layoutCoordinates.positionInWindow()
+                                val size = layoutCoordinates.size
+                                videoPlayerBounds = android.graphics.Rect(
+                                    position.x.toInt(),
+                                    position.y.toInt(),
+                                    position.x.toInt() + size.width,
+                                    position.y.toInt() + size.height
+                                )
+                            }
                     ) {
                         // 🔥 播放器内部使用 padding 避开状态栏
                         Box(
@@ -501,7 +528,12 @@ fun VideoDetailScreen(
                                     downloadProgress = downloadProgress,
                                     isInWatchLater = success.isInWatchLater,
                                     followingMids = success.followingMids,
-                                    videoTags = success.videoTags,  // 🔥 视频标签
+                                    videoTags = success.videoTags,
+                                    // 🔥🔥 [新增] 评论排序/筛选参数
+                                    sortMode = commentState.sortMode,
+                                    upOnlyFilter = commentState.upOnlyFilter,
+                                    onSortModeChange = { commentViewModel.setSortMode(it) },
+                                    onUpOnlyToggle = { commentViewModel.toggleUpOnly() },
                                     onFollowClick = { viewModel.toggleFollow() },
                                     onFavoriteClick = { viewModel.toggleFavorite() },
                                     onLikeClick = { viewModel.toggleLike() },
@@ -736,6 +768,11 @@ fun VideoContentSection(
     isInWatchLater: Boolean = false,  // 🔥 稍后再看状态
     followingMids: Set<Long> = emptySet(),  // 🔥 已关注用户 ID 列表
     videoTags: List<VideoTag> = emptyList(),  // 🔥 视频标签列表
+    // 🔥🔥 [新增] 评论排序/筛选参数
+    sortMode: CommentSortMode = CommentSortMode.HOT,
+    upOnlyFilter: Boolean = false,
+    onSortModeChange: (CommentSortMode) -> Unit = {},
+    onUpOnlyToggle: () -> Unit = {},
     onFollowClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onLikeClick: () -> Unit,
@@ -757,6 +794,38 @@ fun VideoContentSection(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("简介", "评论 $replyCount")
     
+    // 🔥 评论图片预览状态
+    var showImagePreview by remember { mutableStateOf(false) }
+    var previewImages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var previewInitialIndex by remember { mutableIntStateOf(0) }
+    
+    // 🔥🔥 [新增] 合集展开状态
+    var showCollectionSheet by remember { mutableStateOf(false) }
+
+    // 🔥 图片预览对话框
+    if (showImagePreview && previewImages.isNotEmpty()) {
+        ImagePreviewDialog(
+            images = previewImages,
+            initialIndex = previewInitialIndex,
+            onDismiss = { showImagePreview = false }
+        )
+    }
+    
+    // 🔥🔥 [新增] 合集底部弹窗 - 必须在 LazyColumn 外部调用
+    info.ugc_season?.let { season ->
+        if (showCollectionSheet) {
+            CollectionSheet(
+                ugcSeason = season,
+                currentBvid = info.bvid,
+                onDismiss = { showCollectionSheet = false },
+                onEpisodeClick = { episode ->
+                    showCollectionSheet = false
+                    onRelatedVideoClick(episode.bvid)
+                }
+            )
+        }
+    }
+    
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -772,18 +841,12 @@ fun VideoContentSection(
             )
         }
 
-        // 🔥🔥 [官方布局] 2. 标题 + 统计 + 描述 (紧凑排列)
+        // 🔥🔥 [官方布局] 2. 标题 + 统计 + 描述 + 标签 (紧凑排列，默认隐藏)
         item {
             VideoTitleWithDesc(
-                info = info
+                info = info,
+                videoTags = videoTags  // 🔥 传递标签，展开后显示
             )
-        }
-        
-        // 🔥 视频标签
-        if (videoTags.isNotEmpty()) {
-            item {
-                VideoTagsRow(tags = videoTags)
-            }
         }
 
         // 🔥🔥 [官方布局] 3. 操作按钮行
@@ -803,6 +866,17 @@ fun VideoContentSection(
                 onDownloadClick = onDownloadClick,
                 onWatchLaterClick = onWatchLaterClick  // 🔥 稍后再看点击
             )
+        }
+        
+        // 🔥🔥 [新增] 视频合集展示
+        info.ugc_season?.let { season ->
+            item {
+                CollectionRow(
+                    ugcSeason = season,
+                    currentBvid = info.bvid,
+                    onClick = { showCollectionSheet = true }
+                )
+            }
         }
 
         // 🔥🔥 [官方布局] 4. Tab 栏（简介/评论 + 发弹幕入口）
@@ -914,7 +988,16 @@ fun VideoContentSection(
             
         } else {
             // === 评论 Tab 内容 ===
-            item { ReplyHeader(count = replyCount) }
+            // 🔥🔥 [替换] 使用新的排序筛选栏
+            item { 
+                CommentSortFilterBar(
+                    count = replyCount,
+                    sortMode = sortMode,
+                    upOnlyFilter = upOnlyFilter,
+                    onSortModeChange = onSortModeChange,
+                    onUpOnlyToggle = onUpOnlyToggle
+                )
+            }
             
             if (isRepliesLoading && replies.isEmpty()) {
                 item {
@@ -925,33 +1008,69 @@ fun VideoContentSection(
             } else if (replies.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("暂无评论", color = Color.Gray)
+                        Text(
+                            text = if (upOnlyFilter) "这个视频没有 UP 主的评论" else "暂无评论",
+                            color = Color.Gray
+                        )
                     }
                 }
             } else {
                 items(items = replies, key = { it.rpid }) { reply ->
                     ReplyItemView(
                         item = reply,
+                        upMid = info.owner.mid,  // 🔥 传递 UP 主 mid 用于显示 UP 标签
                         emoteMap = emoteMap,
                         onClick = {},
                         onSubClick = { onSubReplyClick(reply) },
-                        onTimestampClick = onTimestampClick  // 🔥🔥 传递时间戳点击回调
+                        onTimestampClick = onTimestampClick,
+                        onImagePreview = { images, index ->
+                            previewImages = images
+                            previewInitialIndex = index
+                            showImagePreview = true
+                        }
                     )
                 }
                 
                 // 加载更多提示
                 item {
+                    // 🔥🔥 [完全修复] 移除 LaunchedEffect，改用 derivedStateOf 检测滚动
+                    // 这样不会在 sortMode 切换时触发无限循环
+                    val shouldLoadMore by remember(replies.size, replyCount, isRepliesLoading) {
+                        derivedStateOf {
+                            !isRepliesLoading && 
+                            replies.isNotEmpty() && 
+                            replies.size < replyCount && 
+                            replyCount > 0
+                        }
+                    }
+                    
+                    // 🔥 只在首次发现需要加载更多时触发一次
+                    LaunchedEffect(shouldLoadMore) {
+                        if (shouldLoadMore) {
+                            onLoadMoreReplies()
+                        }
+                    }
+                    
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (replies.size < replyCount) {
-                             LaunchedEffect(Unit) { onLoadMoreReplies() }
-                             CupertinoActivityIndicator()
-                        } else {
-                             Text("—— end ——", color = Color.Gray, fontSize = 12.sp)
+                        when {
+                            isRepliesLoading -> {
+                                CupertinoActivityIndicator()
+                            }
+                            replies.size >= replyCount && replyCount > 0 -> {
+                                Text("—— end ——", color = Color.Gray, fontSize = 12.sp)
+                            }
+                            replyCount == 0 -> {
+                                // 无评论
+                            }
+                            else -> {
+                                // 等待加载
+                                CupertinoActivityIndicator()
+                            }
                         }
                     }
                 }

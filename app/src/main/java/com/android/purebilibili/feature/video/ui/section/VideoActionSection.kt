@@ -11,9 +11,10 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+// 🍎 Cupertino Icons - iOS SF Symbols 风格图标
+import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
+import io.github.alexzhirkevich.cupertino.icons.outlined.*
+import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,7 +71,7 @@ fun ActionButtonsRow(
     ) {
         // Like
         BiliActionButton(
-            icon = if (isLiked) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+            icon = if (isLiked) CupertinoIcons.Filled.Heart else CupertinoIcons.Default.Heart,
             text = FormatUtils.formatStat(info.stat.like.toLong()),
             isActive = isLiked,
             activeColor = MaterialTheme.colorScheme.primary,
@@ -79,7 +80,7 @@ fun ActionButtonsRow(
 
         // Coin
         BiliActionButton(
-            icon = if (coinCount > 0) Icons.Filled.MonetizationOn else Icons.Outlined.MonetizationOn,
+            icon = com.android.purebilibili.core.ui.AppIcons.BiliCoin,
             text = FormatUtils.formatStat(info.stat.coin.toLong()),
             isActive = coinCount > 0,
             activeColor = Color(0xFFFFB300),
@@ -88,7 +89,7 @@ fun ActionButtonsRow(
 
         // Favorite
         BiliActionButton(
-            icon = if (isFavorited) Icons.Filled.Star else Icons.Outlined.Star,
+            icon = if (isFavorited) CupertinoIcons.Filled.Bookmark else CupertinoIcons.Default.Bookmark,
             text = FormatUtils.formatStat(info.stat.favorite.toLong()),
             isActive = isFavorited,
             activeColor = Color(0xFFFFC107),
@@ -97,7 +98,7 @@ fun ActionButtonsRow(
         
         // 🔥 稍后再看
         BiliActionButton(
-            icon = if (isInWatchLater) Icons.Filled.WatchLater else Icons.Outlined.WatchLater,
+            icon = if (isInWatchLater) CupertinoIcons.Filled.Clock else CupertinoIcons.Default.Clock,
             text = if (isInWatchLater) "已添加" else "稍后看",
             isActive = isInWatchLater,
             activeColor = Color(0xFF9C27B0),  // 紫色
@@ -113,7 +114,7 @@ fun ActionButtonsRow(
         val isDownloaded = downloadProgress >= 1f
         val isDownloading = downloadProgress in 0f..0.99f
         BiliActionButton(
-            icon = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Outlined.Download,
+            icon = if (isDownloaded) CupertinoIcons.Default.Checkmark else CupertinoIcons.Default.ArrowDown,
             text = downloadText,
             isActive = isDownloaded || isDownloading,
             activeColor = if (isDownloaded) Color(0xFF4CAF50) else Color(0xFF2196F3),
@@ -122,7 +123,7 @@ fun ActionButtonsRow(
 
         // Triple action
         BiliActionButton(
-            icon = Icons.Filled.Favorite,
+            icon = CupertinoIcons.Filled.Heart,
             text = "三连",
             isActive = false,
             activeColor = Color(0xFFE91E63),
