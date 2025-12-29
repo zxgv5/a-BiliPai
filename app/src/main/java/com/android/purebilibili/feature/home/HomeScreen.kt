@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi // 🔥 Added
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -52,6 +53,8 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import com.android.purebilibili.core.ui.shimmer
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope  // 🔥 共享过渡
+import com.android.purebilibili.core.ui.animation.DissolvableVideoCard  // 🗑️ 粒子消散动画
+import com.android.purebilibili.core.ui.animation.jiggleOnDissolve      // 📳 iOS 风格抖动效果
 import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
 import coil.imageLoader
 import kotlinx.coroutines.launch
@@ -59,7 +62,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged  // 🚀 性能优化：防�
 import androidx.compose.animation.ExperimentalSharedTransitionApi  // 🔥 共享过渡实验API
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
@@ -810,38 +813,53 @@ fun HomeScreen(
                                 key = { _, video -> video.bvid },
                                 contentType = { _, _ -> "video" }
                             ) { index, video ->
-                                // 🔥🔥 [新增] 根据展示模式选择卡片样式
-                                when (displayMode) {
-                                    1 -> {
-                                        // 🎬 故事卡片 (Apple TV+ 风格)
-                                        StoryVideoCard(
-                                            video = video,
-                                            index = index,  // 🔥 动画索引
-                                            animationEnabled = cardAnimationEnabled,  // 🔥 动画开关
-                                            transitionEnabled = cardTransitionEnabled, // 🔥 过渡动画开关
-                                            onClick = { bvid, cid -> wrappedOnVideoClick(bvid, cid, video.pic) }
-                                        )
-                                    }
-                                    2 -> {
-                                        // 🍎 玻璃拟态 (Vision Pro 风格)
-                                        GlassVideoCard(
-                                            video = video,
-                                            index = index,  // 🔥 动画索引
-                                            animationEnabled = cardAnimationEnabled,  // 🔥 动画开关
-                                            transitionEnabled = cardTransitionEnabled, // 🔥 过渡动画开关
-                                            onClick = { bvid, cid -> wrappedOnVideoClick(bvid, cid, video.pic) }
-                                        )
-                                    }
-                                    else -> {
-                                        // 🔥 默认网格卡片
-                                        ElegantVideoCard(
-                                            video = video,
-                                            index = index,
-                                            isFollowing = video.owner.mid in state.followingMids,  // 🔥 判断是否已关注
-                                            animationEnabled = cardAnimationEnabled,    // 🔥 进场动画开关
-                                            transitionEnabled = cardTransitionEnabled,  // 🔥 过渡动画开关
-                                            onClick = { bvid, cid -> wrappedOnVideoClick(bvid, cid, video.pic) }
-                                        )
+                                // �️ [新增] 检查是否正在消散
+                                val isDissolving = video.bvid in state.dissolvingVideos
+                                
+                                // 🗑️ 使用可消散卡片容器包装
+                                DissolvableVideoCard(
+                                    isDissolving = isDissolving,
+                                    onDissolveComplete = { viewModel.completeVideoDissolve(video.bvid) },
+                                    cardId = video.bvid,  // 🔥 用于识别卡片，触发邻近卡片抖动
+                                    modifier = Modifier
+                                        .jiggleOnDissolve(video.bvid)  // 📳 iOS 风格抖动
+                                ) {
+                                    // �🔥🔥 [新增] 根据展示模式选择卡片样式
+                                    when (displayMode) {
+                                        1 -> {
+                                            // 🎬 故事卡片 (Apple TV+ 风格)
+                                            StoryVideoCard(
+                                                video = video,
+                                                index = index,  // 🔥 动画索引
+                                                animationEnabled = cardAnimationEnabled,  // 🔥 动画开关
+                                                transitionEnabled = cardTransitionEnabled, // 🔥 过渡动画开关
+                                                onDismiss = { viewModel.startVideoDissolve(video.bvid) },
+                                                onClick = { bvid, cid -> wrappedOnVideoClick(bvid, cid, video.pic) }
+                                            )
+                                        }
+                                        2 -> {
+                                            // 🍎 玻璃拟态 (Vision Pro 风格)
+                                            GlassVideoCard(
+                                                video = video,
+                                                index = index,  // 🔥 动画索引
+                                                animationEnabled = cardAnimationEnabled,  // 🔥 动画开关
+                                                transitionEnabled = cardTransitionEnabled, // 🔥 过渡动画开关
+                                                onDismiss = { viewModel.startVideoDissolve(video.bvid) },
+                                                onClick = { bvid, cid -> wrappedOnVideoClick(bvid, cid, video.pic) }
+                                            )
+                                        }
+                                        else -> {
+                                            // 🔥 默认网格卡片
+                                            ElegantVideoCard(
+                                                video = video,
+                                                index = index,
+                                                isFollowing = video.owner.mid in state.followingMids,  // 🔥 判断是否已关注
+                                                animationEnabled = cardAnimationEnabled,    // 🔥 进场动画开关
+                                                transitionEnabled = cardTransitionEnabled,  // 🔥 过渡动画开关
+                                                onDismiss = { viewModel.startVideoDissolve(video.bvid) },
+                                                onClick = { bvid, cid -> wrappedOnVideoClick(bvid, cid, video.pic) }
+                                            )
+                                        }
                                     }
                                 }
                             }

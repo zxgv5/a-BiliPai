@@ -271,12 +271,13 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
                 SettingsManager.getAppIcon(this@PureApplication).first()
             }
             
-            // alias 映射
+            // alias 映射 - 🔥🔥 统一与 SettingsViewModel 中的列表
             val allAliases = listOf(
                 "3D" to "${packageName}.MainActivityAlias3D",
                 "Blue" to "${packageName}.MainActivityAliasBlue",
                 "Retro" to "${packageName}.MainActivityAliasRetro",
                 "Flat" to "${packageName}.MainActivityAliasFlat",
+                "Flat Material" to "${packageName}.MainActivityAliasFlatMaterial",
                 "Neon" to "${packageName}.MainActivityAliasNeon",
                 "Telegram Blue" to "${packageName}.MainActivityAliasTelegramBlue",
                 "Pink" to "${packageName}.MainActivityAliasPink",

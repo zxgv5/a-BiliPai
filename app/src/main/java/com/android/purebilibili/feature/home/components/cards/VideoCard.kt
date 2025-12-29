@@ -32,6 +32,9 @@ import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.core.theme.iOSSystemGray
 import com.android.purebilibili.core.util.iOSCardTapEffect
+import com.android.purebilibili.core.util.HapticType
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 // 🔥 共享元素过渡
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.spring
@@ -57,9 +60,13 @@ fun ElegantVideoCard(
     animationEnabled: Boolean = true,   // 🔥 卡片进场动画开关
     transitionEnabled: Boolean = false, // 🔥 卡片过渡动画开关
     showPublishTime: Boolean = false,   // 🔥 是否显示发布时间（搜索结果用）
+    onDismiss: (() -> Unit)? = null,    // 🗑️ [新增] 删除/过滤回调（长按触发）
     onClick: (String, Long) -> Unit
 ) {
     val haptic = rememberHapticFeedback()
+    
+    // 🗑️ [新增] 长按删除菜单状态
+    var showDismissMenu by remember { mutableStateOf(false) }
     
     val coverUrl = remember(video.bvid) {
         FormatUtils.fixImageUrl(if (video.pic.startsWith("//")) "https:${video.pic}" else video.pic)
@@ -88,17 +95,37 @@ fun ElegantVideoCard(
             .onGloballyPositioned { coordinates ->
                 cardBounds = coordinates.boundsInRoot()
             }
-            .iOSCardTapEffect(
-                pressScale = 0.96f,
-                pressTranslationY = 6f,
-                hapticEnabled = true
-            ) {
-                // 🔥🔥 点击时保存卡片位置（包含密度信息）
-                cardBounds?.let { bounds ->
-                    CardPositionManager.recordCardPosition(bounds, screenWidthPx, screenHeightPx, density = densityValue)
+            // 🗑️ [新增] 长按手势检测
+            .pointerInput(onDismiss) {
+                if (onDismiss != null) {
+                    detectTapGestures(
+                        onLongPress = {
+                            haptic(HapticType.HEAVY)
+                            showDismissMenu = true
+                        },
+                        onTap = {
+                            cardBounds?.let { bounds ->
+                                CardPositionManager.recordCardPosition(bounds, screenWidthPx, screenHeightPx, density = densityValue)
+                            }
+                            onClick(video.bvid, 0)
+                        }
+                    )
                 }
-                onClick(video.bvid, 0)
             }
+            .then(
+                if (onDismiss == null) {
+                    Modifier.iOSCardTapEffect(
+                        pressScale = 0.96f,
+                        pressTranslationY = 6f,
+                        hapticEnabled = true
+                    ) {
+                        cardBounds?.let { bounds ->
+                            CardPositionManager.recordCardPosition(bounds, screenWidthPx, screenHeightPx, density = densityValue)
+                        }
+                        onClick(video.bvid, 0)
+                    }
+                } else Modifier
+            )
             .padding(bottom = 12.dp)
     ) {
         // 🔥 尝试获取共享元素作用域
@@ -314,6 +341,25 @@ fun ElegantVideoCard(
                 )
             }
         }
+    }
+    
+    // 🗑️ [新增] 长按删除菜单
+    DropdownMenu(
+        expanded = showDismissMenu,
+        onDismissRequest = { showDismissMenu = false }
+    ) {
+        DropdownMenuItem(
+            text = { 
+                Text(
+                    "🚫 不感兴趣",
+                    color = MaterialTheme.colorScheme.onSurface
+                ) 
+            },
+            onClick = {
+                showDismissMenu = false
+                onDismiss?.invoke()
+            }
+        )
     }
 }
 

@@ -226,12 +226,17 @@ class MainActivity : ComponentActivity() {
         // 🔥🔥 [重构] 使用新的模式判断方法
         val shouldEnterPip = miniPlayerManager.shouldEnterPip()
         val currentMode = miniPlayerManager.getCurrentMode()
+        val isActuallyPlaying = miniPlayerManager.isPlaying || (miniPlayerManager.player?.isPlaying == true)
         
-        // 🔥🔥 [新增] 支持小窗模式下按 Home 键进入系统 PiP
-        // 条件：在视频详情页 或 小窗播放中
-        val shouldTriggerPip = (isInVideoDetail || miniPlayerManager.isMiniMode) && shouldEnterPip
+        // 🔥🔥 [修复] 必须同时满足：
+        // 1. 在视频详情页 或 小窗播放中
+        // 2. 设置允许进入PiP
+        // 3. 视频正在播放（关键：避免在首页按Home进入PiP）
+        val shouldTriggerPip = (isInVideoDetail || miniPlayerManager.isMiniMode) 
+            && shouldEnterPip 
+            && isActuallyPlaying
         
-        Logger.d(TAG, "📺 miniPlayerMode=$currentMode, shouldEnterPip=$shouldEnterPip, shouldTriggerPip=$shouldTriggerPip, API=${Build.VERSION.SDK_INT}")
+        Logger.d(TAG, "📺 miniPlayerMode=$currentMode, shouldEnterPip=$shouldEnterPip, isPlaying=$isActuallyPlaying, shouldTriggerPip=$shouldTriggerPip, API=${Build.VERSION.SDK_INT}")
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && shouldTriggerPip) {
             try {

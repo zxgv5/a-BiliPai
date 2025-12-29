@@ -66,8 +66,15 @@ sealed class PlayerUiState {
         val emoteMap: Map<String, String> = emptyMap(),
         val isInWatchLater: Boolean = false,  // 🔥 稍后再看状态
         val followingMids: Set<Long> = emptySet(),  // 🔥 已关注用户 ID 列表
-        val videoTags: List<VideoTag> = emptyList()  // 🔥 视频标签列表
-    ) : PlayerUiState()
+        val videoTags: List<VideoTag> = emptyList(),  // 🔥 视频标签列表
+        // 🔥 CDN 线路切换
+        val currentCdnIndex: Int = 0,  // 当前使用的 CDN 索引 (0=主线路)
+        val allVideoUrls: List<String> = emptyList(),  // 所有可用视频 URL (主+备用)
+        val allAudioUrls: List<String> = emptyList()   // 所有可用音频 URL (主+备用)
+    ) : PlayerUiState() {
+        val cdnCount: Int get() = allVideoUrls.size.coerceAtLeast(1)
+        val currentCdnLabel: String get() = "线路${currentCdnIndex + 1}"
+    }
     
     data class Error(
         val error: VideoLoadError,
@@ -250,6 +257,28 @@ class PlayerViewModel : ViewModel() {
                         playbackUseCase.playVideo(result.playUrl, cachedPosition)
                     }
                     
+                    // 🔥 收集所有 CDN URL (主+备用)
+                    val allVideoUrls = buildList {
+                        add(result.playUrl)
+                        result.cachedDashVideos
+                            .find { it.id == result.quality }
+                            ?.backupUrl
+                            ?.filterNotNull()
+                            ?.filter { it.isNotEmpty() }
+                            ?.let { addAll(it) }
+                    }.distinct()
+                    
+                    val allAudioUrls = buildList {
+                        result.audioUrl?.let { add(it) }
+                        result.cachedDashAudios.firstOrNull()
+                            ?.backupUrl
+                            ?.filterNotNull()
+                            ?.filter { it.isNotEmpty() }
+                            ?.let { addAll(it) }
+                    }.distinct()
+                    
+                    Logger.d("PlayerVM", "📡 CDN 线路: 视频${allVideoUrls.size}个, 音频${allAudioUrls.size}个")
+                    
                     _uiState.value = PlayerUiState.Success(
                         info = result.info,
                         playUrl = result.playUrl,
@@ -266,7 +295,11 @@ class PlayerViewModel : ViewModel() {
                         isFollowing = result.isFollowing,
                         isFavorited = result.isFavorited,
                         isLiked = result.isLiked,
-                        coinCount = result.coinCount
+                        coinCount = result.coinCount,
+                        // 🔥 CDN 线路
+                        currentCdnIndex = 0,
+                        allVideoUrls = allVideoUrls,
+                        allAudioUrls = allAudioUrls
                     )
                     
                     // 🔥🔥 [新增] 异步加载关注列表（用于推荐视频的已关注标签）
@@ -351,6 +384,105 @@ class PlayerViewModel : ViewModel() {
         PlayUrlCache.invalidate(bvid, currentCid)
         currentBvid = ""
         loadVideo(bvid)
+    }
+    
+    /**
+     * 🔥 重载视频 - 保持当前播放位置
+     * 用于设置面板的"重载视频"功能
+     */
+    fun reloadVideo() {
+        val bvid = currentBvid.takeIf { it.isNotBlank() } ?: return
+        val currentPos = exoPlayer?.currentPosition ?: 0L
+        
+        // 清除缓存
+        PlayUrlCache.invalidate(bvid, currentCid)
+        PlaybackCooldownManager.clearForVideo(bvid)
+        
+        // 重新加载
+        currentBvid = ""
+        
+        viewModelScope.launch {
+            loadVideo(bvid)
+            // 等待加载完成后恢复位置
+            kotlinx.coroutines.delay(500)
+            exoPlayer?.seekTo(currentPos)
+        }
+    }
+    
+    /**
+     * 🔥 切换 CDN 线路
+     * 在当前画质下切换到下一个 CDN
+     */
+    fun switchCdn() {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        
+        if (current.cdnCount <= 1) {
+            viewModelScope.launch { toast("没有其他可用线路") }
+            return
+        }
+        
+        // 计算下一个 CDN 索引（循环）
+        val nextIndex = (current.currentCdnIndex + 1) % current.cdnCount
+        val nextVideoUrl = current.allVideoUrls.getOrNull(nextIndex) ?: return
+        val nextAudioUrl = current.allAudioUrls.getOrNull(nextIndex)
+        
+        val currentPos = exoPlayer?.currentPosition ?: 0L
+        
+        viewModelScope.launch {
+            Logger.d("PlayerVM", "📡 切换线路: ${current.currentCdnIndex + 1} → ${nextIndex + 1}")
+            
+            // 使用新的 URL 播放
+            if (nextAudioUrl != null) {
+                playbackUseCase.playDashVideo(nextVideoUrl, nextAudioUrl, currentPos)
+            } else {
+                playbackUseCase.playVideo(nextVideoUrl, currentPos)
+            }
+            
+            // 更新状态
+            _uiState.value = current.copy(
+                playUrl = nextVideoUrl,
+                audioUrl = nextAudioUrl,
+                currentCdnIndex = nextIndex
+            )
+            
+            toast("已切换到线路${nextIndex + 1}")
+        }
+    }
+    
+    /**
+     * 🔥 切换到指定 CDN 线路
+     */
+    fun switchCdnTo(index: Int) {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        
+        if (index < 0 || index >= current.cdnCount) return
+        if (index == current.currentCdnIndex) {
+            viewModelScope.launch { toast("已是当前线路") }
+            return
+        }
+        
+        val nextVideoUrl = current.allVideoUrls.getOrNull(index) ?: return
+        val nextAudioUrl = current.allAudioUrls.getOrNull(index)
+        
+        val currentPos = exoPlayer?.currentPosition ?: 0L
+        
+        viewModelScope.launch {
+            Logger.d("PlayerVM", "📡 切换到线路: ${index + 1}")
+            
+            if (nextAudioUrl != null) {
+                playbackUseCase.playDashVideo(nextVideoUrl, nextAudioUrl, currentPos)
+            } else {
+                playbackUseCase.playVideo(nextVideoUrl, currentPos)
+            }
+            
+            _uiState.value = current.copy(
+                playUrl = nextVideoUrl,
+                audioUrl = nextAudioUrl,
+                currentCdnIndex = index
+            )
+            
+            toast("已切换到线路${index + 1}")
+        }
     }
     
     // ========== Interaction ==========

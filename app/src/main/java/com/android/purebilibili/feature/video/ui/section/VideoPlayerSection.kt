@@ -70,7 +70,14 @@ fun VideoPlayerSection(
     sponsorSegment: com.android.purebilibili.data.model.response.SponsorSegment? = null,
     showSponsorSkipButton: Boolean = false,
     onSponsorSkip: () -> Unit = {},
-    onSponsorDismiss: () -> Unit = {}
+    onSponsorDismiss: () -> Unit = {},
+    // 🔥 [新增] 重载视频回调
+    onReloadVideo: () -> Unit = {},
+    // 🔥 [新增] CDN 线路切换
+    currentCdnIndex: Int = 0,
+    cdnCount: Int = 1,
+    onSwitchCdn: () -> Unit = {},
+    onSwitchCdnTo: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -130,6 +137,10 @@ fun VideoPlayerSection(
     
     // 🔥 视频比例状态
     var currentAspectRatio by remember { mutableStateOf(VideoAspectRatio.FIT) }
+    
+    // 🔥 [新增] 视频翻转状态
+    var isFlippedHorizontal by remember { mutableStateOf(false) }
+    var isFlippedVertical by remember { mutableStateOf(false) }
 
     // 记录手势开始时的初始值
     var startVolume by remember { mutableIntStateOf(0) }
@@ -313,23 +324,31 @@ fun VideoPlayerSection(
             }
         }
         
-        // 1. PlayerView (底层)
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = playerState.player
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
-                    useController = false
-                    keepScreenOn = true
-                    resizeMode = currentAspectRatio.resizeMode
-                }
-            },
-            update = { playerView ->
-                playerView.player = playerState.player
-                playerView.resizeMode = currentAspectRatio.resizeMode
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+        // 1. PlayerView (底层) - key 触发 graphicsLayer 强制更新
+        key(isFlippedHorizontal, isFlippedVertical) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = playerState.player
+                        setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
+                        useController = false
+                        keepScreenOn = true
+                        resizeMode = currentAspectRatio.resizeMode
+                    }
+                },
+                update = { playerView ->
+                    playerView.player = playerState.player
+                    playerView.resizeMode = currentAspectRatio.resizeMode
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        // 🔥 应用翻转效果
+                        scaleX = if (isFlippedHorizontal) -1f else 1f
+                        scaleY = if (isFlippedVertical) -1f else 1f
+                    }
+            )
+        }
         
         // 2. DanmakuView (使用 ByteDance DanmakuRenderEngine - 覆盖在 PlayerView 上方)
         android.util.Log.d("VideoPlayerSection", "🔍 DanmakuView check: isInPipMode=$isInPipMode, danmakuEnabled=$danmakuEnabled")
@@ -470,8 +489,23 @@ fun VideoPlayerSection(
                 // 🔥 视频比例调节
                 currentAspectRatio = currentAspectRatio,
                 onAspectRatioChange = { currentAspectRatio = it },
-                // 🔗 [新增] 分享功能
-                bvid = bvid
+                // 🕺 [新增] 分享功能
+                bvid = bvid,
+                // 🔥 [新增] 视频设置面板回调
+                onReloadVideo = onReloadVideo,
+                isFlippedHorizontal = isFlippedHorizontal,
+                isFlippedVertical = isFlippedVertical,
+                onFlipHorizontal = { isFlippedHorizontal = !isFlippedHorizontal },
+                onFlipVertical = { isFlippedVertical = !isFlippedVertical },
+                // 🔥 [新增] 画质切换（用于设置面板）
+                onQualityChange = { qid, pos ->
+                    onQualityChange(qid, playerState.player.currentPosition)
+                },
+                // 🔥 [新增] CDN 线路切换
+                currentCdnIndex = currentCdnIndex,
+                cdnCount = cdnCount,
+                onSwitchCdn = onSwitchCdn,
+                onSwitchCdnTo = onSwitchCdnTo
             )
         }
         

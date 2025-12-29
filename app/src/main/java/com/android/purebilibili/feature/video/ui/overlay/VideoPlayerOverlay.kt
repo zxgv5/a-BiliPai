@@ -35,6 +35,7 @@ import com.android.purebilibili.feature.video.ui.components.SpeedSelectionMenu
 import com.android.purebilibili.feature.video.ui.components.DanmakuSettingsPanel
 import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
 import com.android.purebilibili.feature.video.ui.components.AspectRatioMenu
+import com.android.purebilibili.feature.video.ui.components.VideoSettingsPanel
 import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
 import kotlinx.coroutines.delay
 
@@ -79,12 +80,30 @@ fun VideoPlayerOverlay(
     onAspectRatioChange: (VideoAspectRatio) -> Unit = {},
     // 🔗 [新增] 分享功能
     bvid: String = "",
-    onShare: (() -> Unit)? = null
+    onShare: (() -> Unit)? = null,
+    // 🔥 [新增] 视频设置面板回调
+    onReloadVideo: () -> Unit = {},
+    sleepTimerMinutes: Int? = null,
+    onSleepTimerChange: (Int?) -> Unit = {},
+    isFlippedHorizontal: Boolean = false,
+    isFlippedVertical: Boolean = false,
+    onFlipHorizontal: () -> Unit = {},
+    onFlipVertical: () -> Unit = {},
+    isAudioOnly: Boolean = false,
+    onAudioOnlyToggle: () -> Unit = {},
+    // 🔥 [新增] 画质列表和回调
+    onQualityChange: (Int, Long) -> Unit = { _, _ -> },
+    // 🔥 [新增] CDN 线路切换
+    currentCdnIndex: Int = 0,
+    cdnCount: Int = 1,
+    onSwitchCdn: () -> Unit = {},
+    onSwitchCdnTo: (Int) -> Unit = {}
 ) {
     var showQualityMenu by remember { mutableStateOf(false) }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showRatioMenu by remember { mutableStateOf(false) }
     var showDanmakuSettings by remember { mutableStateOf(false) }
+    var showVideoSettings by remember { mutableStateOf(false) }  // 🔥 新增
     var currentSpeed by remember { mutableFloatStateOf(1.0f) }
     // 🔥 使用传入的比例状态
     var isPlaying by remember { mutableStateOf(player.isPlaying) }
@@ -199,10 +218,11 @@ fun VideoPlayerOverlay(
                         modifier = Modifier.align(Alignment.TopCenter)
                     )
                 } else {
-                    // 🔥🔥 [新增] 竖屏模式顶部栏（返回 + 分享按钮）
+                    // 🔥🔥 [新增] 竖屏模式顶部栏（返回 + 设置 + 分享按钮）
                     val context = LocalContext.current
                     PortraitTopBar(
                         onBack = onBack,
+                        onSettings = { showVideoSettings = true },
                         onShare = onShare ?: {
                             if (bvid.isNotEmpty()) {
                                 ShareUtils.shareVideo(context, title, bvid)
@@ -365,17 +385,55 @@ fun VideoPlayerOverlay(
                 onDismiss = { showDanmakuSettings = false }
             )
         }
+        
+        // --- 9. 🔥 [新增] 视频设置面板 ---
+        if (showVideoSettings) {
+            VideoSettingsPanel(
+                sleepTimerMinutes = sleepTimerMinutes,
+                onSleepTimerChange = onSleepTimerChange,
+                onReload = onReloadVideo,
+                currentQualityLabel = currentQualityLabel,
+                qualityLabels = qualityLabels,
+                qualityIds = qualityIds,
+                onQualitySelected = { index ->
+                    val id = qualityIds.getOrNull(index) ?: 0
+                    onQualityChange(id, 0L)  // 位置由上层处理
+                    showVideoSettings = false
+                },
+                currentSpeed = currentSpeed,
+                onSpeedChange = { speed ->
+                    currentSpeed = speed
+                    player.setPlaybackSpeed(speed)
+                },
+                isFlippedHorizontal = isFlippedHorizontal,
+                isFlippedVertical = isFlippedVertical,
+                onFlipHorizontal = onFlipHorizontal,
+                onFlipVertical = onFlipVertical,
+                isAudioOnly = isAudioOnly,
+                onAudioOnlyToggle = onAudioOnlyToggle,
+                // 🔥 CDN 线路切换
+                currentCdnIndex = currentCdnIndex,
+                cdnCount = cdnCount,
+                onSwitchCdn = onSwitchCdn,
+                onSwitchCdnTo = { index ->
+                    onSwitchCdnTo(index)
+                    showVideoSettings = false
+                },
+                onDismiss = { showVideoSettings = false }
+            )
+        }
     }
 }
 
 /**
  * 🔥 竖屏模式顶部控制栏
  * 
- * 包含返回首页按钮和分享按钮
+ * 包含返回首页按钮、设置按钮和分享按钮
  */
 @Composable
 private fun PortraitTopBar(
     onBack: () -> Unit,
+    onSettings: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -401,19 +459,39 @@ private fun PortraitTopBar(
             )
         }
         
-        // 分享按钮
-        IconButton(
-            onClick = onShare,
-            modifier = Modifier
-                .size(40.dp)
-                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+        // 右侧按钮组
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = CupertinoIcons.Default.SquareAndArrowUp,
-                contentDescription = "分享",
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
+            // 🔥 设置按钮
+            IconButton(
+                onClick = onSettings,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = CupertinoIcons.Default.Ellipsis,
+                    contentDescription = "设置",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            
+            // 分享按钮
+            IconButton(
+                onClick = onShare,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = CupertinoIcons.Default.SquareAndArrowUp,
+                    contentDescription = "分享",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }

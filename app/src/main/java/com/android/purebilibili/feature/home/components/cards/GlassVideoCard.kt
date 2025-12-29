@@ -35,6 +35,10 @@ import com.android.purebilibili.core.util.iOSCardTapEffect
 import com.android.purebilibili.core.util.animateEnter
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.VideoItem
+import com.android.purebilibili.core.util.rememberHapticFeedback
+import com.android.purebilibili.core.util.HapticType
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 // 🔥 共享元素过渡
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.spring
@@ -58,8 +62,14 @@ fun GlassVideoCard(
     index: Int = 0,  // 🔥🔥 [新增] 索引用于动画延迟
     animationEnabled: Boolean = true,  // 🔥 卡片动画开关
     transitionEnabled: Boolean = false, // 🔥 卡片过渡动画开关
+    onDismiss: (() -> Unit)? = null,    // 🗑️ [新增] 删除/过滤回调（长按触发）
     onClick: (String, Long) -> Unit
 ) {
+    val haptic = rememberHapticFeedback()
+    
+    // 🗑️ [新增] 长按删除菜单状态
+    var showDismissMenu by remember { mutableStateOf(false) }
+    
     val coverUrl = remember(video.bvid) {
         FormatUtils.fixImageUrl(if (video.pic.startsWith("//")) "https:${video.pic}" else video.pic)
     }
@@ -147,19 +157,39 @@ fun GlassVideoCard(
                     ),
                     shape = RoundedCornerShape(20.dp)
                 )
-                // 🍎 毛玻璃背景
+                // 单层轻量阴影
                 .background(glassBackground)
-                .iOSCardTapEffect(
-                    pressScale = 0.96f,
-                    pressTranslationY = 8f,
-                    hapticEnabled = true
-                ) {
-                    // 🔥🔥 点击时保存卡片位置
-                    cardBounds?.let { bounds ->
-                        CardPositionManager.recordCardPosition(bounds, screenWidthPx, screenHeightPx)
+                // 🗑️ [新增] 长按手势检测
+                .pointerInput(onDismiss) {
+                    if (onDismiss != null) {
+                        detectTapGestures(
+                            onLongPress = {
+                                haptic(HapticType.HEAVY)
+                                showDismissMenu = true
+                            },
+                            onTap = {
+                                cardBounds?.let { bounds ->
+                                    CardPositionManager.recordCardPosition(bounds, screenWidthPx, screenHeightPx)
+                                }
+                                onClick(video.bvid, 0)
+                            }
+                        )
                     }
-                    onClick(video.bvid, 0)
                 }
+                .then(
+                    if (onDismiss == null) {
+                        Modifier.iOSCardTapEffect(
+                            pressScale = 0.96f,
+                            pressTranslationY = 8f,
+                            hapticEnabled = true
+                        ) {
+                            cardBounds?.let { bounds ->
+                                CardPositionManager.recordCardPosition(bounds, screenWidthPx, screenHeightPx)
+                            }
+                            onClick(video.bvid, 0)
+                        }
+                    } else Modifier
+                )
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -304,5 +334,24 @@ fun GlassVideoCard(
                     )
             )
         }
+    }
+    
+    // 🗑️ [新增] 长按删除菜单
+    DropdownMenu(
+        expanded = showDismissMenu,
+        onDismissRequest = { showDismissMenu = false }
+    ) {
+        DropdownMenuItem(
+            text = { 
+                Text(
+                    "🚫 不感兴趣",
+                    color = MaterialTheme.colorScheme.onSurface
+                ) 
+            },
+            onClick = {
+                showDismissMenu = false
+                onDismiss?.invoke()
+            }
+        )
     }
 }

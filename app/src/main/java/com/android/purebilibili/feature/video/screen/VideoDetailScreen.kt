@@ -387,7 +387,14 @@ fun VideoDetailScreen(
                     // 🔗 [新增] 分享功能
                     bvid = bvid,
                     // 🧪 实验性功能：双击点赞
-                    onDoubleTapLike = { viewModel.toggleLike() }
+                    onDoubleTapLike = { viewModel.toggleLike() },
+                    // 🔥 [新增] 重载视频
+                    onReloadVideo = { viewModel.reloadVideo() },
+                    // 🔥 [新增] CDN 线路切换
+                    currentCdnIndex = (uiState as? PlayerUiState.Success)?.currentCdnIndex ?: 0,
+                    cdnCount = (uiState as? PlayerUiState.Success)?.cdnCount ?: 1,
+                    onSwitchCdn = { viewModel.switchCdn() },
+                    onSwitchCdnTo = { viewModel.switchCdnTo(it) }
                     // 🚀 空降助手 - 已由插件系统自动处理
                     // sponsorSegment = sponsorSegment,
                     // showSponsorSkipButton = showSponsorSkipButton,
@@ -487,7 +494,14 @@ fun VideoDetailScreen(
                                 onBack = handleBack,
                                 // 🔗 [新增] 分享功能
                                 bvid = bvid,
-                                onDoubleTapLike = { viewModel.toggleLike() }
+                                onDoubleTapLike = { viewModel.toggleLike() },
+                                // 🔥 [新增] 重载视频
+                                onReloadVideo = { viewModel.reloadVideo() },
+                                // 🔥 [新增] CDN 线路切换
+                                currentCdnIndex = (uiState as? PlayerUiState.Success)?.currentCdnIndex ?: 0,
+                                cdnCount = (uiState as? PlayerUiState.Success)?.cdnCount ?: 1,
+                                onSwitchCdn = { viewModel.switchCdn() },
+                                onSwitchCdnTo = { viewModel.switchCdnTo(it) }
                                 // 🚀 空降助手 - 已由插件系统自动处理
                                 // sponsorSegment = sponsorSegment,
                                 // showSponsorSkipButton = showSponsorSkipButton,

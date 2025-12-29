@@ -67,5 +67,7 @@ data class HomeUiState(
     // 🔥🔥 [新增] 标签页显示索引（独立于内容分类，用于特殊分类导航后保持标签位置）
     val displayedTabIndex: Int = 0,
     // 🥚 [彩蛋] 刷新成功后的趣味消息
-    val refreshMessage: String? = null
+    val refreshMessage: String? = null,
+    // 🗑️ [新增] 正在消散动画中的视频 BVIDs（动画完成后移除）
+    val dissolvingVideos: Set<String> = emptySet()
 )

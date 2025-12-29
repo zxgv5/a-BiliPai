@@ -80,6 +80,41 @@ fun SettingsScreen(
     
     // 🔥🔥 [新增] 用于重播新手引导
     var showOnboardingReplay by remember { mutableStateOf(false) }
+    
+    // 🧹 缓存清理动画状态
+    var showCacheAnimation by remember { mutableStateOf(false) }
+    var cacheProgress by remember { mutableStateOf<CacheClearProgress?>(null) }
+    
+    // 🧹 启动缓存清理动画
+    LaunchedEffect(showCacheAnimation) {
+        if (showCacheAnimation) {
+            val breakdown = com.android.purebilibili.core.util.CacheUtils.getCacheBreakdown(context)
+            val totalSize = breakdown.totalSize
+            val clearedSizeStr = breakdown.format()
+            
+            // 模拟进度动画
+            for (i in 0..100 step 10) {
+                cacheProgress = CacheClearProgress(
+                    current = (totalSize * i / 100),
+                    total = totalSize,
+                    isComplete = false,
+                    clearedSize = clearedSizeStr
+                )
+                kotlinx.coroutines.delay(150)
+            }
+            
+            // 实际执行清理
+            viewModel.clearCache()
+            
+            // 完成状态
+            cacheProgress = CacheClearProgress(
+                current = totalSize,
+                total = totalSize,
+                isComplete = true,
+                clearedSize = clearedSizeStr
+            )
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refreshCacheSize()
@@ -103,24 +138,26 @@ fun SettingsScreen(
         }
     }
 
-    // 缓存清理弹窗
+    // 缓存清理确认弹窗
     if (showCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { showCacheDialog = false },
-            title = { Text("清除缓存", color = MaterialTheme.colorScheme.onSurface) },
-            text = { Text("确定要清除所有图片和视频缓存吗？", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.clearCache()
-                        Toast.makeText(context, "缓存已清除", Toast.LENGTH_SHORT).show()
-                        showCacheDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) { Text("确认清除") }
+        CacheClearConfirmDialog(
+            cacheSize = state.cacheSize,
+            onConfirm = {
+                showCacheDialog = false
+                showCacheAnimation = true
             },
-            dismissButton = { TextButton(onClick = { showCacheDialog = false }) { Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant) } },
-            containerColor = MaterialTheme.colorScheme.surface
+            onDismiss = { showCacheDialog = false }
+        )
+    }
+    
+    // 🧹 缓存清理动画对话框
+    if (showCacheAnimation && cacheProgress != null) {
+        CacheClearAnimationDialog(
+            progress = cacheProgress!!,
+            onDismiss = {
+                showCacheAnimation = false
+                cacheProgress = null
+            }
         )
     }
     

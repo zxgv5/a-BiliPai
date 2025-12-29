@@ -195,7 +195,7 @@ object CacheUtils {
         // 应用缓存
         context.getSharedPreferences("following_cache", Context.MODE_PRIVATE).edit().clear().apply()
         com.android.purebilibili.core.network.WbiKeyManager.invalidateCache()
-        PlaybackCooldownManager.clearAll()  // 🔥 清除播放冷却
+        PlaybackCooldownManager.clearAll()
         
         emit(ClearProgress(100, "清理完成"))
     }.flowOn(Dispatchers.IO)
@@ -207,6 +207,82 @@ object CacheUtils {
         val percent: Int,
         val message: String
     )
+    
+    /**
+     * 🚀 清除缓存并返回进度 Flow (增强版 - 支持动画)
+     * 返回已清理的字节数和总字节数
+     */
+    data class ClearProgressV2(
+        val cleared: Long,       // 已清理字节数
+        val total: Long,         // 总字节数
+        val isComplete: Boolean, // 是否完成
+        val message: String      // 状态消息
+    ) {
+        fun formatCleared(): String = formatSizeStatic(cleared.toDouble())
+        
+        companion object {
+            private fun formatSizeStatic(size: Double): String {
+                val kiloByte = size / 1024
+                if (kiloByte < 1) return "0 KB"
+                val megaByte = kiloByte / 1024
+                if (megaByte < 1) return String.format("%.1f KB", kiloByte)
+                val gigaByte = megaByte / 1024
+                if (gigaByte < 1) return String.format("%.1f MB", megaByte)
+                return String.format("%.2f GB", gigaByte)
+            }
+        }
+    }
+
+    fun clearAllCacheWithProgressV2(context: Context): Flow<ClearProgressV2> = flow {
+        // 首先获取总大小
+        val breakdown = getCacheBreakdown(context)
+        val totalSize = breakdown.totalSize
+        var clearedSize = 0L
+        
+        emit(ClearProgressV2(0, totalSize, false, "正在清除内存缓存..."))
+        
+        // 内存缓存
+        val memorySize = breakdown.memoryCache
+        context.imageLoader.memoryCache?.clear()
+        com.android.purebilibili.core.cache.PlayUrlCache.clear()
+        clearedSize += memorySize
+        emit(ClearProgressV2(clearedSize, totalSize, false, "内存缓存已清除"))
+        kotlinx.coroutines.delay(100)
+        
+        // 磁盘图片缓存
+        emit(ClearProgressV2(clearedSize, totalSize, false, "正在清除图片缓存..."))
+        val imageSize = breakdown.imageCache
+        context.imageLoader.diskCache?.clear()
+        clearedSize += imageSize
+        emit(ClearProgressV2(clearedSize, totalSize, false, "图片缓存已清除"))
+        kotlinx.coroutines.delay(100)
+        
+        // 网络缓存
+        emit(ClearProgressV2(clearedSize, totalSize, false, "正在清除网络缓存..."))
+        val httpSize = breakdown.httpCache
+        try {
+            com.android.purebilibili.core.network.NetworkModule.okHttpClient.cache?.evictAll()
+        } catch (_: Exception) {}
+        clearedSize += httpSize
+        emit(ClearProgressV2(clearedSize, totalSize, false, "网络缓存已清除"))
+        kotlinx.coroutines.delay(100)
+        
+        // 文件缓存
+        emit(ClearProgressV2(clearedSize, totalSize, false, "正在清除临时文件..."))
+        val otherSize = breakdown.otherCache
+        context.cacheDir?.let { clearDirContentsSelective(it, listOf("image_cache", "okhttp")) }
+        context.externalCacheDir?.let { clearDirContents(it) }
+        clearedSize += otherSize
+        emit(ClearProgressV2(clearedSize, totalSize, false, "临时文件已清除"))
+        kotlinx.coroutines.delay(100)
+        
+        // 应用缓存
+        context.getSharedPreferences("following_cache", Context.MODE_PRIVATE).edit().clear().apply()
+        com.android.purebilibili.core.network.WbiKeyManager.invalidateCache()
+        PlaybackCooldownManager.clearAll()
+        
+        emit(ClearProgressV2(totalSize, totalSize, true, "清理完成"))
+    }.flowOn(Dispatchers.IO)
 
     /**
      * 🚀 使用 walkTopDown 惰性序列快速计算目录大小

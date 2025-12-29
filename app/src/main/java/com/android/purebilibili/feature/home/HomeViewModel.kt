@@ -65,6 +65,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(displayedTabIndex = index)
     }
     
+    // 🗑️ [新增] 开始消散动画（触发 UI 播放粒子动画）
+    fun startVideoDissolve(bvid: String) {
+        _uiState.value = _uiState.value.copy(
+            dissolvingVideos = _uiState.value.dissolvingVideos + bvid
+        )
+    }
+    
+    // 🗑️ [新增] 完成消散动画（从列表移除并记录到已过滤集合）
+    fun completeVideoDissolve(bvid: String) {
+        _uiState.value = _uiState.value.copy(
+            dissolvingVideos = _uiState.value.dissolvingVideos - bvid,
+            videos = _uiState.value.videos.filterNot { it.bvid == bvid }
+        )
+    }
+    
     
     // 🔥🔥 [新增] 切换直播子分类
     fun switchLiveSubCategory(subCategory: LiveSubCategory) {
