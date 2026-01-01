@@ -298,10 +298,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val pm = context.packageManager
             val packageName = context.packageName
             
-            // alias 映射
+            // alias 映射 - 必须与 AndroidManifest.xml 中声明的完全一致
             val allAliases = listOf(
                 "3D" to "${packageName}.MainActivityAlias3D",
-                "NewYear" to "${packageName}.MainActivityAliasNewYear",
                 "Blue" to "${packageName}.MainActivityAliasBlue",
                 "Retro" to "${packageName}.MainActivityAliasRetro",
                 "Flat" to "${packageName}.MainActivityAliasFlat",
@@ -318,24 +317,32 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val targetAlias = allAliases.find { it.first == iconKey }?.second
                 ?: "${packageName}.MainActivityAlias3D" // 默认3D
             
-            // 🔥🔥 [修复] 先禁用所有 alias，再启用目标 alias
-            // 避免出现多个启动器图标
+            // 🔥🔥 [修复] 先启用目标 alias，再禁用其他 alias
+            // 关键：确保在任何时刻都有一个活动的入口点，避免系统卡死
             
-            // 第一步：禁用所有 alias
-            allAliases.forEach { (_, aliasFullName) ->
+            try {
+                // 第一步：先启用目标 alias（确保有可用入口）
                 pm.setComponentEnabledSetting(
-                    android.content.ComponentName(packageName, aliasFullName),
-                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    android.content.ComponentName(packageName, targetAlias),
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                     android.content.pm.PackageManager.DONT_KILL_APP
                 )
+                
+                // 第二步：禁用其他所有 alias（只禁用非目标的）
+                allAliases.filter { it.second != targetAlias }.forEach { (_, aliasFullName) ->
+                    try {
+                        pm.setComponentEnabledSetting(
+                            android.content.ComponentName(packageName, aliasFullName),
+                            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            android.content.pm.PackageManager.DONT_KILL_APP
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.w("SettingsViewModel", "Failed to disable alias: $aliasFullName", e)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsViewModel", "Failed to switch app icon to $iconKey", e)
             }
-            
-            // 第二步：启用目标 alias
-            pm.setComponentEnabledSetting(
-                android.content.ComponentName(packageName, targetAlias),
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                android.content.pm.PackageManager.DONT_KILL_APP
-            )
         }
     }
 

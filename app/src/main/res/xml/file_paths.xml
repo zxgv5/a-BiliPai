@@ -4,4 +4,9 @@
     <cache-path
         name="logs"
         path="logs/" />
+    
+    <!-- 外部 Download 目录（用于日志导出） -->
+    <external-path
+        name="external_downloads"
+        path="Download/BiliPai/" />
 </paths>

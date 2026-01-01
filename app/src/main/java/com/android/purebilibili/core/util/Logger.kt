@@ -175,6 +175,8 @@ object LogCollector {
     
     /**
      * 导出日志到文件并通过系统分享
+     * 
+     * 日志会保存到 Download/BiliPai/logs/ 目录，方便 MT 管理器等工具直接访问
      */
     fun exportAndShare(context: Context) {
         try {
@@ -199,15 +201,131 @@ object LogCollector {
             }
             
             val content = header + entries.joinToString("\n") { it.format() }
-            
-            // 写入缓存目录
             val fileName = "bilipai_log_${fileDateFormat.format(Date())}.txt"
-            val cacheDir = File(context.cacheDir, "logs")
-            cacheDir.mkdirs()
-            val logFile = File(cacheDir, fileName)
-            logFile.writeText(content)
             
-            // 通过 FileProvider 分享
+            // 🔥🔥 [优化] 保存到外部 Download 目录，MT 管理器可直接访问
+            val savedPath = saveToExternalDownload(context, fileName, content)
+            
+            if (savedPath != null) {
+                // 保存成功，显示路径并提供分享选项
+                val displayPath = savedPath.substringAfter("Download/")
+                Toast.makeText(
+                    context, 
+                    "📁 已保存到: Download/$displayPath\n\n点击分享按钮可发送给开发者", 
+                    Toast.LENGTH_LONG
+                ).show()
+                
+                // 通过 FileProvider 分享（兼容所有 Android 版本）
+                shareLogFile(context, savedPath, fileName)
+            } else {
+                // 外部存储不可用，回退到内部缓存
+                val cacheDir = File(context.cacheDir, "logs")
+                cacheDir.mkdirs()
+                val logFile = File(cacheDir, fileName)
+                logFile.writeText(content)
+                
+                Toast.makeText(context, "日志已保存，点击分享发送", Toast.LENGTH_SHORT).show()
+                shareLogFileFromCache(context, logFile)
+            }
+            
+        } catch (e: Exception) {
+            Log.e("LogCollector", "导出日志失败", e)
+            Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * 🔥 保存日志到外部 Download 目录
+     * 
+     * 路径: /storage/emulated/0/Download/BiliPai/logs/xxx.txt
+     * MT管理器路径: Download/BiliPai/logs/
+     */
+    private fun saveToExternalDownload(context: Context, fileName: String, content: String): String? {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                // Android 10+ 使用 MediaStore API
+                val contentValues = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
+                    put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "Download/BiliPai/logs")
+                }
+                
+                val uri = context.contentResolver.insert(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
+                
+                uri?.let {
+                    context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                        outputStream.write(content.toByteArray())
+                    }
+                    "Download/BiliPai/logs/$fileName"
+                }
+            } else {
+                // Android 9 及以下直接写入
+                @Suppress("DEPRECATION")
+                val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS
+                )
+                val logDir = File(downloadDir, "BiliPai/logs")
+                logDir.mkdirs()
+                val logFile = File(logDir, fileName)
+                logFile.writeText(content)
+                logFile.absolutePath
+            }
+        } catch (e: Exception) {
+            Log.w("LogCollector", "无法保存到外部存储", e)
+            null
+        }
+    }
+    
+    /**
+     * 分享日志文件（从外部存储）
+     */
+    private fun shareLogFile(context: Context, filePath: String, fileName: String) {
+        try {
+            // 构建文件 URI
+            val file = if (filePath.startsWith("Download/")) {
+                // MediaStore 路径，需要重新查询
+                @Suppress("DEPRECATION")
+                val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS
+                )
+                File(downloadDir, filePath.substringAfter("Download/"))
+            } else {
+                File(filePath)
+            }
+            
+            if (!file.exists()) {
+                // 文件可能是通过 MediaStore 创建的，使用缓存备份分享
+                return
+            }
+            
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "BiliPai 日志反馈")
+                putExtra(Intent.EXTRA_TEXT, "请查看附件中的日志文件\n\n文件位置: $filePath")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            
+            context.startActivity(Intent.createChooser(shareIntent, "分享日志"))
+        } catch (e: Exception) {
+            Log.e("LogCollector", "分享失败", e)
+        }
+    }
+    
+    /**
+     * 分享日志文件（从缓存目录）
+     */
+    private fun shareLogFileFromCache(context: Context, logFile: File) {
+        try {
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
@@ -223,10 +341,8 @@ object LogCollector {
             }
             
             context.startActivity(Intent.createChooser(shareIntent, "分享日志"))
-            
         } catch (e: Exception) {
-            Log.e("LogCollector", "导出日志失败", e)
-            Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e("LogCollector", "分享失败", e)
         }
     }
 }
