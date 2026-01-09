@@ -94,6 +94,8 @@ object ShareUtils {
         
         try {
             context.startActivity(Intent.createChooser(intent, "分享视频"))
+            //  记录分享事件
+            AnalyticsHelper.logShare(bvid, "system_share")
         } catch (e: Exception) {
             Logger.e("ShareUtils", "分享失败: ${e.message}")
         }

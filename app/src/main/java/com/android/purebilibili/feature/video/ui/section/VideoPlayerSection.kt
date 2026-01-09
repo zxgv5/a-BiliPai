@@ -665,6 +665,8 @@ fun VideoPlayerSection(
                     scope.launch {
                         com.android.purebilibili.core.store.SettingsManager.setDanmakuEnabled(context, newState)
                     }
+                    //  记录弹幕开关事件
+                    com.android.purebilibili.core.util.AnalyticsHelper.logDanmakuToggle(newState)
                 },
                 danmakuOpacity = danmakuOpacity,
                 danmakuFontScale = danmakuFontScale,

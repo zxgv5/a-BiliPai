@@ -144,6 +144,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                                 isPolling = false
                                 withContext(Dispatchers.Main) {
                                     _state.value = LoginState.Success
+                                    //  记录登录事件
+                                    com.android.purebilibili.core.util.AnalyticsHelper.logLogin("qrcode_web")
                                 }
                             } else {
                                 _state.value = LoginState.Error("Cookie 解析失败")
@@ -385,6 +387,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             }
             withContext(Dispatchers.Main) {
                 _state.value = LoginState.Success
+                //  记录登录事件
+                com.android.purebilibili.core.util.AnalyticsHelper.logLogin("phone")
             }
         } else {
             _state.value = LoginState.Error("Cookie 解析失败")
@@ -513,6 +517,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                                 isTvPolling = false
                                 withContext(Dispatchers.Main) {
                                     _state.value = LoginState.Success
+                                    //  记录登录事件
+                                    com.android.purebilibili.core.util.AnalyticsHelper.logLogin("qrcode_tv")
                                 }
                             } else {
                                 _state.value = LoginState.Error("登录数据解析失败")

@@ -997,6 +997,8 @@ class PlayerViewModel : ViewModel() {
                 )
                 val label = current.qualityLabels.getOrNull(current.qualityIds.indexOf(result.actualQuality)) ?: "${result.actualQuality}"
                 toast(if (result.wasFallback) " 已切换至 $label" else "✓ 已切换至 $label")
+                //  记录画质切换事件
+                AnalyticsHelper.logQualityChange(currentBvid, current.currentQuality, result.actualQuality)
             } else {
                 _uiState.value = current.copy(isQualitySwitching = false, requestedQuality = null)
                 toast("清晰度切换失败")

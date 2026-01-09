@@ -121,6 +121,11 @@ class SponsorBlockPlugin : PlayerPlugin {
         if (config.autoSkip) {
             skippedIds.add(segment.UUID)
             Logger.d(TAG, " 自动跳过: ${segment.categoryName}")
+            //  记录空降助手跳过事件
+            com.android.purebilibili.core.util.AnalyticsHelper.logSponsorBlockSkip(
+                videoId = skippedIds.firstOrNull() ?: "",
+                segmentType = segment.categoryName
+            )
             return SkipAction.SkipTo(
                 positionMs = segment.endTimeMs,
                 reason = "已跳过: ${segment.categoryName}"

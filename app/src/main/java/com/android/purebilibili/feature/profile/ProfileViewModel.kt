@@ -83,6 +83,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             TokenManager.clear(getApplication())
             _uiState.value = ProfileUiState.LoggedOut
+            //  记录登出事件
+            com.android.purebilibili.core.util.AnalyticsHelper.logLogout()
         }
     }
 }
