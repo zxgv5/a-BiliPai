@@ -68,7 +68,7 @@ object VideoRepository {
             put("3064", 1)
             put("39c8", "333.999.fp.risk")
             put("3c43", org.json.JSONObject().apply {
-                put("adca", "Linux")
+                put("adca", "Windows") // 与 User-Agent (Windows NT 10.0) 保持一致
                 put("bfe9", randPngEnd.takeLast(50))
             })
         }.toString()

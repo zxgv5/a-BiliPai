@@ -134,10 +134,15 @@ object LogCollector {
         sanitized = sanitized.replace(Regex("sid=[^;\\s]+"), "sid=***")
         sanitized = sanitized.replace(Regex("buvid3=[^;\\s]+"), "buvid3=***")
         
-        // 脱敏 Token
+        // 脱敏 Token / Key
         sanitized = sanitized.replace(Regex("access_token=[^&\\s]+"), "access_token=***")
         sanitized = sanitized.replace(Regex("refresh_token=[^&\\s]+"), "refresh_token=***")
+        sanitized = sanitized.replace(Regex("access_key=[^&\\s]+"), "access_key=***")
+        sanitized = sanitized.replace(Regex("appkey=[^&\\s]+"), "appkey=***")
+        sanitized = sanitized.replace(Regex("sign=[^&\\s]+"), "sign=***")
+        sanitized = sanitized.replace(Regex("csrf=[^&\\s]+"), "csrf=***")
         sanitized = sanitized.replace(Regex("\"token\":\"[^\"]+\""), "\"token\":\"***\"")
+        sanitized = sanitized.replace(Regex("\"csrf\":\"[^\"]+\""), "\"csrf\":\"***\"")
         
         // 脱敏手机号（11位数字）
         sanitized = sanitized.replace(Regex("\\b1[3-9]\\d{9}\\b"), "1**********")

@@ -40,6 +40,7 @@ import coil.decode.ImageDecoderDecoder
 import com.android.purebilibili.core.ui.BiliGradientButton
 import com.android.purebilibili.core.ui.EmptyState
 import com.android.purebilibili.core.ui.LoadingAnimation
+import com.android.purebilibili.core.util.responsiveContentWidth
 
 import com.android.purebilibili.feature.dynamic.components.DynamicCardV2
 import com.android.purebilibili.feature.dynamic.components.DynamicSidebar
@@ -331,7 +332,7 @@ private fun DynamicList(
             top = statusBarHeight + topPaddingExtra,
             bottom = 80.dp
         ),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize().responsiveContentWidth()
     ) {
         // 空状态
         if (filteredItems.isEmpty() && !state.isLoading && state.error == null) {

@@ -61,7 +61,8 @@ fun ProfileScreen(
     onHistoryClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFollowingClick: (Long) -> Unit = {},  //  关注列表点击
-    onDownloadClick: () -> Unit = {}  //  离线缓存点击
+    onDownloadClick: () -> Unit = {},  //  离线缓存点击
+    onWatchLaterClick: () -> Unit = {} // 稍后再看点击
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -156,7 +157,9 @@ fun ProfileScreen(
                         onFavoriteClick = onFavoriteClick,
                         onFollowingClick = { onFollowingClick(currentUiState.user.mid) },
                         onDownloadClick = onDownloadClick,
-                        onSettingsClick = onSettingsClick
+                        onSettingsClick = onSettingsClick,
+                        onBack = onBack,
+                        onWatchLaterClick = onWatchLaterClick
                     )
                 } else {
                     MobileProfileContent(
@@ -168,7 +171,8 @@ fun ProfileScreen(
                         onHistoryClick = onHistoryClick,
                         onFavoriteClick = onFavoriteClick,
                         onFollowingClick = { onFollowingClick(currentUiState.user.mid) },
-                        onDownloadClick = onDownloadClick
+                        onDownloadClick = onDownloadClick,
+                        onWatchLaterClick = onWatchLaterClick
                     )
                 }
             }
@@ -184,7 +188,9 @@ fun TabletProfileContent(
     onFavoriteClick: () -> Unit,
     onFollowingClick: () -> Unit,
     onDownloadClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onBack: () -> Unit,
+    onWatchLaterClick: () -> Unit
 ) {
     AdaptiveSplitLayout(
         modifier = Modifier.fillMaxSize(),
@@ -200,8 +206,12 @@ fun TabletProfileContent(
             ) {
                  Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = onBack) {
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(CupertinoIcons.Default.Gearshape, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -230,7 +240,7 @@ fun TabletProfileContent(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    ServicesSection(onHistoryClick, onFavoriteClick, onDownloadClick)
+                    ServicesSection(onHistoryClick, onFavoriteClick, onDownloadClick, onWatchLaterClick)
                     
                     Spacer(modifier = Modifier.height(32.dp))
                     
@@ -240,7 +250,7 @@ fun TabletProfileContent(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                         ),
-                        modifier = Modifier.align(Alignment.End)
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Text("退出登录")
                     }
@@ -257,7 +267,8 @@ fun MobileProfileContent(
     onHistoryClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFollowingClick: () -> Unit,
-    onDownloadClick: () -> Unit
+    onDownloadClick: () -> Unit,
+    onWatchLaterClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -266,7 +277,7 @@ fun MobileProfileContent(
         item { UserInfoSection(user) }
         item { UserStatsSection(user, onFollowingClick) }
         item { VipBannerSection(user) }
-        item { ServicesSection(onHistoryClick, onFavoriteClick, onDownloadClick) }
+        item { ServicesSection(onHistoryClick, onFavoriteClick, onDownloadClick, onWatchLaterClick) }
         item {
             Box(modifier = Modifier.fillMaxWidth().padding(top = 24.dp), contentAlignment = Alignment.Center) {
                 TextButton(onClick = onLogout, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
@@ -511,7 +522,8 @@ fun VipBannerSection(user: UserState) {
 fun ServicesSection(
     onHistoryClick: () -> Unit,
     onFavoriteClick: () -> Unit,
-    onDownloadClick: () -> Unit = {}  //  离线缓存
+    onDownloadClick: () -> Unit = {},  //  离线缓存
+    onWatchLaterClick: () -> Unit = {} // 稍后再看
 ) {
     Column(
         modifier = Modifier
@@ -539,7 +551,7 @@ fun ServicesSection(
         ServiceItem(CupertinoIcons.Default.Bookmark, "我的收藏", iOSYellow, onClick = onFavoriteClick)
         Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(start = 56.dp))
 
-        ServiceItem(CupertinoIcons.Default.Bookmark, "稍后再看", iOSGreen) { /* TODO */ }
+        ServiceItem(CupertinoIcons.Default.Bookmark, "稍后再看", iOSGreen, onClick = onWatchLaterClick)
     }
 }
 

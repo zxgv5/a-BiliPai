@@ -210,7 +210,8 @@ fun FollowAuthorSection(
 @Composable
 fun GeneralSection(
     onAppearanceClick: () -> Unit,
-    onPlaybackClick: () -> Unit
+    onPlaybackClick: () -> Unit,
+    onBottomBarClick: () -> Unit
 ) {
     SettingsGroup {
         SettingClickableItem(
@@ -227,6 +228,14 @@ fun GeneralSection(
             value = "解码、手势、后台播放",
             onClick = onPlaybackClick,
             iconTint = iOSGreen
+        )
+        Divider()
+        SettingClickableItem(
+            icon = CupertinoIcons.Default.RectangleStack,
+            title = "底栏设置",
+            value = "自定义底栏项目",
+            onClick = onBottomBarClick,
+            iconTint = iOSBlue
         )
     }
 }

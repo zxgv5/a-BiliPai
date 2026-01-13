@@ -227,6 +227,7 @@ fun SettingsScreen(
     ) {
         if (windowSizeClass.shouldUseSplitLayout) {
             TabletSettingsLayout(
+                onBack = onBack,
                 onAppearanceClick = onAppearanceClick,
                 onPlaybackClick = onPlaybackClick,
                 onPermissionClick = onPermissionClick,
@@ -259,6 +260,7 @@ fun SettingsScreen(
                 onAppearanceClick = onAppearanceClick,
                 onPlaybackClick = onPlaybackClick,
                 onPermissionClick = onPermissionClick,
+                onNavigateToBottomBarSettings = onNavigateToBottomBarSettings,
                 onPluginsClick = onPluginsClick,
                 onExportLogsClick = onExportLogsAction,
                 onLicenseClick = onOpenSourceLicensesClick,
@@ -301,6 +303,7 @@ private fun MobileSettingsLayout(
     onAppearanceClick: () -> Unit,
     onPlaybackClick: () -> Unit,
     onPermissionClick: () -> Unit,
+    onNavigateToBottomBarSettings: () -> Unit,
     onPluginsClick: () -> Unit,
     onExportLogsClick: () -> Unit,
     onLicenseClick: () -> Unit,
@@ -361,7 +364,11 @@ private fun MobileSettingsLayout(
             
             item { SettingsSectionTitle("常规") }
             item { 
-                GeneralSection(onAppearanceClick, onPlaybackClick)
+                GeneralSection(
+                    onAppearanceClick = onAppearanceClick,
+                    onPlaybackClick = onPlaybackClick,
+                    onBottomBarClick = onNavigateToBottomBarSettings
+                )
             }
             
             item { SettingsSectionTitle("隐私与安全") }

@@ -109,6 +109,28 @@ object CardPositionManager {
     }
     
     /**
+     *  卡片水平位置枚举
+     */
+    enum class CardHorizontalPosition {
+        LEFT,   // 左边两个 (0% - 40%)
+        MIDDLE, // 中间一个 (40% - 60%)
+        RIGHT   // 右边两个 (60% - 100%)
+    }
+
+    /**
+     *  获取卡片的水平位置区域（针对 5 列布局优化）
+     */
+    val cardHorizontalPosition: CardHorizontalPosition
+        get() {
+            val centerX = lastClickedCardCenter?.x ?: 0.5f
+            return when {
+                centerX < 0.4f -> CardHorizontalPosition.LEFT
+                centerX > 0.6f -> CardHorizontalPosition.RIGHT
+                else -> CardHorizontalPosition.MIDDLE
+            }
+        }
+
+    /**
      *  判断最后点击的卡片是否在屏幕左侧
      * 用于小窗入场动画方向
      */

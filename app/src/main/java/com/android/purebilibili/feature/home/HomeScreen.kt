@@ -52,7 +52,7 @@ import com.android.purebilibili.core.ui.LoadingAnimation
 import com.android.purebilibili.core.ui.VideoCardSkeleton
 import com.android.purebilibili.core.ui.ErrorState as ModernErrorState
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeSource
 import com.android.purebilibili.core.ui.shimmer
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope  //  共享过渡
 import com.android.purebilibili.core.ui.animation.DissolvableVideoCard  //  粒子消散动画
@@ -100,6 +100,13 @@ fun HomeScreen(
     val staggeredGridState = rememberLazyStaggeredGridState()  // 🌊 瀑布流状态
     val hazeState = remember { HazeState() }
     val coroutineScope = rememberCoroutineScope()  //  用于双击回顶动画
+    
+    // [修复] 刷新时自动滚回顶部，防止下拉用力过猛导致内容偏移
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            gridState.animateScrollToItem(0)
+        }
+    }
     
     //  [新增] JSON 插件过滤提示
     val snackbarHostState = remember { SnackbarHostState() }
@@ -281,12 +288,15 @@ fun HomeScreen(
     val density = LocalDensity.current
     val navBarHeight = WindowInsets.navigationBars.getBottom(density).let { with(density) { it.toDp() } }
     
-    //  动态计算底部避让高度
     val bottomBarHeight = if (isBottomBarFloating) {
         84.dp + navBarHeight  // 72dp(栏高度) + 12dp(底部边距)
     } else {
         64.dp + navBarHeight  // 64dp(Docked模式)
     }
+
+    //  [修复] 动态计算内容顶部边距，防止被头部遮挡
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val listTopPadding = statusBarHeight + 110.dp  // 状态栏 + 52dp搜索栏 + 48dp标签栏 + 10dp间距
 
     val prefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     
@@ -463,9 +473,8 @@ fun HomeScreen(
         derivedStateOf {
             val firstVisibleItem = gridState.firstVisibleItemIndex
             if (firstVisibleItem == 0) {
-                //  量化到 50px 单位，减少重组频率
-                val raw = gridState.firstVisibleItemScrollOffset
-                (raw / 50) * 50f
+                //  直接使用原始偏移量，避免量化导致的跳变
+                gridState.firstVisibleItemScrollOffset.toFloat()
             } else 1000f
         }
     }
@@ -557,6 +566,20 @@ fun HomeScreen(
     var isAnimatingTransition by remember { mutableStateOf(false) }  // 是否正在动画过渡
     var transitionDirection by remember { mutableIntStateOf(0) }  // -1=左滑进入, 1=右滑进入, 0=无
     
+    //  [新增] 下拉回弹物理动画状态
+    val targetPullOffset = if (pullRefreshState.distanceFraction > 0) {
+        with(density) { (pullRefreshState.distanceFraction * 130.dp.toPx()).coerceAtMost(250.dp.toPx()) }
+    } else 0f
+    
+    val animatedPullOffset by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = targetPullOffset,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = 0.5f,  // 0.5 = 明显的弹性回弹 (Bouncy)
+            stiffness = 300f      // 300 = 中等刚度
+        ),
+        label = "pull_physics"
+    )
+    
     //  [修复] 特殊分类列表（有独立页面，不在首页显示内容）
     val specialCategories = listOf(
         HomeCategory.ANIME, 
@@ -574,14 +597,12 @@ fun HomeScreen(
             if (displayedTabIndex > 0) {
                 val prevIndex = displayedTabIndex - 1
                 val prevCategory = HomeCategory.entries[prevIndex]
-                // 更新标签页显示位置（通过 ViewModel）
+                // Update label position and switch category content
                 viewModel.updateDisplayedTabIndex(prevIndex)
-                //  [修复] 对于特殊分类，只导航到独立页面；普通分类更新内容
+                // [Modified] Special handling: Only Anime(13) and Movie(181) go to separate pages
                 when (prevCategory) {
                     HomeCategory.ANIME -> onBangumiClick(1)
                     HomeCategory.MOVIE -> onBangumiClick(2)
-                    HomeCategory.GAME, HomeCategory.KNOWLEDGE, HomeCategory.TECH -> 
-                        onCategoryClick(prevCategory.tid, prevCategory.label)
                     else -> viewModel.switchCategory(prevCategory)
                 }
             }
@@ -595,14 +616,12 @@ fun HomeScreen(
             if (displayedTabIndex < HomeCategory.entries.size - 1) {
                 val nextIndex = displayedTabIndex + 1
                 val nextCategory = HomeCategory.entries[nextIndex]
-                // 更新标签页显示位置（通过 ViewModel）
+                // Update label position and switch category content
                 viewModel.updateDisplayedTabIndex(nextIndex)
-                //  [修复] 对于特殊分类，只导航到独立页面；普通分类更新内容
+                // [Modified] Special handling: Only Anime(13) and Movie(181) go to separate pages
                 when (nextCategory) {
                     HomeCategory.ANIME -> onBangumiClick(1)
                     HomeCategory.MOVIE -> onBangumiClick(2)
-                    HomeCategory.GAME, HomeCategory.KNOWLEDGE, HomeCategory.TECH -> 
-                        onCategoryClick(nextCategory.tid, nextCategory.label)
                     else -> viewModel.switchCategory(nextCategory)
                 }
             }
@@ -696,17 +715,20 @@ fun HomeScreen(
         contentWindowInsets = WindowInsets(0),
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
+        //  [修复] 将 Header 移到 haze Box 外部
+        // hazeChild 只能模糊同级或父级 haze 源的内容，不能模糊自身所属的内容
+        //  [还原] 恢复原来的布局结构，Header 在 Box 内部
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .haze(state = hazeState)  //  Haze 源：整个内容区域
+                .hazeSource(state = hazeState)  //  使用正确的 Haze API
         ) {
             if (state.isLoading && state.videos.isEmpty() && state.liveRooms.isEmpty()) {
                 //  首次加载改为骨架屏
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(gridColumns),
                     contentPadding = PaddingValues(
-                        top = 128.dp,  //  [优化] 确保卡片圆角完全显示
+                        top = listTopPadding,  //  [优化] 确保卡片圆角完全显示
                         //  [修复] 动态底部 padding
                         bottom = when {
                             useSideNavigation -> navBarHeight + 8.dp
@@ -776,8 +798,9 @@ fun HomeScreen(
                             state = pullRefreshState,
                             isRefreshing = isRefreshing,
                             modifier = Modifier
+                                .align(Alignment.TopCenter)  //  [修复] 确保指示器水平居中
                                 .fillMaxWidth()
-                                .padding(top = 70.dp)  //  [修复] 调整刷新提示位置 100→70
+                                .padding(top = statusBarHeight + 110.dp)  //  [优化] 刷新提示位于 Header(约110dp) 下方
                         )
                     }
                 ) {
@@ -785,7 +808,7 @@ fun HomeScreen(
                     state = gridState,
                     columns = GridCells.Fixed(gridColumns),
                     contentPadding = PaddingValues(
-                        top = 128.dp,  //  [优化] 确保卡片圆角完全显示
+                        top = listTopPadding,  //  [优化] 确保卡片圆角完全显示
                         //  [修复] 底栏隐藏时减少底部 padding，避免白色填充
                         bottom = when {
                             useSideNavigation -> navBarHeight + 8.dp
@@ -813,6 +836,13 @@ fun HomeScreen(
                         .graphicsLayer {
                             // 使用动画值实现平滑过渡
                             translationX = animatedDragOffset
+                            
+
+                            
+                            //  使用 AnimateAsState 手动管理偏移，实现物理回弹
+                            //  注意：由于是在 graphicsLayer 内部，我们需要使用 state 提升到外部或在此处直接使用 value (但 graphicsLayer 是 lambda)
+                            //  更优解：将 animatedPullOffset 定义在 graphicsLayer 外部
+                            translationY = animatedPullOffset
                         }
                         .pointerInput(targetCategory) {
                             detectHorizontalDragGestures(
@@ -997,52 +1027,41 @@ fun HomeScreen(
                     }
                 }
                 }
-            }
 
             //  iOS 风格 Header (带滚动隐藏/显示动画)
-            // 使用 zIndex 确保 header 始终在列表内容之上
-            Box(modifier = Modifier.zIndex(1f)) {
-                iOSHomeHeader(
-                    scrollOffset = scrollOffset,
-                    user = state.user,
-                    onAvatarClick = { if (state.user.isLogin) onProfileClick() else onAvatarClick() },
-                    onSettingsClick = onSettingsClick,
-                    onSearchClick = onSearchClick,
-                    categoryIndex = displayedTabIndex,  //  [修复] 使用 ViewModel 中的标签页索引
-                    onCategorySelected = { index ->
-                        //  [修复] 通过 ViewModel 更新标签页显示位置
-                        viewModel.updateDisplayedTabIndex(index)
-                        val category = HomeCategory.entries[index]
-                        //  分类跳转逻辑
-                        when (category) {
-                            HomeCategory.ANIME -> onBangumiClick(1)   // 番剧
-                            HomeCategory.MOVIE -> onBangumiClick(2)   // 电影
-                            //  新增分类：跳转到分类详情页面
-                            HomeCategory.GAME,
-                            HomeCategory.KNOWLEDGE,
-                            HomeCategory.TECH -> onCategoryClick(category.tid, category.label)
-                            // 其他分类正常切换
-                            else -> viewModel.switchCategory(category)
-                        }
-                    },
-                    onPartitionClick = onPartitionClick,  //  分区按钮点击
-                    isScrollingUp = isScrollingUp,
-                    hazeState = if (isHeaderBlurEnabled) hazeState else null,  //  恢复 header 模糊
-                    onStatusBarDoubleTap = {
-                        //  双击状态栏，平滑滚动回顶部
-                        coroutineScope.launch {
-                            gridState.animateScrollToItem(0)
-                        }
-                    },
-                    //  [新增] 下拉刷新时收起标签页
-                    isRefreshing = isRefreshing,
-                    pullProgress = pullRefreshState.distanceFraction
-                )
-            }
-        }
+            //  [修复] Header 在 haze Box 外部，但在同一个父 Box 内，可以正确模糊
+            iOSHomeHeader(
+                scrollOffset = scrollOffset,
+                user = state.user,
+                onAvatarClick = { if (state.user.isLogin) onProfileClick() else onAvatarClick() },
+                onSettingsClick = onSettingsClick,
+                onSearchClick = onSearchClick,
+                categoryIndex = displayedTabIndex,
+                onCategorySelected = { index ->
+                    viewModel.updateDisplayedTabIndex(index)
+                    val category = HomeCategory.entries[index]
+                    when (category) {
+                        HomeCategory.ANIME -> onBangumiClick(1)
+                        HomeCategory.MOVIE -> onBangumiClick(2)
+                        // All others (Game, Knowledge, Tech, etc.) are handled by state switch
+                        else -> viewModel.switchCategory(category)
+                    }
+                },
+                onPartitionClick = onPartitionClick,
+                isScrollingUp = isScrollingUp,
+                hazeState = if (isHeaderBlurEnabled) hazeState else null,
+                onStatusBarDoubleTap = {
+                    coroutineScope.launch {
+                        gridState.animateScrollToItem(0)
+                    }
+                },
+                isRefreshing = isRefreshing,
+                pullProgress = pullRefreshState.distanceFraction
+            )
+        }  //  关闭父 Box
     }
     }
-
+    }  //  关闭 scaffoldContent lambda
     // 📱 [平板适配] 导航模式切换动画
     // 始终使用 Row 布局，通过动画控制侧边栏的显示/隐藏
     Row(modifier = Modifier.fillMaxSize()) {

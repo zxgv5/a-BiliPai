@@ -44,6 +44,7 @@ fun PlaybackSettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
     onBack: () -> Unit
 ) {
+    val state by viewModel.state.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -63,21 +64,22 @@ fun PlaybackSettingsScreen(
         contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-             PlaybackSettingsSheetContent(viewModel = viewModel)
+             PlaybackSettingsContent(viewModel = viewModel, state = state)
         }
     }
 }
 
 /**
- * 播放设置内容 - 可在 BottomSheet 中复用
+ * 播放设置内容 - 可在 BottomSheet 中或分栏布局中复用
  */
 @Composable
-fun PlaybackSettingsSheetContent(
+fun PlaybackSettingsContent(
     viewModel: SettingsViewModel,
+    state: SettingsUiState,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val state by viewModel.state.collectAsState()
+    // val state by viewModel.state.collectAsState() // Moved to parameter
     val prefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     
     var isStatsEnabled by remember { mutableStateOf(prefs.getBoolean("show_stats", false)) }

@@ -74,7 +74,8 @@ fun AppNavigation(
     // 统一跳转逻辑
     fun navigateToVideo(bvid: String, cid: Long = 0L, coverUrl: String = "") {
         //  如果有小窗在播放，先退出小窗模式
-        miniPlayerManager?.exitMiniMode()
+        //  [修复] 点击新视频时，立即关闭小窗不播放退出动画，避免闪烁
+        miniPlayerManager?.exitMiniMode(animate = false)
         navController.navigate(VideoRoute.createRoute(bvid, cid, coverUrl))
     }
 
@@ -309,7 +310,8 @@ fun AppNavigation(
                 onHistoryClick = { navController.navigate(ScreenRoutes.History.route) },
                 onFavoriteClick = { navController.navigate(ScreenRoutes.Favorite.route) },
                 onFollowingClick = { mid -> navController.navigate(ScreenRoutes.Following.createRoute(mid)) },
-                onDownloadClick = { navController.navigate(ScreenRoutes.DownloadList.route) }
+                onDownloadClick = { navController.navigate(ScreenRoutes.DownloadList.route) },
+                onWatchLaterClick = { navController.navigate(ScreenRoutes.WatchLater.route) }
             )
         }
 

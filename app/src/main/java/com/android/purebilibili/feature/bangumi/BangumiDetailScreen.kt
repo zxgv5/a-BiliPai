@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,9 @@ import com.android.purebilibili.core.theme.iOSYellow
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.data.model.response.BangumiDetail
 import com.android.purebilibili.data.model.response.BangumiEpisode
+import com.android.purebilibili.core.util.LocalWindowSizeClass
+import androidx.compose.ui.platform.LocalConfiguration
+import com.android.purebilibili.core.util.responsiveContentWidth
 
 /**
  * 番剧详情页面
@@ -100,22 +104,319 @@ fun BangumiDetailScreen(
                 }
             }
             is BangumiDetailState.Success -> {
-                BangumiDetailContent(
-                    detail = state.detail,
-                    paddingValues = paddingValues,
-                    onEpisodeClick = onEpisodeClick,
-                    onSeasonClick = onSeasonClick,
-                    onToggleFollow = { isFollowing ->
-                        viewModel.toggleFollow(seasonId, isFollowing)
-                    }
-                )
+                if (LocalWindowSizeClass.current.shouldUseSplitLayout) {
+                    TabletBangumiDetailContent(
+                        detail = state.detail,
+                        paddingValues = paddingValues,
+                        onEpisodeClick = onEpisodeClick,
+                        onSeasonClick = onSeasonClick,
+                        onToggleFollow = { isFollowing ->
+                            viewModel.toggleFollow(seasonId, isFollowing)
+                        }
+                    )
+                } else {
+                    MobileBangumiDetailContent(
+                        detail = state.detail,
+                        paddingValues = paddingValues,
+                        onEpisodeClick = onEpisodeClick,
+                        onSeasonClick = onSeasonClick,
+                        onToggleFollow = { isFollowing ->
+                            viewModel.toggleFollow(seasonId, isFollowing)
+                        }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BangumiDetailContent(
+private fun TabletBangumiDetailContent(
+    detail: BangumiDetail,
+    paddingValues: PaddingValues,
+    onEpisodeClick: (BangumiEpisode) -> Unit,
+    onSeasonClick: (Long) -> Unit,
+    onToggleFollow: (Boolean) -> Unit
+) {
+    // 状态管理
+    val followFromApi = detail.userStatus?.follow == 1
+    var isFollowing by remember(detail.seasonId, followFromApi) { 
+        mutableStateOf(followFromApi) 
+    }
+    
+    // 选集相关状态
+    var showJumpDialog by remember { mutableStateOf(false) }
+    var jumpInputText by remember { mutableStateOf("") }
+    var jumpErrorMessage by remember { mutableStateOf<String?>(null) }
+    
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+    ) {
+        // LEFT PANE: Info & Introduction (40%)
+        Column(
+            modifier = Modifier
+                .weight(4f)
+                .fillMaxHeight()
+                .padding(end = 24.dp)
+                .responsiveContentWidth() // Double check constraint
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header (Cover + Title)
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cover
+                        AsyncImage(
+                            model = FormatUtils.fixImageUrl(detail.cover),
+                            contentDescription = detail.title,
+                            modifier = Modifier
+                                .width(140.dp)
+                                .aspectRatio(0.75f)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        // Title & Stats
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = detail.title,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            
+                            // Rating
+                            detail.rating?.let { rating ->
+                                if (rating.score > 0) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            CupertinoIcons.Default.Star,
+                                            contentDescription = null,
+                                            tint = iOSYellow, // Assuming this is available
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = String.format("%.1f", rating.score),
+                                            color = iOSYellow,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = " (${rating.count}人评分)",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Stats
+                            detail.stat?.let { stat ->
+                                Text(
+                                    text = "${FormatUtils.formatStat(stat.views)}播放 · ${FormatUtils.formatStat(stat.favorites)}追番",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // Action Buttons
+                item {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        // Follow Button
+                         Button(
+                            onClick = { 
+                                val wasFollowing = isFollowing
+                                isFollowing = !wasFollowing
+                                onToggleFollow(wasFollowing)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if(isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                                contentColor = if(isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                if (isFollowing) CupertinoIcons.Default.Checkmark else CupertinoIcons.Default.Plus,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (isFollowing) "已追番" else "追番")
+                        }
+                    }
+                }
+                
+                // Introduction
+                if (detail.evaluate.isNotEmpty()) {
+                    item {
+                        Column {
+                            Text(
+                                text = "简介",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = detail.evaluate,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp,
+                                lineHeight = 22.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        // RIGHT PANE: Episodes & Seasons (60%)
+        Column(
+            modifier = Modifier
+                .weight(6f)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)) // Distinct background
+        ) {
+            // Re-implementing correctly using a single LazyVerticalGrid
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(160.dp),
+                contentPadding = PaddingValues(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                 // Header: Episodes Title
+                 if (!detail.episodes.isNullOrEmpty()) {
+                     item(span = { GridItemSpan(maxLineSpan) }) {
+                         Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom=8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "选集 (${detail.episodes.size})",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp
+                            )
+                             TextButton(onClick = { 
+                                jumpInputText = ""
+                                jumpErrorMessage = null
+                                showJumpDialog = true 
+                            }) { Text("跳转") }
+                        }
+                     }
+                     
+                     items(detail.episodes) { episode ->
+                         EpisodeChip(
+                                episode = episode,
+                                onClick = { onEpisodeClick(episode) }
+                         )
+                     }
+                 }
+                 
+                 // Related Seasons
+                 if (!detail.seasons.isNullOrEmpty() && detail.seasons.size > 1) {
+                     item(span = { GridItemSpan(maxLineSpan) }) {
+                         Text(
+                            text = "相关季度",
+                            modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                     }
+                     
+                     items(detail.seasons) { season ->
+                         val isCurrentSeason = season.seasonId == detail.seasonId
+                         Surface(
+                            onClick = { if (!isCurrentSeason) onSeasonClick(season.seasonId) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isCurrentSeason) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.height(48.dp) // Fixed height for consistency
+                         ) {
+                             Box(contentAlignment = Alignment.Center) {
+                                 Text(
+                                    text = season.seasonTitle.ifEmpty { season.title },
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    fontSize = 14.sp,
+                                    color = if (isCurrentSeason) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                             }
+                         }
+                     }
+                 }
+            }
+        }
+    }
+    
+    // Dialogs (Shared logic)
+    if (showJumpDialog && !detail.episodes.isNullOrEmpty()) {
+         AlertDialog(
+            onDismissRequest = { showJumpDialog = false },
+            title = { Text("跳转到第几集") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = jumpInputText,
+                        onValueChange = { 
+                            jumpInputText = it.filter { char -> char.isDigit() }
+                            jumpErrorMessage = null
+                        },
+                        label = { Text("集数 (1-${detail.episodes.size})") },
+                        singleLine = true,
+                        isError = jumpErrorMessage != null,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (jumpErrorMessage != null) {
+                        Text(
+                            text = jumpErrorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val epNumber = jumpInputText.toIntOrNull()
+                        if (epNumber == null || epNumber < 1 || epNumber > detail.episodes.size) {
+                            jumpErrorMessage = "请输入 1-${detail.episodes.size} 之间的数字"
+                        } else {
+                            val targetEpisode = detail.episodes.getOrNull(epNumber - 1)
+                            if (targetEpisode != null) {
+                                onEpisodeClick(targetEpisode)
+                            }
+                            showJumpDialog = false
+                        }
+                    }
+                ) { Text("跳转") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showJumpDialog = false }) { Text("取消") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun MobileBangumiDetailContent(
     detail: BangumiDetail,
     paddingValues: PaddingValues,
     onEpisodeClick: (BangumiEpisode) -> Unit,

@@ -48,49 +48,9 @@ fun ThemeSettingsScreen(
     val themeInteractionLevel = (themeBaseLevel + if (state.dynamicColor) 0.2f else 0f).coerceIn(0f, 1f)
     val themeAnimationSpeed = if (state.dynamicColor) 1.15f else 0.95f
     
-    // 主题模式弹窗
-    if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            title = { Text("外观模式", color = MaterialTheme.colorScheme.onSurface) },
-            text = {
-                Column {
-                    AppThemeMode.entries.forEach { mode ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setThemeMode(mode)
-                                    showThemeDialog = false
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (state.themeMode == mode),
-                                onClick = {
-                                    viewModel.setThemeMode(mode)
-                                    showThemeDialog = false
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = MaterialTheme.colorScheme.primary,
-                                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = mode.label, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                    }
-                }
-            },
-            confirmButton = { 
-                TextButton(onClick = { showThemeDialog = false }) { 
-                    Text("取消", color = MaterialTheme.colorScheme.primary) 
-                } 
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    }
+
+    //  Dialog moved to Content
+
 
     Scaffold(
         topBar = {
@@ -110,25 +70,124 @@ fun ThemeSettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            contentPadding = WindowInsets.navigationBars.asPaddingValues()
-        ) {
-            
-            //  外观模式
-            item { SettingsSectionTitle("外观模式") }
-            item {
-                SettingsGroup {
-                    // 深色模式选择
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showThemeDialog = true }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+        ThemeSettingsContent(
+            modifier = Modifier.padding(padding),
+            state = state,
+            showThemeDialog = showThemeDialog,
+            onShowThemeDialogChange = { showThemeDialog = it },
+            viewModel = viewModel,
+            context = context
+        )
+    }
+}
+
+@Composable
+fun ThemeSettingsContent(
+    modifier: Modifier = Modifier,
+    state: SettingsUiState,
+    showThemeDialog: Boolean,
+    onShowThemeDialogChange: (Boolean) -> Unit,
+    viewModel: SettingsViewModel,
+    context: android.content.Context
+) {
+    //  Need to pass showThemeDialog state up or handle it inside Content?
+    //  Actually, the Dialog is part of the Screen/Content interaction.
+    //  Let's keep the Dialog inside Content or pass the state. 
+    //  Ideally, Content should be self-contained but State Hoisting is better.
+    //  Wait, the original code had the Dialog at the top level of Screen.
+    //  If I move Content out, the Dialog should probably still be invoked from within Content or triggered by it.
+    //  The simplest way for Tablet support is if the Content *includes* the logic to show the dialog, 
+    //  OR if the Dialog is separate.
+    //  In the original code, `showThemeDialog` controls `AlertDialog`.
+    //  I'll pass the state down for now.
+    
+    //  Re-declaring the mutable state inside Content might Duplicate it if I use it in Screen too?
+    //  No, I should hoist it.
+    
+    //  Actually, let's look at the original `ThemeSettingsScreen`.
+    //  It defines `showThemeDialog`.
+    //  And the `AlertDialog` is inside `ThemeSettingsScreen`.
+    //  So if I move the `LazyColumn` to `Content`, the `AlertDialog` remains in `Screen`.
+    //  BUT, `Content` triggers the dialog via `clickable { showThemeDialog = true }`.
+    //  So I need to pass `onShowDialog` to `Content`.
+    
+    //  Wait, if I use `ThemeSettingsContent` in Tablet layout, where does the Dialog live?
+    //  It should probably live inside `ThemeSettingsContent` or be handled by the parent.
+    //  If `ThemeSettingsContent` is just the list, then the Dialog should be outside?
+    //  No, for Tablet, the Dialog should show over the whole screen or the split pane? Usually whole screen or Center.
+    //  So it's better if `ThemeSettingsContent` *contains* the Dialog?
+    //  Or `Screen` contains `Dialog` + `Content`. 
+    //  In Tablet, `TabletSettingsLayout` will use `Content`. Does it need to re-implement the Dialog?
+    //  Yes, unless `Content` includes the Dialog.
+    //  Let's include the Dialog in `Content`? 
+    //  If I include Dialog in Content, then `Screen` just calls `Content`.
+    //  That seems cleaner for code reuse.
+    
+    var localShowThemeDialog by remember { mutableStateOf(false) }
+    // If we want to control it from outside, we can pass it in. 
+    // But for now, letting Content manage its own "secondary" dialogs is fine.
+    
+    if (localShowThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { localShowThemeDialog = false },
+            title = { Text("外观模式", color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column {
+                    AppThemeMode.entries.forEach { mode ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setThemeMode(mode)
+                                    localShowThemeDialog = false
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (state.themeMode == mode),
+                                onClick = {
+                                    viewModel.setThemeMode(mode)
+                                    localShowThemeDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = mode.label, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+            },
+            confirmButton = { 
+                TextButton(onClick = { localShowThemeDialog = false }) { 
+                    Text("取消", color = MaterialTheme.colorScheme.primary) 
+                } 
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize(),
+        contentPadding = WindowInsets.navigationBars.asPaddingValues()
+    ) {
+        
+        //  外观模式
+        item { SettingsSectionTitle("外观模式") }
+        item {
+            SettingsGroup {
+                // 深色模式选择
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { localShowThemeDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
@@ -302,4 +361,4 @@ fun ThemeSettingsScreen(
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
-}
+

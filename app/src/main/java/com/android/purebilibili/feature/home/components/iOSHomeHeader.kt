@@ -34,6 +34,10 @@ import com.android.purebilibili.core.util.rememberHapticFeedback
 import com.android.purebilibili.feature.home.UserState
 import com.android.purebilibili.core.theme.iOSSystemGray
 import dev.chrisbanes.haze.HazeState
+import com.android.purebilibili.core.store.SettingsManager
+import com.android.purebilibili.core.ui.blur.unifiedBlur
+import com.android.purebilibili.core.ui.blur.BlurStyles
+import com.android.purebilibili.core.ui.blur.BlurIntensity
 
 /**
  *  简洁版首页头部 (带滚动隐藏/显示动画)
@@ -64,11 +68,13 @@ fun iOSHomeHeader(
     val density = LocalDensity.current
 
     // 计算滚动进度
+    // 计算滚动进度
     val maxOffsetPx = with(density) { 50.dp.toPx() }
     val scrollProgress = (scrollOffset / maxOffsetPx).coerceIn(0f, 1f)
     
-    //  [下拉刷新] 合并滚动和下拉进度，下拉时也要收起标签页
-    val progress = maxOf(scrollProgress, (pullProgress * 1.5f).coerceIn(0f, 1f))
+    //  [优化] 下拉刷新时强制展开标签页
+    //  防止下拉回弹时的微小滚动偏移以及刷新状态下标签页消失
+    val progress = if (pullProgress > 0f || isRefreshing) 0f else scrollProgress
     
     // 状态栏高度
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -76,52 +82,62 @@ fun iOSHomeHeader(
     val totalHeaderTopPadding = statusBarHeight + searchBarHeight
     
     // 背景颜色 - 始终使用实心背景
-    val bgColor = MaterialTheme.colorScheme.surface
+    // 背景颜色 - 始终使用实心背景
+    // val bgColor = MaterialTheme.colorScheme.surface // [Deleted]
+
+    //  读取当前模糊强度以确定背景透明度
+    val blurIntensity by SettingsManager.getBlurIntensity(LocalContext.current)
+        .collectAsState(initial = BlurIntensity.THIN)
+    val backgroundAlpha = BlurStyles.getBackgroundAlpha(blurIntensity)
+
+    //  动态背景颜色
+    //  [修复] 强制提高背景不透明度 (0.95f)，解决滑动时文字看不清的问题
+    val headerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (hazeState != null) 0.95f else 1f)
 
     Box(
         modifier = Modifier.fillMaxWidth()
     ) {
         // ===== 分类标签栏 =====
-        if (progress < 0.99f) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = totalHeaderTopPadding)
-                    .graphicsLayer {
-                        alpha = 1f - progress
-                        translationY = -progress * size.height * 0.8f
-                        val scale = 1f - (progress * 0.15f)
-                        scaleX = scale
-                        scaleY = scale
-                    }
-                    .background(bgColor)
-            ) {
-                CategoryTabRow(
-                    selectedIndex = categoryIndex,
-                    onCategorySelected = onCategorySelected,
-                    onPartitionClick = onPartitionClick  //  传递分区回调
-                )
-            }
+        // ===== 分类标签栏 =====
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .padding(top = totalHeaderTopPadding)
+                // .graphicsLayer { ... } // 移除滚动隐藏动画，锁定标签栏
+                // 保持默认状态：可见且无位移
+                .clip(androidx.compose.ui.graphics.RectangleShape)
+                .then(if (hazeState != null) Modifier.unifiedBlur(hazeState) else Modifier)
+                .background(headerColor)
+        ) {
+            CategoryTabRow(
+                selectedIndex = categoryIndex,
+                onCategorySelected = onCategorySelected,
+                onPartitionClick = onPartitionClick
+            )
         }
 
-        // ===== 搜索栏区域 - 使用简单的实心背景 =====
+        // ===== 搜索栏区域 =====
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .zIndex(1f)
-                .background(bgColor)
+                .clip(androidx.compose.ui.graphics.RectangleShape)
+                .then(if (hazeState != null) Modifier.unifiedBlur(hazeState) else Modifier)
+                .background(headerColor)
         ) {
             // 状态栏占位
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
+                    .height(statusBarHeight)  // [修复] 明确设置高度以接收点击事件
                     .pointerInput(Unit) {
-                        detectTapGestures(onDoubleTap = {
-                            haptic(HapticType.MEDIUM)
-                            onStatusBarDoubleTap()
-                        })
+                        detectTapGestures(
+                            onTap = {
+                                haptic(HapticType.LIGHT) // 单击震动反馈
+                                onStatusBarDoubleTap()
+                            }
+                        )
                     }
             )
             
@@ -213,6 +229,7 @@ fun iOSHomeHeader(
                     )
                 }
             }
+            }
         }
     }
-}
+

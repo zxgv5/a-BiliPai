@@ -71,6 +71,12 @@ fun TabletVideoLayout(
     onToggleFullscreen: () -> Unit,  // 📺 全屏切换回调
     isInPipMode: Boolean,
     onPipClick: () -> Unit,
+
+    // [New] Codec & Audio Params
+    currentCodec: String = "hev1", 
+    onCodecChange: (String) -> Unit = {},
+    currentAudioQuality: Int = -1,
+    onAudioQualityChange: (Int) -> Unit = {},
     transitionEnabled: Boolean = false //  卡片过渡动画开关
 ) {
     val splitRatio = rememberSplitLayoutRatio()
@@ -152,7 +158,13 @@ fun TabletVideoLayout(
                         viewPoints = viewPoints,
                         isVerticalVideo = isVerticalVideo,
                         onPortraitFullscreen = { playerState.setPortraitFullscreen(true) },
-                        onPipClick = onPipClick
+
+                        onPipClick = onPipClick,
+                        // [New] Codec & Audio
+                        currentCodec = currentCodec,
+                        onCodecChange = onCodecChange,
+                        currentAudioQuality = currentAudioQuality,
+                        onAudioQualityChange = onAudioQualityChange
                     )
                 }
                 

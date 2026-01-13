@@ -163,12 +163,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             HomeCategory.RECOMMEND -> VideoRepository.getHomeVideos(refreshIdx)
             HomeCategory.POPULAR -> VideoRepository.getPopularVideos(popularPage)
             else -> {
-                //  [修复] 未实现的分类显示错误，但保留 previousCategory 供返回使用
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "该分类暂未实现"
-                )
-                return
+                //  Generic categories (Game, Tech, etc.)
+                if (currentCategory.tid > 0) {
+                     VideoRepository.getRegionVideos(tid = currentCategory.tid, page = refreshIdx + 1) // Using refreshIdx for pagination similar to Recommend
+                } else {
+                     Result.failure(Exception("Unknown category"))
+                }
             }
         }
         

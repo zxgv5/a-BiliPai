@@ -180,7 +180,7 @@ fun CategoryTabRow(
     onPartitionClick: () -> Unit = {}  //  新增：分区按钮回调
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
-    val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
     
     Row(
         modifier = Modifier

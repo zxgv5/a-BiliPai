@@ -112,7 +112,12 @@ fun VideoPlayerOverlay(
     // 📲 [新增] 小窗模式
     onPipClick: () -> Unit = {},
     //  [新增] 拖动进度条开始回调（用于清除弹幕）
-    onSeekStart: () -> Unit = {}
+    onSeekStart: () -> Unit = {},
+    // [New] Codec & Audio Params
+    currentCodec: String = "hev1",
+    onCodecChange: (String) -> Unit = {},
+    currentAudioQuality: Int = -1,
+    onAudioQualityChange: (Int) -> Unit = {}
 ) {
     var showQualityMenu by remember { mutableStateOf(false) }
     var showSpeedMenu by remember { mutableStateOf(false) }
@@ -500,6 +505,17 @@ fun VideoPlayerOverlay(
                 onSwitchCdn = onSwitchCdn,
                 onSwitchCdnTo = { index ->
                     onSwitchCdnTo(index)
+                    showVideoSettings = false
+                },
+                // [New] Codec & Audio
+                currentCodec = currentCodec,
+                onCodecChange = { codec ->
+                    onCodecChange(codec)
+                    showVideoSettings = false
+                },
+                currentAudioQuality = currentAudioQuality,
+                onAudioQualityChange = { quality ->
+                    onAudioQualityChange(quality)
                     showVideoSettings = false
                 },
                 onDismiss = { showVideoSettings = false }

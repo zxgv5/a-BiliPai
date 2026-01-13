@@ -161,7 +161,12 @@ fun VideoDetailScreen(
     val sleepTimerMinutes by viewModel.sleepTimerMinutes.collectAsState()
     
     // 📖 [新增] 监听视频章节数据
+    // 📖 [新增] 监听视频章节数据
     val viewPoints by viewModel.viewPoints.collectAsState()
+    
+    // [New] Codec & Audio Preferences
+    val codecPreference by viewModel.videoCodecPreference.collectAsState(initial = "hev1")
+    val audioQualityPreference by viewModel.audioQualityPreference.collectAsState(initial = -1)
     
     //  [PiP修复] 记录视频播放器在屏幕上的位置，用于PiP窗口只显示视频区域
     var videoPlayerBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
@@ -460,12 +465,23 @@ fun VideoDetailScreen(
         AnimatedContent(
             targetState = isFullscreenMode,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(300)) +
-                 scaleIn(initialScale = 0.92f, animationSpec = tween(300)))
-                    .togetherWith(
-                        fadeOut(animationSpec = tween(200)) +
-                        scaleOut(targetScale = 1.08f, animationSpec = tween(200))
-                    )
+                if (targetState) {
+                    // 进入全屏：放大 + 渐入
+                    (fadeIn(animationSpec = tween(400)) +
+                            scaleIn(initialScale = 0.9f, animationSpec = tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing)))
+                        .togetherWith(
+                            fadeOut(animationSpec = tween(400)) +
+                                    scaleOut(targetScale = 1.1f, animationSpec = tween(400))
+                        )
+                } else {
+                    // 退出全屏：缩小 + 渐出
+                    (fadeIn(animationSpec = tween(400)) +
+                            scaleIn(initialScale = 1.1f, animationSpec = tween(400)))
+                        .togetherWith(
+                            fadeOut(animationSpec = tween(400)) +
+                                    scaleOut(targetScale = 0.9f, animationSpec = tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                        )
+                }
             },
             label = "fullscreen_transition"
         ) { targetIsFullscreen ->
@@ -488,6 +504,12 @@ fun VideoDetailScreen(
                     cdnCount = (uiState as? PlayerUiState.Success)?.cdnCount ?: 1,
                     onSwitchCdn = { viewModel.switchCdn() },
                     onSwitchCdnTo = { viewModel.switchCdnTo(it) },
+
+                    // [New] Codec & Audio (Fullscreen)
+                    currentCodec = codecPreference,
+                    onCodecChange = { viewModel.setVideoCodec(it) },
+                    currentAudioQuality = audioQualityPreference,
+                    onAudioQualityChange = { viewModel.setAudioQuality(it) },
                     
                     //  [新增] 音频模式
                     isAudioOnly = false, // 全屏模式只有视频
@@ -530,7 +552,13 @@ fun VideoDetailScreen(
                         onToggleFullscreen = { toggleFullscreen() },  // 📺 平板全屏切换
                         isInPipMode = isPipMode,
                         onPipClick = handlePipClick,
-                        transitionEnabled = transitionEnabled  //  传递过渡动画开关
+
+                        transitionEnabled = transitionEnabled,  //  传递过渡动画开关
+                        // [New] Codec & Audio
+                        currentCodec = codecPreference,
+                        onCodecChange = { viewModel.setVideoCodec(it) },
+                        currentAudioQuality = audioQualityPreference,
+                        onAudioQualityChange = { viewModel.setAudioQuality(it) }
                     )
                 } else {
                     // 📱 手机竖屏：原有单列布局
@@ -654,8 +682,14 @@ fun VideoDetailScreen(
                                 // 📱 [新增] 竖屏全屏模式
                                 isVerticalVideo = isVerticalVideo,
                                 onPortraitFullscreen = { playerState.setPortraitFullscreen(true) },
+
                                 // 📲 [修复] 小窗模式 - 转移到应用内小窗而非直接进入系统 PiP
-                                onPipClick = handlePipClick
+                                onPipClick = handlePipClick,
+                                // [New] Codec & Audio
+                                currentCodec = codecPreference,
+                                onCodecChange = { viewModel.setVideoCodec(it) },
+                                currentAudioQuality = audioQualityPreference,
+                                onAudioQualityChange = { viewModel.setAudioQuality(it) }
                                 //  空降助手 - 已由插件系统自动处理
                                 // sponsorSegment = sponsorSegment,
                                 // showSponsorSkipButton = showSponsorSkipButton,

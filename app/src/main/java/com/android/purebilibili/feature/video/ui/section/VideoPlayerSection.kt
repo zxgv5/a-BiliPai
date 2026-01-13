@@ -100,7 +100,13 @@ fun VideoPlayerSection(
     isVerticalVideo: Boolean = false,
     onPortraitFullscreen: () -> Unit = {},
     // 📲 [新增] 小窗模式
-    onPipClick: () -> Unit = {}
+    // 📲 [新增] 小窗模式
+    onPipClick: () -> Unit = {},
+    // [New] Codec & Audio Params
+    currentCodec: String = "hev1", 
+    onCodecChange: (String) -> Unit = {},
+    currentAudioQuality: Int = -1,
+    onAudioQualityChange: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -752,9 +758,15 @@ fun VideoPlayerSection(
                 isVerticalVideo = isVerticalVideo,
                 onPortraitFullscreen = onPortraitFullscreen,
                 // 📲 [新增] 小窗模式
+                // 📲 [新增] 小窗模式
                 onPipClick = onPipClick,
                 //  [新增] 拖动进度条开始时清除弹幕
-                onSeekStart = { danmakuManager.clear() }
+                onSeekStart = { danmakuManager.clear() },
+                // [New] Codec & Audio
+                currentCodec = currentCodec,
+                onCodecChange = onCodecChange,
+                currentAudioQuality = currentAudioQuality,
+                onAudioQualityChange = onAudioQualityChange
             )
         }
         

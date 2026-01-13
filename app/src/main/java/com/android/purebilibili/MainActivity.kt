@@ -215,9 +215,13 @@ class MainActivity : ComponentActivity() {
                     MiniPlayerOverlay(
                         miniPlayerManager = miniPlayerManager,
                         onExpandClick = {
-                            //  直接显示全屏播放器（无需导航）
-                            showFullscreen = true
-                            miniPlayerManager.exitMiniMode()
+                            //  [修改] 导航回详情页，而不是只显示全屏播放器
+                            miniPlayerManager.currentBvid?.let { bvid ->
+                                val cid = miniPlayerManager.currentCid
+                                navController.navigate("video/$bvid?cid=$cid&cover=") {
+                                    launchSingleTop = true
+                                }
+                            }
                         }
                     )
                     

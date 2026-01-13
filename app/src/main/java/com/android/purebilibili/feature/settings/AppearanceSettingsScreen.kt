@@ -145,65 +145,88 @@ fun AppearanceSettingsScreen(
         //  [修复] 禁用 Scaffold 默认的 WindowInsets 消耗，避免底部填充
         contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            //  [修复] 添加底部导航栏内边距，确保沉浸式效果
-            contentPadding = WindowInsets.navigationBars.asPaddingValues()
-        ) {
-            
-            //  [新增] 快速入口
-            item { SettingsSectionTitle("快速入口") }
-            item {
-                SettingsGroup {
-                    // 主题设置
-                    SettingClickableItem(
-                        icon = CupertinoIcons.Default.MoonStars,
-                        title = "主题设置",
-                        value = state.themeMode.label,
-                        onClick = onNavigateToThemeSettings,
-                        iconTint = iOSBlue
-                    )
-                    Divider()
-                    // 图标设置
-                    SettingClickableItem(
-                        icon = CupertinoIcons.Default.SquareStack3dUp,
-                        title = "应用图标",
-                        value = when(state.appIcon) {
-                            // 🎀 二次元少女系列
-                            "Yuki" -> "比心少女"
-                            "Anime" -> "蓝发电视"
-                            "Tv" -> "双马尾"
-                            "Headphone" -> "耳机少女"
-                            // 经典系列
-                            "3D" -> "3D立体"
-                            "Blue" -> "经典蓝"
-                            "Retro" -> "复古怀旧"
-                            "Flat" -> "扁平现代"
-                            "Flat Material" -> "扁平材质"
-                            "Neon" -> "霓虹"
-                            "Telegram Blue" -> "纸飞机蓝"
-                            "Pink" -> "樱花粉"
-                            "Purple" -> "香芋紫"
-                            "Green" -> "薄荷绿"
-                            "Dark" -> "暗夜蓝"
-                            else -> "比心少女"  // 默认是 Yuki
-                        },
-                        onClick = onNavigateToIconSettings,
-                        iconTint = iOSPurple
-                    )
-                    Divider()
-                    // 动画设置
-                    SettingClickableItem(
-                        icon = CupertinoIcons.Default.WandAndStars,
-                        title = "动画与效果",
-                        value = if (state.cardAnimationEnabled) "已开启" else "已关闭",
-                        onClick = onNavigateToAnimationSettings,
-                        iconTint = iOSPink
-                    )
-                }
+        AppearanceSettingsContent(
+            modifier = Modifier.padding(padding),
+            state = state,
+            onNavigateToThemeSettings = onNavigateToThemeSettings,
+            onNavigateToIconSettings = onNavigateToIconSettings,
+            onNavigateToAnimationSettings = onNavigateToAnimationSettings,
+            onNavigateToBottomBarSettings = onNavigateToBottomBarSettings,
+            viewModel = viewModel,
+            context = context
+        )
+    }
+}
+
+@Composable
+fun AppearanceSettingsContent(
+    modifier: Modifier = Modifier,
+    state: SettingsUiState,
+    onNavigateToThemeSettings: () -> Unit,
+    onNavigateToIconSettings: () -> Unit,
+    onNavigateToAnimationSettings: () -> Unit,
+    onNavigateToBottomBarSettings: () -> Unit,
+    viewModel: SettingsViewModel,
+    context: android.content.Context
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize(),
+        //  [修复] 添加底部导航栏内边距，确保沉浸式效果
+        contentPadding = WindowInsets.navigationBars.asPaddingValues()
+    ) {
+        
+        //  [新增] 快速入口
+        item { SettingsSectionTitle("快速入口") }
+        item {
+            SettingsGroup {
+                // 主题设置
+                SettingClickableItem(
+                    icon = CupertinoIcons.Default.MoonStars,
+                    title = "主题设置",
+                    value = state.themeMode.label,
+                    onClick = onNavigateToThemeSettings,
+                    iconTint = iOSBlue
+                )
+                Divider()
+                // 图标设置
+                SettingClickableItem(
+                    icon = CupertinoIcons.Default.SquareStack3dUp,
+                    title = "应用图标",
+                    value = when(state.appIcon) {
+                        // 🎀 二次元少女系列
+                        "Yuki" -> "比心少女"
+                        "Anime" -> "蓝发电视"
+                        "Tv" -> "双马尾"
+                        "Headphone" -> "耳机少女"
+                        // 经典系列
+                        "3D" -> "3D立体"
+                        "Blue" -> "经典蓝"
+                        "Retro" -> "复古怀旧"
+                        "Flat" -> "扁平现代"
+                        "Flat Material" -> "扁平材质"
+                        "Neon" -> "霓虹"
+                        "Telegram Blue" -> "纸飞机蓝"
+                        "Pink" -> "樱花粉"
+                        "Purple" -> "香芋紫"
+                        "Green" -> "薄荷绿"
+                        "Dark" -> "暗夜蓝"
+                        else -> "比心少女"  // 默认是 Yuki
+                    },
+                    onClick = onNavigateToIconSettings,
+                    iconTint = iOSPurple
+                )
+                Divider()
+                // 动画设置
+                SettingClickableItem(
+                    icon = CupertinoIcons.Default.WandAndStars,
+                    title = "动画与效果",
+                    value = if (state.cardAnimationEnabled) "已开启" else "已关闭",
+                    onClick = onNavigateToAnimationSettings,
+                    iconTint = iOSPink
+                )
             }
+        }
             
             //  首页展示 - 抽屉式选择
             item { SettingsSectionTitle("首页展示") }
@@ -663,7 +686,7 @@ fun AppearanceSettingsScreen(
             }
         }
     }
-}
+
 /**
  *  模糊强度选择器 (可展开/收起)
  */

@@ -64,12 +64,24 @@ fun AnimationSettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            contentPadding = WindowInsets.navigationBars.asPaddingValues()
-        ) {
+        AnimationSettingsContent(
+            modifier = Modifier.padding(padding),
+            state = state,
+            viewModel = viewModel
+        )
+    }
+}
+
+@Composable
+fun AnimationSettingsContent(
+    modifier: Modifier = Modifier,
+    state: SettingsUiState,
+    viewModel: SettingsViewModel
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = WindowInsets.navigationBars.asPaddingValues()
+    ) {
             
             //  卡片动画
             item { SettingsSectionTitle("卡片动画") }
@@ -166,4 +178,4 @@ fun AnimationSettingsScreen(
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
-}
+

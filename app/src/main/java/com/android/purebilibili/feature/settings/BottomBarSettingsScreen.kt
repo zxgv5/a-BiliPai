@@ -61,6 +61,34 @@ val allBottomBarTabs = listOf(
 fun BottomBarSettingsScreen(
     onBack: () -> Unit
 ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("底栏管理", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        BottomBarSettingsContent(
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
+
+@Composable
+fun BottomBarSettingsContent(
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
@@ -89,32 +117,13 @@ fun BottomBarSettingsScreen(
             SettingsManager.setBottomBarItemColor(context, itemId, colorIndex)
         }
     }
-    
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("底栏管理", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "返回")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
             // 说明文字
             item {
                 Text(
@@ -208,7 +217,7 @@ fun BottomBarSettingsScreen(
             }
         }
     }
-}
+
 
 /**
  * 底栏预览组件

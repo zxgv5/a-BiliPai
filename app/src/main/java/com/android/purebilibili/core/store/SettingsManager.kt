@@ -497,7 +497,11 @@ object SettingsManager {
     // ========== 🌐 网络感知画质设置 ==========
     
     private val KEY_WIFI_QUALITY = intPreferencesKey("wifi_default_quality")
+
     private val KEY_MOBILE_QUALITY = intPreferencesKey("mobile_default_quality")
+    //  [New] Video Codec & Audio Quality
+    private val KEY_VIDEO_CODEC = stringPreferencesKey("video_codec_preference")
+    private val KEY_AUDIO_QUALITY = intPreferencesKey("audio_quality_preference")
     
     // --- WiFi 默认画质 (默认 80 = 1080P) ---
     fun getWifiQuality(context: Context): Flow<Int> = context.settingsDataStore.data
@@ -534,6 +538,49 @@ object SettingsManager {
     fun getMobileQualitySync(context: Context): Int {
         return context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
             .getInt("mobile_quality", 64)
+    }
+
+    // --- Video Codec Preference (Default: HEVC/hev1) ---
+    // Values: "avc1" (AVC), "hev1" (HEVC), "av01" (AV1)
+    fun getVideoCodec(context: Context): Flow<String> = context.settingsDataStore.data
+        .map { preferences -> preferences[KEY_VIDEO_CODEC] ?: "hev1" }
+
+    suspend fun setVideoCodec(context: Context, value: String) {
+        context.settingsDataStore.edit { preferences -> preferences[KEY_VIDEO_CODEC] = value }
+        // Sync to SharedPreferences for synchronous access
+        context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .edit().putString("video_codec", value).apply()
+    }
+
+    fun getVideoCodecSync(context: Context): String {
+        return context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .getString("video_codec", "hev1") ?: "hev1"
+    }
+
+    // --- Audio Quality Preference (Default: 30280 = 192K) ---
+    // Special Values: -1 (Auto/Highest)
+    fun getAudioQuality(context: Context): Flow<Int> = context.settingsDataStore.data
+        .map { preferences -> 
+            val value = preferences[KEY_AUDIO_QUALITY] ?: -1
+            com.android.purebilibili.core.util.Logger.d("SettingsManager", "📻 getAudioQuality Flow emitting: $value")
+            value 
+        }
+
+    suspend fun setAudioQuality(context: Context, value: Int) {
+        com.android.purebilibili.core.util.Logger.d("SettingsManager", "📻 setAudioQuality called with: $value")
+        context.settingsDataStore.edit { preferences -> 
+            preferences[KEY_AUDIO_QUALITY] = value 
+            com.android.purebilibili.core.util.Logger.d("SettingsManager", "📻 setAudioQuality DataStore written: $value")
+        }
+        // Sync to SharedPreferences for synchronous access - Use commit() to ensure immediate write
+        val result = context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .edit().putInt("audio_quality", value).commit()
+        com.android.purebilibili.core.util.Logger.d("SettingsManager", "📻 setAudioQuality SharedPrefs committed: $value, success=$result")
+    }
+
+    fun getAudioQualitySync(context: Context): Int {
+        return context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .getInt("audio_quality", -1)
     }
     
     // ==========  空降助手 (SponsorBlock) ==========

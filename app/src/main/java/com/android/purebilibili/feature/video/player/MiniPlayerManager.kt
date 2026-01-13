@@ -467,11 +467,17 @@ class MiniPlayerManager private constructor(private val context: Context) :
         // 继续播放
     }
 
+    //  [新增] 是否执行退出动画 (用于在点击新视频时瞬间消失，避免闪烁)
+    var shouldAnimateExit by mutableStateOf(true)
+        private set
+
     /**
      * 退出小窗模式（返回全屏详情页）
+     * @param animate 是否执行退出动画
      */
-    fun exitMiniMode() {
-        Logger.d(TAG, "Exiting mini mode")
+    fun exitMiniMode(animate: Boolean = true) {
+        Logger.d(TAG, "Exiting mini mode, animate=$animate")
+        shouldAnimateExit = animate
         isMiniMode = false
     }
 
