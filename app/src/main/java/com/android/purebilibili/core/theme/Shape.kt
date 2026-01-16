@@ -47,45 +47,18 @@ object iOSCornerRadius {
     
     /** 胶囊圆角 - 胶囊按钮、Pill */
     val Full = 100.dp
+}
     
-    /**
-     * 根据缩放比例计算圆角值
-     */
-    fun scaled(base: Dp, scale: Float): Dp = (base.value * scale).dp
-}
 
-/**
- *  动态圆角 Shapes
- * 
- * 支持用户自定义圆角比例 (0.5x ~ 1.5x)
- */
-@Composable
-fun rememberDynamicShapes(cornerScale: Float = 1f): Shapes {
-    return remember(cornerScale) {
-        Shapes(
-            extraSmall = RoundedCornerShape(iOSCornerRadius.scaled(iOSCornerRadius.Tiny, cornerScale)),
-            small = RoundedCornerShape(iOSCornerRadius.scaled(iOSCornerRadius.Small, cornerScale)),
-            medium = RoundedCornerShape(iOSCornerRadius.scaled(iOSCornerRadius.Medium, cornerScale)),
-            large = RoundedCornerShape(iOSCornerRadius.scaled(iOSCornerRadius.Large, cornerScale)),
-            extraLarge = RoundedCornerShape(iOSCornerRadius.scaled(iOSCornerRadius.ExtraLarge, cornerScale))
-        )
-    }
-}
+
+
 
 /**
  *  CompositionLocal 提供圆角缩放比例
  */
 val LocalCornerRadiusScale = staticCompositionLocalOf { 1f }
 
-/**
- *  CompositionLocal 提供 UI 缩放比例
- */
-val LocalUIScale = staticCompositionLocalOf { 1f }
 
-/**
- *  CompositionLocal 提供字体缩放比例
- */
-val LocalFontScale = staticCompositionLocalOf { 1f }
 
 /**
  *  iOS 风格预设 Shape

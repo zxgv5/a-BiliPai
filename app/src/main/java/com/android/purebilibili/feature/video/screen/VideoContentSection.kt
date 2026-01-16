@@ -423,7 +423,7 @@ private fun VideoHeaderContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.surface) // 🎨 [修复] 与 TabBar 统一使用 Surface (通常为白色/深灰色)，消除割裂感
             .onGloballyPositioned { coordinates ->
                 onGloballyPositioned(coordinates.size.height.toFloat())
             }
@@ -556,7 +556,7 @@ private fun VideoContentTabBar(
 @Composable
 private fun VideoRecommendationHeader() {
     Row(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), // 优化：减少底部间距，使视频卡片更紧凑
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

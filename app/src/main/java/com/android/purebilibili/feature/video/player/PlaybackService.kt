@@ -47,8 +47,12 @@ class PlaybackService : MediaSessionService() {
             .build()
 
         // 2. 初始化 Session
-        // 注意：点击跳转 Activity
-        val intent = Intent(this, VideoActivity::class.java).apply {
+        // 注意：点击跳转 Activity，使用 MainActivity Deep Link
+        val intent = Intent(this, com.android.purebilibili.MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            // 注意：Service 不知道 bvid，这里只能跳转首页或不做处理
+            // 实际上这个 Service 当前主要作为 MediaSessionService 的空壳
+            // 真实的 Session 是在 VideoPlayerState 中创建的
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntent = PendingIntent.getActivity(

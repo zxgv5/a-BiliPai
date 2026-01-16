@@ -46,7 +46,7 @@ import com.android.purebilibili.core.theme.iOSSystemGray
 fun RelatedVideosHeader() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background // Automated iOS System Gray 6 via Theme
+        color = Color.Transparent // 🎨 [修复] 让标题直接显示在背景上，不显示为独立的色块
     ) {
         Row(
             modifier = Modifier
@@ -135,7 +135,7 @@ fun RelatedVideoItem(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(82.dp),
+                    .heightIn(min = 82.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Title

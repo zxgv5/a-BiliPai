@@ -44,6 +44,7 @@ object SettingsManager {
     //  [新增] 手势灵敏度和主题色
     private val KEY_GESTURE_SENSITIVITY = floatPreferencesKey("gesture_sensitivity")
     //  [新增] 双击跳转秒数 (可分开设置快进和后退)
+    private val KEY_DOUBLE_TAP_SEEK_ENABLED = booleanPreferencesKey("double_tap_seek_enabled")
     private val KEY_SEEK_FORWARD_SECONDS = intPreferencesKey("seek_forward_seconds")
     private val KEY_SEEK_BACKWARD_SECONDS = intPreferencesKey("seek_backward_seconds")
     //  [新增] 长按倍速 (默认 2.0x)
@@ -58,9 +59,9 @@ object SettingsManager {
     //  [新增] 模糊效果开关
     private val KEY_HEADER_BLUR_ENABLED = booleanPreferencesKey("header_blur_enabled")
     private val KEY_BOTTOM_BAR_BLUR_ENABLED = booleanPreferencesKey("bottom_bar_blur_enabled")
-    // � [新增] 模糊强度 (ULTRA_THIN, THIN, THICK)
+    //  [新增] 模糊强度 (ULTRA_THIN, THIN, THICK)
     private val KEY_BLUR_INTENSITY = stringPreferencesKey("blur_intensity")
-    // � [合并] 首页展示模式 (0=Grid, 1=Story, 2=Glass)
+    //  [合并] 首页展示模式 (0=Grid, 1=Story, 2=Glass)
     private val KEY_DISPLAY_MODE = intPreferencesKey("display_mode")
     //  [新增] 卡片动画开关
     private val KEY_CARD_ANIMATION_ENABLED = booleanPreferencesKey("card_animation_enabled")
@@ -206,6 +207,13 @@ object SettingsManager {
     }
 
     //  [新增] --- 双击跳转秒数 ---
+    fun getDoubleTapSeekEnabled(context: Context): Flow<Boolean> = context.settingsDataStore.data
+        .map { preferences -> preferences[KEY_DOUBLE_TAP_SEEK_ENABLED] ?: true } // 默认开启
+
+    suspend fun setDoubleTapSeekEnabled(context: Context, value: Boolean) {
+        context.settingsDataStore.edit { preferences -> preferences[KEY_DOUBLE_TAP_SEEK_ENABLED] = value }
+    }
+
     fun getSeekForwardSeconds(context: Context): Flow<Int> = context.settingsDataStore.data
         .map { preferences -> preferences[KEY_SEEK_FORWARD_SECONDS] ?: 10 }
 
@@ -240,7 +248,7 @@ object SettingsManager {
 
     suspend fun setThemeColorIndex(context: Context, index: Int) {
         context.settingsDataStore.edit { preferences -> 
-            preferences[KEY_THEME_COLOR_INDEX] = index.coerceIn(0, 5)
+            preferences[KEY_THEME_COLOR_INDEX] = index.coerceIn(0, 9)
         }
     }
     
@@ -956,74 +964,13 @@ object SettingsManager {
         context.settingsDataStore.edit { preferences -> preferences[KEY_SWIPE_HIDE_PLAYER] = value }
     }
     
-    // ==========  界面自定义设置 ==========
-    
-    private val KEY_CORNER_RADIUS_SCALE = floatPreferencesKey("corner_radius_scale")
-    private val KEY_FONT_SCALE = floatPreferencesKey("ui_font_scale")
-    private val KEY_UI_SCALE = floatPreferencesKey("ui_scale")
+
     
     /**
      *  圆角大小比例 (0.5 ~ 1.5, 默认 1.0)
      * 控制全局 UI 圆角大小
      */
-    fun getCornerRadiusScale(context: Context): Flow<Float> = context.settingsDataStore.data
-        .map { preferences -> preferences[KEY_CORNER_RADIUS_SCALE] ?: 1.0f }
 
-    suspend fun setCornerRadiusScale(context: Context, value: Float) {
-        context.settingsDataStore.edit { preferences -> 
-            preferences[KEY_CORNER_RADIUS_SCALE] = value.coerceIn(0.5f, 1.5f) 
-        }
-    }
-    
-    //  同步读取圆角比例
-    fun getCornerRadiusScaleSync(context: Context): Float {
-        return context.getSharedPreferences("ui_customization", Context.MODE_PRIVATE)
-            .getFloat("corner_radius_scale", 1.0f)
-    }
-    
-    /**
-     *  字体大小比例 (0.8 ~ 1.4, 默认 1.0)
-     * 控制全局字体大小
-     */
-    fun getFontScale(context: Context): Flow<Float> = context.settingsDataStore.data
-        .map { preferences -> preferences[KEY_FONT_SCALE] ?: 1.0f }
-
-    suspend fun setFontScale(context: Context, value: Float) {
-        context.settingsDataStore.edit { preferences -> 
-            preferences[KEY_FONT_SCALE] = value.coerceIn(0.8f, 1.4f) 
-        }
-        //  同步到 SharedPreferences
-        context.getSharedPreferences("ui_customization", Context.MODE_PRIVATE)
-            .edit().putFloat("font_scale", value).apply()
-    }
-    
-    //  同步读取字体比例
-    fun getFontScaleSync(context: Context): Float {
-        return context.getSharedPreferences("ui_customization", Context.MODE_PRIVATE)
-            .getFloat("font_scale", 1.0f)
-    }
-    
-    /**
-     *  UI 整体缩放比例 (0.9 ~ 1.2, 默认 1.0)
-     * 控制 UI 元素整体大小
-     */
-    fun getUIScale(context: Context): Flow<Float> = context.settingsDataStore.data
-        .map { preferences -> preferences[KEY_UI_SCALE] ?: 1.0f }
-
-    suspend fun setUIScale(context: Context, value: Float) {
-        context.settingsDataStore.edit { preferences -> 
-            preferences[KEY_UI_SCALE] = value.coerceIn(0.9f, 1.2f) 
-        }
-        //  同步到 SharedPreferences
-        context.getSharedPreferences("ui_customization", Context.MODE_PRIVATE)
-            .edit().putFloat("ui_scale", value).apply()
-    }
-    
-    //  同步读取 UI 缩放
-    fun getUIScaleSync(context: Context): Float {
-        return context.getSharedPreferences("ui_customization", Context.MODE_PRIVATE)
-            .getFloat("ui_scale", 1.0f)
-    }
     
     // ========== 📱 平板导航模式 ==========
     

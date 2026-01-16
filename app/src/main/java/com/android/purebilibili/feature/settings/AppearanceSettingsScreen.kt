@@ -1,4 +1,5 @@
-// 文件路径: feature/settings/AppearanceSettingsScreen.kt
+@file:OptIn(androidx.compose.animation.ExperimentalAnimationApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.android.purebilibili.feature.settings
 
 import android.os.Build
@@ -11,6 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 //  Cupertino Icons - iOS SF Symbols 风格图标
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
@@ -22,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,7 +41,7 @@ import com.android.purebilibili.core.ui.components.*
  *  外观设置二级页面
  * iOS 风格设计
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun AppearanceSettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
@@ -182,39 +187,174 @@ fun AppearanceSettingsContent(
                         exit =   androidx.compose.animation.shrinkVertically() +   androidx.compose.animation.fadeOut()
                     ) {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
+                            //  Theme Color Label
                             Text(
                                 "主题色", 
                                 style = MaterialTheme.typography.labelSmall, 
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            
+                            //  [新增] 实时主题色预览
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 24.dp)
+                                    .height(140.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(
+                                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            colors = listOf(
+                                                ThemeColors[state.themeColorIndex].copy(alpha = 0.15f),
+                                                ThemeColors[state.themeColorIndex].copy(alpha = 0.05f)
+                                            )
+                                        )
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = ThemeColors[state.themeColorIndex].copy(alpha = 0.3f),
+                                        shape = RoundedCornerShape(20.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
                             ) {
-                                items(ThemeColors.size) { index ->
-                                    val color = ThemeColors[index]
-                                    val isSelected = state.themeColorIndex == index
-                                    
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    // 模拟应用图标/Logo
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(color)
-                                            .clickable { viewModel.setThemeColorIndex(index) }
-                                            .then(
-                                                if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape) 
-                                                else Modifier
+                                            .size(60.dp)
+                                            .padding(bottom = 12.dp)
+                                            .background(
+                                                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                                    colors = listOf(
+                                                        ThemeColors[state.themeColorIndex],
+                                                        ThemeColors[state.themeColorIndex].copy(alpha = 0.8f)
+                                                    )
+                                                ),
+                                                shape = RoundedCornerShape(16.dp)
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        if (isSelected) {
-                                            Icon(
-                                                CupertinoIcons.Default.Checkmark,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(18.dp)
-                                            )
+                                        Icon(
+                                            CupertinoIcons.Filled.Play,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                    
+                                    // 当前选中颜色名称
+                                    Text(
+                                        text = ThemeColorNames.getOrElse(state.themeColorIndex) { "自定义" },
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "正在预览当前主题色",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            //  [Redesign] Theme Color Grid - Strict 2 Rows x 5 Columns
+                            val spacing = 12.dp
+                            
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(16.dp) // 增加行间距以容纳文字
+                            ) {
+                                ThemeColors.chunked(5).forEach { rowColors ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(spacing)
+                                    ) {
+                                        rowColors.forEach { color ->
+                                            val index = ThemeColors.indexOf(color)
+                                            val isSelected = state.themeColorIndex == index
+                                            
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                // 选中状态动画
+                                                val scale by androidx.compose.animation.core.animateFloatAsState(
+                                                    targetValue = if (isSelected) 1.1f else 1.0f,
+                                                    label = "scale",
+                                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                                                )
+                                                
+                                                Box(
+                                                    modifier = Modifier
+                                                        .aspectRatio(1f) // Ensure square aspect ratio for perfect circles
+                                                        .graphicsLayer {
+                                                            scaleX = scale
+                                                            scaleY = scale
+                                                        }
+                                                        // 选中时的外光环 (圆形)
+                                                        .border(
+                                                            width = if (isSelected) 2.dp else 0.dp,
+                                                            color = if (isSelected) color.copy(alpha = 0.5f) else Color.Transparent,
+                                                            shape = CircleShape
+                                                        )
+                                                        .padding(3.dp) // 光环与色块的间距
+                                                        .clip(CircleShape) // 裁剪为圆形
+                                                        .background(
+                                                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                                                colors = listOf(
+                                                                    color.copy(alpha = 0.9f), // 中心稍亮
+                                                                    color // 边缘原色
+                                                                ),
+                                                                center = androidx.compose.ui.geometry.Offset.Unspecified,
+                                                                radius = Float.POSITIVE_INFINITY
+                                                            )
+                                                        )
+                                                        // 添加个内部高光，增加球体质感
+                                                        .background(
+                                                            brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                                                colors = listOf(
+                                                                    Color.White.copy(alpha = 0.2f),
+                                                                    Color.Transparent
+                                                                ),
+                                                                start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                                                end = androidx.compose.ui.geometry.Offset(100f, 100f)
+                                                            )
+                                                        )
+                                                        .clickable { 
+                                                            viewModel.setThemeColorIndex(index)
+                                                        },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    androidx.compose.animation.AnimatedVisibility(
+                                                        visible = isSelected,
+                                                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
+                                                        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut()
+                                                    ) {
+                                                        Icon(
+                                                            CupertinoIcons.Default.Checkmark,
+                                                            contentDescription = null,
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                                
+                                                // 颜色名称
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    text = ThemeColorNames.getOrElse(index) { "" },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                        
+                                        // Fill empty spots if last row has fewer than 5 items
+                                        if (rowColors.size < 5) {
+                                            repeat(5 - rowColors.size) {
+                                                 Spacer(modifier = Modifier.weight(1f))
+                                            }
                                         }
                                     }
                                 }
@@ -371,47 +511,8 @@ fun AppearanceSettingsContent(
                     }
                 }
             }
-
-            item { IOSSectionTitle("界面自定义") }
-            item {
-                IOSGroup {
-                    // 字体大小 (0.8x - 1.4x)
-                    SliderSettingItem(
-                        title = "字体大小",
-                        value = state.fontScale,
-                        range = 0.8f..1.4f,
-                        onValueChange = { viewModel.setFontScale(it) },
-                        steps = 11, // 0.05 per step
-                        icon = CupertinoIcons.Default.Character
-                    )
-
-                    Divider()
-
-                    // UI 缩放 (0.9x - 1.2x)
-                    SliderSettingItem(
-                        title = "UI 缩放",
-                        value = state.uiScale,
-                        range = 0.9f..1.2f,
-                        onValueChange = { viewModel.setUIScale(it) },
-                        steps = 5, // 0.05 per step
-                        icon = CupertinoIcons.Default.Gear
-                    )
-                    
-                    Divider()
-                    
-                    // 实时预览卡片
-                    Box(modifier = Modifier.padding(16.dp)) {
-                        UICustomizationPreviewCard(
-                            fontScale = state.fontScale,
-                            uiScale = state.uiScale
-                        )
-                    }
-                }
-            }
         }
     }
-
-
 
 
 /**
@@ -490,96 +591,5 @@ fun ColorPreviewItem(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-fun SliderSettingItem(
-    title: String,
-    value: Float,
-    range: ClosedFloatingPointRange<Float>,
-    onValueChange: (Float) -> Unit,
-    steps: Int = 0,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = String.format("%.2fx", value),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = range,
-            steps = steps,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-    }
-}
-
-/**
- *  UI 自定义预览卡片 - 简化版（固定圆角）
- */
-@Composable
-fun UICustomizationPreviewCard(
-    fontScale: Float,
-    uiScale: Float
-) {
-    val cornerRadius = 12.dp * uiScale  // 固定圆角，仅受 UI 缩放影响
-    val padding = 16.dp * uiScale
-    
-    Surface(
-        shape = RoundedCornerShape(cornerRadius),
-        color = iOSTeal.copy(alpha = 0.18f),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(padding)
-        ) {
-            Text(
-                text = "预览效果",
-                style = MaterialTheme.typography.titleMedium,
-                fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale * uiScale,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp * uiScale))
-            Text(
-                text = "调整滑块查看实时变化。",
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = MaterialTheme.typography.bodyMedium.fontSize * fontScale * uiScale
-            )
-            Spacer(modifier = Modifier.height(12.dp * uiScale))
-            Button(
-                onClick = {},
-                shape = RoundedCornerShape(8.dp * uiScale),
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text(
-                    text = "确认",
-                    fontSize = MaterialTheme.typography.labelLarge.fontSize * fontScale * uiScale
-                )
-            }
-        }
     }
 }

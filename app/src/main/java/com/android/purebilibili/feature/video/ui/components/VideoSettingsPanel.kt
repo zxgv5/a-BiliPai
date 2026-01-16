@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -76,7 +77,7 @@ fun VideoSettingsPanel(
     // 关闭面板
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val seekForwardSeconds by com.android.purebilibili.core.store.SettingsManager
@@ -505,15 +506,20 @@ fun VideoSettingsPanel(
                 SettingsDivider()
             }
 
-            //  [新增] 双击跳转秒数设置
+            //  [新增] 双击跳转秒数设置 (带开关)
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp) // 优化：减少垂直间距
                 ) {
+                    val doubleTapSeekEnabled by com.android.purebilibili.core.store.SettingsManager
+                        .getDoubleTapSeekEnabled(context)
+                        .collectAsState(initial = true)
+
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
                             imageVector = CupertinoIcons.Default.Forward,
@@ -522,54 +528,75 @@ fun VideoSettingsPanel(
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = "双击跳转",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "快进 ${seekForwardSeconds}s / 后退 ${seekBackwardSeconds}s",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "双击跳转",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (doubleTapSeekEnabled) "快进 ${seekForwardSeconds}s / 后退 ${seekBackwardSeconds}s" else "已关闭",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // 开关
+                        Switch(
+                            checked = doubleTapSeekEnabled,
+                            onCheckedChange = { checked ->
+                                scope.launch {
+                                    com.android.purebilibili.core.store.SettingsManager.setDoubleTapSeekEnabled(context, checked)
+                                }
+                            },
+                            modifier = Modifier.scale(0.8f) // 优化：开关稍微缩小
                         )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
                     
-                    // 快进秒数选择
-                    Text(
-                        text = "快进秒数（双击右侧）",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    SeekSecondsOptions(
-                        currentSeconds = seekForwardSeconds,
-                        onSelect = { seconds ->
-                            scope.launch {
-                                com.android.purebilibili.core.store.SettingsManager.setSeekForwardSeconds(context, seconds)
-                            }
+                    // 仅当开启时显示秒数选项
+                    AnimatedVisibility(
+                        visible = doubleTapSeekEnabled,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // 快进秒数选择
+                            Text(
+                                text = "快进秒数（双击右侧）",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            SeekSecondsOptions(
+                                currentSeconds = seekForwardSeconds,
+                                onSelect = { seconds ->
+                                    scope.launch {
+                                        com.android.purebilibili.core.store.SettingsManager.setSeekForwardSeconds(context, seconds)
+                                    }
+                                }
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // 后退秒数选择
+                            Text(
+                                text = "后退秒数（双击左侧）",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            SeekSecondsOptions(
+                                currentSeconds = seekBackwardSeconds,
+                                onSelect = { seconds ->
+                                    scope.launch {
+                                        com.android.purebilibili.core.store.SettingsManager.setSeekBackwardSeconds(context, seconds)
+                                    }
+                                }
+                            )
                         }
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // 后退秒数选择
-                    Text(
-                        text = "后退秒数（双击左侧）",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    SeekSecondsOptions(
-                        currentSeconds = seekBackwardSeconds,
-                        onSelect = { seconds ->
-                            scope.launch {
-                                com.android.purebilibili.core.store.SettingsManager.setSeekBackwardSeconds(context, seconds)
-                            }
-                        }
-                    )
+                    }
                 }
                 SettingsDivider()
             }
@@ -579,7 +606,7 @@ fun VideoSettingsPanel(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp) // 优化：减少垂直间距
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
@@ -591,18 +618,19 @@ fun VideoSettingsPanel(
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = "长按倍速",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "当前 ${longPressSpeed}x",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "长按倍速",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "当前 ${longPressSpeed}x",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     

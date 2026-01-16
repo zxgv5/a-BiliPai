@@ -212,10 +212,13 @@ fun VideoDetailScreen(
         }
     }
     
-    //  [新增] 包装的 onBack，在导航之前立即恢复状态栏
-    val handleBack = remember(onBack) {
+    //  [修复] 包装的 onBack，在导航之前立即恢复状态栏并通知小窗管理器
+    val handleBack = remember(onBack, miniPlayerManager) {
         {
             isScreenActive = false  // 标记页面正在退出
+            // 🎯 通知小窗管理器这是用户主动导航离开（用于控制后台音频）
+            miniPlayerManager?.markLeavingByNavigation()
+            
             restoreStatusBar()      //  立即恢复状态栏（动画开始前）
             onBack()                // 执行实际的返回导航
         }
@@ -452,6 +455,12 @@ fun VideoDetailScreen(
         )
         val activity = context.findActivity()
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
+
+    // 🎯 [修复] 默认拦截系统返回键（非全屏状态下）
+    // 确保通过系统手势返回也能触发 markLeavingByNavigation，从而停止后台音频
+    BackHandler(enabled = !isFullscreenMode && !isPortraitFullscreen && !isPhoneInLandscapeSplitView) {
+        handleBack()
     }
 
     // 沉浸式状态栏控制

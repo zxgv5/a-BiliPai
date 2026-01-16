@@ -58,20 +58,13 @@ fun PureBiliBiliTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     themeColorIndex: Int = 0, //  默认 0 = iOS 蓝色
-    cornerRadiusScale: Float = 1.0f,
-    fontScale: Float = 1.0f,
-    uiScale: Float = 1.0f,
     content: @Composable () -> Unit
 ) {
     //  获取自定义主题色 (默认 iOS 蓝)
     val customPrimaryColor = ThemeColors.getOrElse(themeColorIndex) { iOSSystemBlue }
     
-    //  [新增] 提供动态圆角和缩放比例
-    val shapes = rememberDynamicShapes(cornerRadiusScale)
-    
-    //  [TODO] 字体缩放目前主要通过 UI 缩放配合字体大小调整来实现，
-    //  或者后续可以在 Typography 中应用 fontScale。
-    //  这里主要提供 CompositionLocal 供组件自适应。
+    //  [优化] 使用固定 iOS 风格圆角
+    val shapes = iOSShapes
     
     val colorScheme = when {
         // 如果开启了动态取色 且 系统版本 >= Android 12 (S)
@@ -96,16 +89,10 @@ fun PureBiliBiliTheme(
         }
     }
 
-    CompositionLocalProvider(
-        LocalCornerRadiusScale provides cornerRadiusScale,
-        LocalFontScale provides fontScale,
-        LocalUIScale provides uiScale
-    ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = BiliTypography,
-            shapes = shapes, // 应用动态圆角
-            content = content
-        )
-    }
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = BiliTypography,
+        shapes = shapes,
+        content = content
+    )
 }

@@ -17,33 +17,20 @@ import android.os.Bundle
 import com.android.purebilibili.core.util.Logger
 import android.util.Rational
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 // Imports for moved classes
 import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
 import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
-import com.android.purebilibili.feature.video.state.rememberVideoPlayerState
-import com.android.purebilibili.feature.video.ui.section.VideoPlayerSection
+
 
 private const val TAG = "BiliPlayerActivity"
 
@@ -117,90 +104,19 @@ class VideoActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
-                val sleepTimerMinutes by viewModel.sleepTimerMinutes.collectAsStateWithLifecycle()
-                val isAudioOnly by viewModel.isInAudioMode.collectAsStateWithLifecycle()
-                val viewPoints by viewModel.viewPoints.collectAsStateWithLifecycle()
-                
-                //  空降助手状态 - 已由插件系统自动处理，无需UI
-                // val sponsorSegment by viewModel.currentSponsorSegment.collectAsStateWithLifecycle()
-                // val showSponsorSkipButton by viewModel.showSkipButton.collectAsStateWithLifecycle()
-                // val sponsorBlockEnabled by com.android.purebilibili.core.store.SettingsManager
-                //     .getSponsorBlockEnabled(this@VideoActivity)
-                //     .collectAsStateWithLifecycle(initialValue = false)
-                
-                //  空降助手：已由插件系统后台处理
-                // androidx.compose.runtime.LaunchedEffect(sponsorBlockEnabled, uiState) {
-                //     if (sponsorBlockEnabled && uiState is PlayerUiState.Success) {
-                //         while (true) {
-                //             kotlinx.coroutines.delay(500)
-                //             viewModel.checkAndSkipSponsor(this@VideoActivity)
-                //         }
-                //     }
-                // }
-
-                // 初始化播放器 (VideoPlayerState 内部已包含自动元数据更新逻辑)
-                val playerState = rememberVideoPlayerState(
-                    context = this,
-                    viewModel = viewModel,
-                    bvid = bvid
+                // VideoDetailScreen handles its own UI state and player initialization
+                com.android.purebilibili.feature.video.screen.VideoDetailScreen(
+                    bvid = bvid,
+                    coverUrl = "", // Will be updated when video info loads
+                    onBack = { finish() },
+                    onNavigateToAudioMode = {
+                        viewModel.setAudioMode(true)
+                    },
+                    // We don't need to pass external player here as VideoDetailScreen manages it via VideoPlayerState
+                    // But if we wanted to support smooth transition from notification (which might be playing), 
+                    // VideoPlayerState's reuse logic handles checking MiniPlayerManager if applicable.
+                    // For pure Activity launch, it creates/reuses logic internally.
                 )
-
-                BackHandler(enabled = isFullscreen) {
-                    toggleFullscreen()
-                }
-
-                Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-                    Box(
-                        modifier = if (isFullscreen || isInPipMode) {
-                            Modifier.fillMaxSize()
-                        } else {
-                            Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-                        }
-                    ) {
-                        VideoPlayerSection(
-                            playerState = playerState,
-                            uiState = uiState,
-                            isFullscreen = isFullscreen,
-                            isInPipMode = isInPipMode,
-                            onToggleFullscreen = { toggleFullscreen() },
-                            onQualityChange = { quality, pos ->
-                                viewModel.changeQuality(quality, pos)
-                            },
-                            onBack = {
-                                if (isFullscreen) toggleFullscreen() else finish()
-                            },
-                            //  实验性功能：双击点赞
-                            onDoubleTapLike = { viewModel.toggleLike() },
-                            
-                            //  [新增] 音频模式
-                            isAudioOnly = isAudioOnly,
-                            onAudioOnlyToggle = { viewModel.setAudioMode(!isAudioOnly) },
-                            
-                            //  [新增] 定时关闭
-                            sleepTimerMinutes = sleepTimerMinutes,
-                            onSleepTimerChange = { viewModel.setSleepTimer(it) },
-                            
-                            // 📖 [新增] 视频章节数据
-                            viewPoints = viewPoints
-                            
-                            //  空降助手 - 已由插件系统自动处理
-                            // sponsorSegment = sponsorSegment,
-                            // showSponsorSkipButton = showSponsorSkipButton,
-                            // onSponsorSkip = { viewModel.skipCurrentSponsorSegment() },
-                            // onSponsorDismiss = { viewModel.dismissSponsorSkipButton() }
-                        )
-                    }
-
-                    if (!isFullscreen && !isInPipMode) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = "详情页内容区域 (待实现)", color = Color.Gray)
-                        }
-                    }
-                }
             }
         }
     }

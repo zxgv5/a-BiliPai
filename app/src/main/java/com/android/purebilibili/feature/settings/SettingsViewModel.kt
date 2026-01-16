@@ -37,10 +37,7 @@ data class SettingsUiState(
     val autoSkipOpEd: Boolean = false,
     val prefetchVideo: Boolean = false,
     val doubleTapLike: Boolean = true,
-    //  UI 自定义
-    val cornerRadiusScale: Float = 1.0f,
-    val fontScale: Float = 1.0f,
-    val uiScale: Float = 1.0f,
+
     //  空降助手
     val sponsorBlockEnabled: Boolean = false,
     val sponsorBlockAutoSkip: Boolean = true
@@ -66,9 +63,7 @@ data class ExtraSettings(
     val displayMode: Int,
     val cardAnimationEnabled: Boolean,
     val cardTransitionEnabled: Boolean,
-    val cornerRadiusScale: Float,
-    val fontScale: Float,
-    val uiScale: Float
+
 )
 
 //  实验性功能设置
@@ -98,9 +93,7 @@ private data class BaseSettings(
     val displayMode: Int, //  新增
     val cardAnimationEnabled: Boolean, //  卡片进场动画
     val cardTransitionEnabled: Boolean, //  卡片过渡动画
-    val cornerRadiusScale: Float,
-    val fontScale: Float,
-    val uiScale: Float
+
 )
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -140,19 +133,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         listOf(isBottomBarFloating, labelMode, displayMode, cardAnimation, cardTransition)
     }
 
-    private val uiSettingsFlow3 = combine(
-        SettingsManager.getCornerRadiusScale(context),
-        SettingsManager.getFontScale(context),
-        SettingsManager.getUIScale(context)
-    ) { cornerRadius, font, ui ->
-        Triple(cornerRadius, font, ui)
-    }
-    
     // 合并所有 UI 设置
-    private val uiSettingsFlow = combine(uiSettingsFlow1, uiSettingsFlow2, uiSettingsFlow3) { ui1, ui2, ui3 ->
+    private val uiSettingsFlow = combine(uiSettingsFlow1, uiSettingsFlow2) { ui1, ui2 ->
         // ui1: Triple(gesture, color, icon)
         // ui2: List(floating, label, display, cardAnim, cardTrans)
-        // ui3: Triple(corner, font, ui)
         ExtraSettings(
             gestureSensitivity = ui1.first,
             themeColorIndex = ui1.second,
@@ -162,9 +146,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             displayMode = ui2[2] as Int,
             cardAnimationEnabled = ui2[3] as Boolean,
             cardTransitionEnabled = ui2[4] as Boolean,
-            cornerRadiusScale = ui3.first,
-            fontScale = ui3.second,
-            uiScale = ui3.third,
             headerBlurEnabled = false, // 暂存，将在下一步合并
             bottomBarBlurEnabled = false, // 暂存
             blurIntensity = BlurIntensity.THIN // 暂存
@@ -226,9 +207,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             displayMode = extra.displayMode,
             cardAnimationEnabled = extra.cardAnimationEnabled,
             cardTransitionEnabled = extra.cardTransitionEnabled,
-            cornerRadiusScale = extra.cornerRadiusScale,
-            fontScale = extra.fontScale,
-            uiScale = extra.uiScale
+
         )
     }
 
@@ -258,9 +237,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             displayMode = settings.displayMode,
             cardAnimationEnabled = settings.cardAnimationEnabled,
             cardTransitionEnabled = settings.cardTransitionEnabled,
-            cornerRadiusScale = settings.cornerRadiusScale,
-            fontScale = settings.fontScale,
-            uiScale = settings.uiScale,
+
             cacheSize = cache.first,
             cacheBreakdown = cache.second,  //  详细缓存统计
             //  实验性功能
@@ -452,10 +429,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun toggleSponsorBlock(value: Boolean) { viewModelScope.launch { SettingsManager.setSponsorBlockEnabled(context, value) } }
     fun toggleSponsorBlockAutoSkip(value: Boolean) { viewModelScope.launch { SettingsManager.setSponsorBlockAutoSkip(context, value) } }
     
-    //  [新增] UI 自定义设置
-    fun setCornerRadiusScale(value: Float) { viewModelScope.launch { SettingsManager.setCornerRadiusScale(context, value) } }
-    fun setFontScale(value: Float) { viewModelScope.launch { SettingsManager.setFontScale(context, value) } }
-    fun setUIScale(value: Float) { viewModelScope.launch { SettingsManager.setUIScale(context, value) } }
+
 }
 
 // Move DisplayMode enum here to be accessible

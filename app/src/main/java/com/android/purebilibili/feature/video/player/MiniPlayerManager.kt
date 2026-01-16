@@ -413,7 +413,11 @@ class MiniPlayerManager private constructor(private val context: Context) :
                 }
             
             // 创建 MediaSession
-            val sessionIntent = Intent(context, VideoActivity::class.java).apply {
+            // 🎯 [修复] 使用 MainActivity 以保持单一任务栈，防止进入 VideoActivity 导致状态丢失
+            val sessionIntent = Intent(context, com.android.purebilibili.MainActivity::class.java).apply {
+                action = Intent.ACTION_VIEW
+                // 占位符 URL，实际点击时会复用 Activity 栈顶
+                data = Uri.parse("https://www.bilibili.com/video/")
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pendingIntent = PendingIntent.getActivity(
@@ -794,6 +798,18 @@ class MiniPlayerManager private constructor(private val context: Context) :
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOnlyAlertOnce(true)
             .setContentIntent(mediaSession?.sessionActivity)
+        
+        // 🎯 [修复] 确保点击通知本体也能正确跳转（覆盖 setContentIntent 作为双重保障）
+        val intent = Intent(context, com.android.purebilibili.MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = Uri.parse("https://www.bilibili.com/video/$currentBvid") // 携带 BVID
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val contentIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        builder.setContentIntent(contentIntent)
         
         //  [新增] 添加控制按钮
         // 上一曲按钮

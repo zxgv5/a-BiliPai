@@ -113,10 +113,7 @@ class MainActivity : ComponentActivity() {
             //  3. [新增] 获取主题色索引
             val themeColorIndex by SettingsManager.getThemeColorIndex(context).collectAsState(initial = 0)
             
-            //  [新增] UI 自定义设置
-            val cornerRadiusScale by SettingsManager.getCornerRadiusScale(context).collectAsState(initial = 1.0f)
-            val fontScale by SettingsManager.getFontScale(context).collectAsState(initial = 1.0f)
-            val uiScale by SettingsManager.getUIScale(context).collectAsState(initial = 1.0f)
+
 
             // 4. 获取系统当前的深色状态
             val systemInDark = isSystemInDarkTheme()
@@ -153,9 +150,7 @@ class MainActivity : ComponentActivity() {
                 darkTheme = useDarkTheme,
                 dynamicColor = dynamicColor,
                 themeColorIndex = themeColorIndex, //  传入主题色索引
-                cornerRadiusScale = cornerRadiusScale,
-                fontScale = fontScale,
-                uiScale = uiScale
+
             ) {
                 //  📐 [平板适配] 提供全局 WindowSizeClass
                 androidx.compose.runtime.CompositionLocalProvider(

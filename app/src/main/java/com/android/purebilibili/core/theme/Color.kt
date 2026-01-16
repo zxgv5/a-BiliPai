@@ -68,32 +68,32 @@ val iOSSystemGray4Dark = Color(0xFF3A3A3C)
 val iOSSystemGray5Dark = Color(0xFF2C2C2E)
 val iOSSystemGray6Dark = Color(0xFF1C1C1E)
 
-//  [更新] --- 预设主题色 (用于自定义主题，iOS蓝为默认) ---
+//  [更新] --- 预设主题色 (按色相环顺序排列：暖色→冷色→中性色) ---
 val ThemeColors = listOf(
     Color(0xFF007AFF),  // 0: iOS 蓝色 (默认)
-    Color(0xFFFA7298),  // 1: B站粉色 (BiliPink)
-    Color(0xFF00A1D6),  // 2: B站蓝色 (Bilibili Blue)
-    Color(0xFF34C759),  // 3: iOS 开关绿色 (iOS Switch Green)
-    Color(0xFF9C27B0),  // 4: 紫色 (Material Purple)
-    Color(0xFFFF5722),  // 5: 橙色 (Material Deep Orange)
-    Color(0xFF607D8B),  // 6: 蓝灰色 (Material Blue Grey)
+    Color(0xFFFA7298),  // 1: 樱花粉 (BiliPink)
+    Color(0xFF00A1D6),  // 2: 天空蓝 (Bilibili Blue)
+    Color(0xFF34C759),  // 3: 薄荷绿 (iOS Switch Green)
+    Color(0xFFAF52DE),  // 4: 梦幻紫 (iOS Purple)
+    Color(0xFFFF5722),  // 5: 活力橙 (Material Deep Orange)
+    Color(0xFF607D8B),  // 6: 静谧蓝灰 (Material Blue Grey)
     Color(0xFFFF6B6B),  // 7: 珊瑚红 (Coral)
-    Color(0xFF5856D6),  // 8: 靛蓝色 (Indigo)
-    Color(0xFF00BFA5),  // 9: 薄荷绿 (Mint)
+    Color(0xFF5856D6),  // 8: 靛蓝 (Indigo)
+    Color(0xFF00BFA5),  // 9: 翡翠青 (Teal)
 )
 
-//  主题颜色名称
+//  主题颜色名称 (与 ThemeColors 索引对应)
 val ThemeColorNames = listOf(
-    "经典蓝",
-    "樱花粉",
-    "天空蓝",
-    "清新绿",
-    "梦幻紫",
-    "活力橙",
-    "蓝灰",
-    "珊瑚红",
-    "靛蓝",
-    "薄荷绿"
+    "经典蓝",      // 0
+    "樱花粉",      // 1
+    "天空蓝",      // 2
+    "薄荷绿",      // 3
+    "梦幻紫",      // 4
+    "活力橙",      // 5
+    "静谧蓝灰",    // 6
+    "珊瑚红",      // 7
+    "靛蓝",        // 8
+    "翡翠青"       // 9
 )
 
 //  --- 底栏项目可选颜色调色板 ---

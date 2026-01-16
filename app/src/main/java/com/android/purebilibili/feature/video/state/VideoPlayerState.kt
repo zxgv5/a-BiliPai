@@ -399,8 +399,11 @@ fun rememberVideoPlayerState(
     }
 
     val sessionActivityPendingIntent = remember(context, bvid) {
-        val intent = Intent(context, VideoActivity::class.java).apply {
-            putExtra("bvid", bvid)
+        //  [修复] 点击通知跳转到 MainActivity 而不是新建 VideoActivity
+        // 这样可以复用应用内的导航栈，保持"单 Activity"架构
+        val intent = Intent(context, com.android.purebilibili.MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = Uri.parse("https://www.bilibili.com/video/$bvid")
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         PendingIntent.getActivity(

@@ -393,11 +393,22 @@ class PlayerViewModel : ViewModel() {
             player.playerError == null // 没有播放错误
         
         val currentSuccess = _uiState.value as? PlayerUiState.Success
-        if (!force && currentSuccess != null && currentBvid == bvid && isPlayerHealthy && player != null) {
-            Logger.d("PlayerVM", " $bvid already playing healthy, skip reload")
+        
+        // 🎯 [关键修复] 即使 currentBvid 为空（新 ViewModel），如果播放器已经在播放这个视频，也不要重新加载
+        // 这种情况发生在 Notification -> MainActivity (New Activity/VM) -> VideoDetailScreen -> reuse attached player
+        val isAlreadyPlayingTarget = isPlayerHealthy && (currentBvid == bvid || (currentBvid.isEmpty() && player?.isPlaying == true))
+        
+        if (!force && isAlreadyPlayingTarget) {
+            Logger.d("PlayerVM", "🎯 $bvid already playing healthy, skip reload (currentBvid=$currentBvid)")
+            // 补全 ViewModel 状态：currentBvid 可能为空，需要同步
+            if (currentBvid.isEmpty()) {
+                currentBvid = bvid
+                // 如果需要恢复 UI 状态 (Title, etc)，应该在 cache 中查找或等待 attachPlayer 时的同步
+            }
+            
             //  确保音量正常
-            player.volume = 1.0f
-            if (!player.isPlaying) {
+            player?.volume = 1.0f
+            if (player?.isPlaying == false) {
                 player.play()
             }
             return
