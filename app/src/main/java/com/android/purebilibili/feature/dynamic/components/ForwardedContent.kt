@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.ImageLoader
 import com.android.purebilibili.core.theme.iOSBlue
+import com.android.purebilibili.data.model.response.DynamicDesc
 import com.android.purebilibili.data.model.response.DynamicItem
 
 /**
@@ -35,7 +36,7 @@ fun ForwardedContent(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .background(androidx.compose.ui.graphics.Color(0xFFF2F2F7)) // iOS Guided Gray
             .padding(12.dp)
     ) {
         // 原作者
@@ -58,16 +59,15 @@ fun ForwardedContent(
             Spacer(modifier = Modifier.height(8.dp))
         }
         
-        // 原文字内容
-        content?.desc?.text?.takeIf { it.isNotEmpty() }?.let { text ->
-            Text(
-                text,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(0.8f),
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+        // 原文字内容 - 使用 RichTextContent 支持表情
+        content?.desc?.let { desc ->
+            if (desc.text.isNotEmpty()) {
+                RichTextContent(
+                    desc = desc,
+                    onUserClick = onUserClick
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
         
         // 原视频

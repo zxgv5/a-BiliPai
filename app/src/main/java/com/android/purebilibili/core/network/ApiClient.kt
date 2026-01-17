@@ -493,11 +493,21 @@ interface StoryApi {
 
 //  动态 API
 interface DynamicApi {
+    //  添加 features 参数以获取 rich_text_nodes 表情数据
     @GET("x/polymer/web-dynamic/v1/feed/all")
     suspend fun getDynamicFeed(
         @Query("type") type: String = "all",
         @Query("offset") offset: String = "",
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("features") features: String = "itemOpusStyle"  // 获取富文本样式（含表情）
+    ): DynamicFeedResponse
+    
+    //  [新增] 获取指定用户的动态列表
+    @GET("x/polymer/web-dynamic/v1/feed/space")
+    suspend fun getUserDynamicFeed(
+        @Query("host_mid") hostMid: Long,           // UP主 mid
+        @Query("offset") offset: String = "",
+        @Query("features") features: String = "itemOpusStyle"
     ): DynamicFeedResponse
     
     //  [新增] 获取动态评论列表 (type=17 表示动态)

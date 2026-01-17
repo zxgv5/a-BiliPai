@@ -23,6 +23,13 @@ sealed class ScreenRoutes(val route: String) {
     //  离线缓存列表
     object DownloadList : ScreenRoutes("download_list")
     
+    // 🔧 [新增] 离线视频播放
+    object OfflineVideoPlayer : ScreenRoutes("offline_video/{taskId}") {
+        fun createRoute(taskId: String): String {
+            return "offline_video/${android.net.Uri.encode(taskId)}"
+        }
+    }
+    
     //  动态页面
     object Dynamic : ScreenRoutes("dynamic")
     

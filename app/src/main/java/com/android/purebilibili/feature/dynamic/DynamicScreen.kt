@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -53,6 +54,8 @@ import com.android.purebilibili.feature.dynamic.components.RepostDialog
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
 import io.github.alexzhirkevich.cupertino.icons.filled.*
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 
 /**
  *  动态页面 - 支持两种布局模式
@@ -96,6 +99,9 @@ fun DynamicScreen(
     //  布局模式状态（侧边栏/横向）
     var displayMode by remember { mutableStateOf(DynamicDisplayMode.SIDEBAR) }
     
+    //  [Haze] 模糊状态
+    val hazeState = remember { HazeState() }
+    
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.getTop(density).let { with(density) { it.toDp() } }
     val pullRefreshState = rememberPullToRefreshState()
@@ -115,17 +121,23 @@ fun DynamicScreen(
             .build()
     }
     
-    // 过滤动态
-    val filteredItems = remember(state.items, selectedTab, selectedUserId) {
-        var items = state.items
+    //  [修改] 过滤动态 - 选中用户时使用 userItems
+    val filteredItems = remember(state.items, state.userItems, selectedTab, selectedUserId) {
+        val baseItems = if (selectedUserId != null) {
+            // 使用专门加载的用户动态
+            state.userItems
+        } else {
+            state.items
+        }
+        var items = baseItems
         if (selectedTab == 1) {
             items = items.filter { it.type == "DYNAMIC_TYPE_AV" }
         }
-        selectedUserId?.let { uid ->
-            items = items.filter { it.modules.module_author?.mid == uid }
-        }
         items.distinctBy { it.id_str }
     }
+    
+    //  [修改] 判断是否加载更多（区分全部动态和用户动态）
+    val currentHasMore = if (selectedUserId != null) state.hasUserMore else state.hasMore
     
     // 加载更多
     val shouldLoadMore by remember {
@@ -133,7 +145,7 @@ fun DynamicScreen(
             val layoutInfo = listState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItems > 0 && lastVisibleItemIndex >= totalItems - 3 && !state.isLoading && state.hasMore
+            totalItems > 0 && lastVisibleItemIndex >= totalItems - 3 && !state.isLoading && currentHasMore
         }
     }
     //  [埋点] 页面浏览追踪
@@ -141,12 +153,44 @@ fun DynamicScreen(
         com.android.purebilibili.core.util.AnalyticsHelper.logScreenView("DynamicScreen")
     }
     
-    LaunchedEffect(shouldLoadMore) { if (shouldLoadMore) viewModel.loadMore() }
+    //  [修改] 加载更多 - 区分全部动态和用户动态
+    LaunchedEffect(shouldLoadMore, selectedUserId) {
+        if (shouldLoadMore) {
+            if (selectedUserId != null) {
+                viewModel.loadMoreUserDynamics()
+            } else {
+                viewModel.loadMore()
+            }
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = Color.Transparent // 透明背景以显示渐变
     ) { padding ->
+        // 背景层 - 浅色风格
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F7))) {
+             // 极淡的柔光背景 (保持一点点质感)
+            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                 // 顶部淡蓝光晕
+                 drawCircle(
+                     brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(Color(0xFFE3F2FD), Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, -100f),
+                        radius = size.width * 0.8f
+                     )
+                 )
+                 // 底部淡紫光晕
+                 drawCircle(
+                     brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(Color(0xFFF3E5F5), Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(0f, size.height + 100f),
+                        radius = size.width * 0.8f
+                     )
+                 )
+            }
+        }
+
         //  [新增] 模式切换动画
         AnimatedContent(
             targetState = displayMode,
@@ -186,7 +230,8 @@ fun DynamicScreen(
                             onTogglePin = { viewModel.togglePinUser(it) },
                             onToggleHidden = { viewModel.toggleHiddenUser(it) },
                             onToggleExpand = { viewModel.toggleSidebar() },
-                            modifier = Modifier.padding(top = statusBarHeight)
+                            topPadding = statusBarHeight, // 传入顶部间距
+                            onBackClick = onBack // 传入返回事件
                         )
                         
                         // 右侧内容区
@@ -196,37 +241,41 @@ fun DynamicScreen(
                             state = pullRefreshState,
                             modifier = Modifier.fillMaxSize().weight(1f)
                         ) {
-                            DynamicList(
-                                state = state,
-                                filteredItems = filteredItems,
-                                listState = listState,
-                                statusBarHeight = statusBarHeight,
-                                topPaddingExtra = 100.dp,  // 顶栏高度
-                                onVideoClick = onVideoClick,
-                                onUserClick = onUserClick,
-                                onLiveClick = onLiveClick,
-                                onLoginClick = onLoginClick,
-                                gifImageLoader = gifImageLoader,
-                                onCommentClick = { viewModel.openCommentSheet(it) },
-                                onRepostClick = { showRepostDialog = it },
-                                onLikeClick = { dynamicId ->
-                                    viewModel.likeDynamic(dynamicId) { _, msg ->
-                                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                likedDynamics = likedDynamics
-                            )
-                            
-                            // 顶栏
-                            DynamicTopBarWithTabs(
-                                selectedTab = selectedTab,
-                                tabs = tabs,
-                                onTabSelected = { selectedTab = it },
-                                displayMode = displayMode,
-                                onDisplayModeChange = { displayMode = it },
-                                onBackClick = onHomeClick,
-                                modifier = Modifier.align(Alignment.TopCenter)
-                            )
+                            // 使用 Box 包裹，以便 hazeSource 可以应用于列表
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                DynamicList(
+                                    state = state,
+                                    filteredItems = filteredItems,
+                                    listState = listState,
+                                    statusBarHeight = statusBarHeight,
+                                    topPaddingExtra = 100.dp,  // 顶栏高度
+                                    onVideoClick = onVideoClick,
+                                    onUserClick = onUserClick,
+                                    onLiveClick = onLiveClick,
+                                    onLoginClick = onLoginClick,
+                                    gifImageLoader = gifImageLoader,
+                                    onCommentClick = { viewModel.openCommentSheet(it) },
+                                    onRepostClick = { showRepostDialog = it },
+                                    onLikeClick = { dynamicId ->
+                                        viewModel.likeDynamic(dynamicId) { _, msg ->
+                                            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    likedDynamics = likedDynamics,
+                                    modifier = Modifier.hazeSource(hazeState) // 应用 hazeSource
+                                )
+                                
+                                // 顶栏
+                                DynamicTopBarWithTabs(
+                                    selectedTab = selectedTab,
+                                    tabs = tabs,
+                                    onTabSelected = { selectedTab = it },
+                                    displayMode = displayMode,
+                                    onDisplayModeChange = { displayMode = it },
+                                    hazeState = hazeState, // 传入 hazeState
+                                    modifier = Modifier.align(Alignment.TopCenter)
+                                )
+                            }
                             
                             // 错误提示
                             ErrorOverlay(state, onLoginClick, { viewModel.refresh() }, Modifier.align(Alignment.Center))
@@ -242,49 +291,63 @@ fun DynamicScreen(
                         state = pullRefreshState,
                         modifier = Modifier.fillMaxSize().padding(padding)
                     ) {
-                        DynamicList(
-                            state = state,
-                            filteredItems = filteredItems,
-                            listState = listState,
-                            statusBarHeight = statusBarHeight,
-                            topPaddingExtra = 220.dp,  // 顶栏 + 横向用户列表高度
-                            onVideoClick = onVideoClick,
-                            onUserClick = onUserClick,
-                            onLiveClick = onLiveClick,
-                            onLoginClick = onLoginClick,
-                            gifImageLoader = gifImageLoader,
-                            onCommentClick = { viewModel.openCommentSheet(it) },
-                            onRepostClick = { showRepostDialog = it },
-                            onLikeClick = { dynamicId ->
-                                viewModel.likeDynamic(dynamicId) { _, msg ->
-                                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            likedDynamics = likedDynamics
-                        )
-                        
-                        // 顶部区域：顶栏 + 横向用户列表
-                        Column(modifier = Modifier.align(Alignment.TopCenter)) {
-                            DynamicTopBarWithTabs(
-                                selectedTab = selectedTab,
-                                tabs = tabs,
-                                onTabSelected = { selectedTab = it },
-                                displayMode = displayMode,
-                                onDisplayModeChange = { displayMode = it },
-                                onBackClick = onHomeClick
-                            )
-                            
-                            //  横向 UP 主列表
-                            HorizontalUserList(
-                                users = followedUsers,
-                                selectedUserId = selectedUserId,
-                                showHiddenUsers = showHiddenUsers,
-                                hiddenCount = hiddenUserIds.size,
-                                onUserClick = { viewModel.selectUser(it) },
-                                onToggleShowHidden = { viewModel.toggleShowHiddenUsers() },
-                                onTogglePin = { viewModel.togglePinUser(it) },
-                                onToggleHidden = { viewModel.toggleHiddenUser(it) }
-                            )
+                         // 使用 Box 包裹
+                        Box {
+                             DynamicList(
+                                 state = state,
+                                 filteredItems = filteredItems,
+                                 listState = listState,
+                                 statusBarHeight = statusBarHeight,
+                                 topPaddingExtra = 220.dp,  // 顶栏 + 横向用户列表高度
+                                 onVideoClick = onVideoClick,
+                                 onUserClick = onUserClick,
+                                 onLiveClick = onLiveClick,
+                                 onLoginClick = onLoginClick,
+                                 gifImageLoader = gifImageLoader,
+                                 onCommentClick = { viewModel.openCommentSheet(it) },
+                                 onRepostClick = { showRepostDialog = it },
+                                 onLikeClick = { dynamicId ->
+                                     viewModel.likeDynamic(dynamicId) { _, msg ->
+                                         android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                                     }
+                                 },
+                                 likedDynamics = likedDynamics,
+                                 modifier = Modifier.hazeSource(hazeState) // 应用 hazeSource
+                             )
+                             
+                             // 顶部区域：顶栏 + 横向用户列表
+                             Column(modifier = Modifier.align(Alignment.TopCenter)) {
+                                 // 应用模糊效果到顶部区域容器
+                                 Box(modifier = Modifier.fillMaxWidth()) {
+                                    // 背景应用模糊
+                                    // 注意：这里可能需要像 iOSHomeHeader 那样处理，或者简单地让 TopBar 处理
+                                    // 鉴于 TopBar 已经处理了，我们只需要让它作为背景
+                                    // 但 HorizontalUserList 也需要在 blur 上方
+                                    
+                                    // 简化处理：让 DynamicTopBarWithTabs 处理模糊，HorizontalUserList 在其下方（视觉上）
+                                    // 这里暂时只给 TopBar 加模糊支持，列表先不加以免复杂化
+                                     DynamicTopBarWithTabs(
+                                         selectedTab = selectedTab,
+                                         tabs = tabs,
+                                         onTabSelected = { selectedTab = it },
+                                         displayMode = displayMode,
+                                         onDisplayModeChange = { displayMode = it },
+                                         hazeState = hazeState // 传入
+                                     )
+                                 }
+                                 
+                                 //  横向 UP 主列表
+                                 HorizontalUserList(
+                                     users = followedUsers,
+                                     selectedUserId = selectedUserId,
+                                     showHiddenUsers = showHiddenUsers,
+                                     hiddenCount = hiddenUserIds.size,
+                                     onUserClick = { viewModel.selectUser(it) },
+                                     onToggleShowHidden = { viewModel.toggleShowHiddenUsers() },
+                                     onTogglePin = { viewModel.togglePinUser(it) },
+                                     onToggleHidden = { viewModel.toggleHiddenUser(it) }
+                                 )
+                             }
                         }
                         
                         ErrorOverlay(state, onLoginClick, { viewModel.refresh() }, Modifier.align(Alignment.Center))
@@ -341,7 +404,8 @@ private fun DynamicList(
     onCommentClick: (String) -> Unit = {},
     onRepostClick: (String) -> Unit = {},
     onLikeClick: (String) -> Unit = {},
-    likedDynamics: Set<String> = emptySet()
+    likedDynamics: Set<String> = emptySet(),
+    modifier: Modifier = Modifier
 ) {
     LazyColumn(
         state = listState,
@@ -349,7 +413,7 @@ private fun DynamicList(
             top = statusBarHeight + topPaddingExtra,
             bottom = 80.dp
         ),
-        modifier = Modifier.fillMaxSize().responsiveContentWidth()
+        modifier = modifier.fillMaxSize().responsiveContentWidth()
     ) {
         // 空状态
         if (filteredItems.isEmpty() && !state.isLoading && state.error == null) {

@@ -19,6 +19,13 @@ import androidx.compose.ui.unit.sp
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
 import io.github.alexzhirkevich.cupertino.icons.filled.*
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.android.purebilibili.core.ui.blur.unifiedBlur
+import com.android.purebilibili.core.store.SettingsManager
+import com.android.purebilibili.core.ui.blur.BlurStyles
+import com.android.purebilibili.core.ui.blur.BlurIntensity
+import dev.chrisbanes.haze.HazeState
 
 //  动态页面布局模式
 enum class DynamicDisplayMode {
@@ -36,48 +43,45 @@ fun DynamicTopBarWithTabs(
     onTabSelected: (Int) -> Unit,
     displayMode: DynamicDisplayMode = DynamicDisplayMode.SIDEBAR,
     onDisplayModeChange: (DynamicDisplayMode) -> Unit = {},
-    onBackClick: () -> Unit = {},
+    hazeState: HazeState? = null,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.getTop(density).let { with(density) { it.toDp() } }
     
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
+    //  读取当前模糊强度以确定背景透明度
+    val blurIntensity by SettingsManager.getBlurIntensity(androidx.compose.ui.platform.LocalContext.current)
+        .collectAsState(initial = BlurIntensity.THIN)
+    val backgroundAlpha = BlurStyles.getBackgroundAlpha(blurIntensity)
+    
+    //  使用 blurIntensity 对应的背景透明度实现毛玻璃质感
+    val headerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (hazeState != null) backgroundAlpha else 0f)
+
+    //  [关键修复] 使用透明背景，让主界面的渐变透出来
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            // 应用模糊效果
+            .then(if (hazeState != null) Modifier.unifiedBlur(hazeState) else Modifier)
+            .background(headerColor)
     ) {
         Column {
             Spacer(modifier = Modifier.height(statusBarHeight))
             
-            //  标题行：返回按钮 + 标题
+            //  标题行：标题 - 高度设为 44dp 以与左侧边栏返回按钮对齐
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .height(44.dp) // 固定高度 44dp
+                    .padding(horizontal = 16.dp), 
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                //  返回视频首页按钮
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = CupertinoIcons.Default.ChevronBackward,
-                        contentDescription = "返回首页",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.width(4.dp))
-                
                 // 标题
                 Text(
                     "动态",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.Black // 强制黑色
                 )
                 
                 Spacer(modifier = Modifier.weight(1f))
@@ -95,7 +99,7 @@ fun DynamicTopBarWithTabs(
                         imageVector = if (displayMode == DynamicDisplayMode.SIDEBAR)
                             CupertinoIcons.Default.ListBullet else CupertinoIcons.Default.RectangleStack,
                         contentDescription = "切换布局模式",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = Color.Black, // 强制黑色
                         modifier = Modifier.size(22.dp)
                     )
                 }

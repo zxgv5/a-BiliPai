@@ -28,7 +28,8 @@ enum class VideoAspectRatio(val displayName: String, val resizeMode: Int) {
     FIT("适应", AspectRatioFrameLayout.RESIZE_MODE_FIT),
     FILL("填充", AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
     RATIO_16_9("16:9", AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH),
-    RATIO_4_3("4:3", AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT);
+    RATIO_4_3("4:3", AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT),
+    STRETCH("拉伸", AspectRatioFrameLayout.RESIZE_MODE_FILL);
     
     companion object {
         fun fromResizeMode(mode: Int): VideoAspectRatio {

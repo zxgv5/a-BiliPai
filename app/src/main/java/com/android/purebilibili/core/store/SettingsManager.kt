@@ -553,6 +553,25 @@ object SettingsManager {
         return context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
             .getInt("mobile_quality", 64)
     }
+    
+    // --- 🚀 自动最高画质 (开启后忽略上方设置，始终选择最高可用画质) ---
+    private val KEY_AUTO_HIGHEST_QUALITY = booleanPreferencesKey("auto_highest_quality")
+    
+    fun getAutoHighestQuality(context: Context): Flow<Boolean> = context.settingsDataStore.data
+        .map { preferences -> preferences[KEY_AUTO_HIGHEST_QUALITY] ?: false }  // 默认关闭
+    
+    suspend fun setAutoHighestQuality(context: Context, value: Boolean) {
+        context.settingsDataStore.edit { preferences -> preferences[KEY_AUTO_HIGHEST_QUALITY] = value }
+        //  同步到 SharedPreferences，供 NetworkUtils 同步读取
+        context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .edit().putBoolean("auto_highest_quality", value).commit()
+        com.android.purebilibili.core.util.Logger.d("SettingsManager", "🚀 自动最高画质: $value")
+    }
+    
+    fun getAutoHighestQualitySync(context: Context): Boolean {
+        return context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+            .getBoolean("auto_highest_quality", false)
+    }
 
     // --- Video Codec Preference (Default: HEVC/hev1) ---
     // Values: "avc1" (AVC), "hev1" (HEVC), "av01" (AV1)

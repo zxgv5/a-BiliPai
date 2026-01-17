@@ -18,11 +18,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil.ImageLoader
 import coil.compose.AsyncImage
@@ -30,6 +35,7 @@ import coil.compose.AsyncImage
 import com.android.purebilibili.core.theme.iOSBlue
 import com.android.purebilibili.data.model.response.DynamicDesc
 import com.android.purebilibili.data.model.response.DynamicItem
+import com.android.purebilibili.data.model.response.DynamicStatModule
 import com.android.purebilibili.data.model.response.DynamicType
 
 /**
@@ -54,17 +60,13 @@ fun DynamicCardV2(
     val type = DynamicType.fromApiValue(item.type)
 
     //  [优化] 卡片式设计：圆角 + 微阴影 + 更好的间距
-    Surface(
+    //  [优化] 使用 GlassCard 替换 Surface
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),  // 卡片外部间距
-        shape = RoundedCornerShape(16.dp),  // iOS 风格大圆角
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,  // 微阴影增加层次感
-        border = BorderStroke(
-            width = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        backgroundColor = androidx.compose.ui.graphics.Color.White, // iOS 风格：纯白背景
+        shape = RoundedCornerShape(20.dp) // 更大的圆角
     ) {
     Column(
         modifier = Modifier
@@ -231,79 +233,142 @@ fun DynamicCardV2(
             Spacer(modifier = Modifier.height(12.dp))
         }
         
-        //  [新增] 底部操作栏：转发、评论、点赞
-        stat?.let { statModule ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // 转发按钮
-                ActionButton(
-                    icon = io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.ArrowTurnUpRight,
-                    count = statModule.forward.count,
-                    label = "转发",
-                    onClick = { onRepostClick(item.id_str) }
-                )
-                
-                // 评论按钮
-                ActionButton(
-                    icon = io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.Message,
-                    count = statModule.comment.count,
-                    label = "评论",
-                    onClick = { onCommentClick(item.id_str) }
-                )
-                
-                // 点赞按钮
-                ActionButton(
-                    icon = if (isLiked) io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Filled.Heart 
-                           else io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.Heart,
-                    count = statModule.like.count,
-                    label = "点赞",
-                    isActive = isLiked,
-                    onClick = { onLikeClick(item.id_str) }
-                )
-            }
+        //  [修复] 底部操作栏：转发、评论、点赞 - 始终显示
+        val statModule = stat ?: DynamicStatModule()  // 使用默认值避免按钮消失
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 转发按钮
+            ActionButton(
+                icon = io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.ArrowTurnUpRight,
+                count = statModule.forward.count,
+                label = "转发",
+                onClick = { onRepostClick(item.id_str) }
+            )
+            
+            // 评论按钮
+            ActionButton(
+                icon = io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.Message,
+                count = statModule.comment.count,
+                label = "评论",
+                onClick = { onCommentClick(item.id_str) }
+            )
+            
+            // 点赞按钮
+            ActionButton(
+                icon = if (isLiked) io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Filled.Heart 
+                       else io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.Heart,
+                count = statModule.like.count,
+                label = "点赞",
+                isActive = isLiked,
+                onClick = { onLikeClick(item.id_str) }
+            )
         }
     }
     }  //  关闭 Surface
 }
 
 /**
- *  富文本内容（支持@提及高亮）
+ *  富文本内容（支持表情、@提及、话题高亮）
+ *  解析 API 返回的 rich_text_nodes 来正确渲染表情图片
  */
 @Composable
 fun RichTextContent(
     desc: DynamicDesc,
     onUserClick: (Long) -> Unit
 ) {
-    // 简化版：直接渲染文本，@提及用蓝色
-    val text = buildAnnotatedString {
-        val rawText = desc.text
-        var lastEnd = 0
-        
-        // 查找 @xxx 模式
-        val atPattern = Regex("@[^@\\s]+")
-        atPattern.findAll(rawText).forEach { match ->
-            // 普通文本
-            if (match.range.first > lastEnd) {
-                append(rawText.substring(lastEnd, match.range.first))
+    // 收集所有表情节点以创建 InlineContent
+    // 支持两种类型格式: RICH_TEXT_NODE_TYPE_EMOJI 和 EMOJI
+    val emojiNodes = remember(desc.rich_text_nodes) {
+        desc.rich_text_nodes
+            .filter { it.type.endsWith("EMOJI") && it.emoji != null }
+            .associateBy({ it.text }, { it.emoji!!.icon_url })
+    }
+    
+    // 如果 rich_text_nodes 为空，回退到正则方式
+    val useRichTextNodes = desc.rich_text_nodes.isNotEmpty()
+    
+    val annotatedText = buildAnnotatedString {
+        if (useRichTextNodes) {
+            // 使用 rich_text_nodes 解析
+            desc.rich_text_nodes.forEach { node ->
+                // 支持两种类型格式：
+                // - 完整格式: RICH_TEXT_NODE_TYPE_EMOJI
+                // - 简短格式: EMOJI
+                val nodeType = node.type.removePrefix("RICH_TEXT_NODE_TYPE_")
+                when (nodeType) {
+                    "EMOJI" -> {
+                        // 表情节点：插入内联内容占位符
+                        if (node.emoji != null && node.emoji.icon_url.isNotEmpty()) {
+                            appendInlineContent(id = node.text, alternateText = node.text)
+                        } else {
+                            append(node.text)
+                        }
+                    }
+                    "AT" -> {
+                        // @提及：蓝色高亮
+                        withStyle(SpanStyle(color = iOSBlue, fontWeight = FontWeight.Medium)) {
+                            append(node.text)
+                        }
+                    }
+                    "TOPIC" -> {
+                        // 话题标签：蓝色高亮
+                        withStyle(SpanStyle(color = iOSBlue, fontWeight = FontWeight.Medium)) {
+                            append(node.text)
+                        }
+                    }
+                    else -> {
+                        // TEXT 或其他类型：普通文本
+                        append(node.text)
+                    }
+                }
             }
-            // @提及
-            withStyle(SpanStyle(color = iOSBlue, fontWeight = FontWeight.Medium)) {
-                append(match.value)
+        } else {
+            // 回退：使用正则匹配 @ 提及
+            val rawText = desc.text
+            var lastEnd = 0
+            val atPattern = Regex("@[^@\\s]+")
+            atPattern.findAll(rawText).forEach { match ->
+                if (match.range.first > lastEnd) {
+                    append(rawText.substring(lastEnd, match.range.first))
+                }
+                withStyle(SpanStyle(color = iOSBlue, fontWeight = FontWeight.Medium)) {
+                    append(match.value)
+                }
+                lastEnd = match.range.last + 1
             }
-            lastEnd = match.range.last + 1
+            if (lastEnd < rawText.length) {
+                append(rawText.substring(lastEnd))
+            }
         }
-        // 剩余文本
-        if (lastEnd < rawText.length) {
-            append(rawText.substring(lastEnd))
+    }
+    
+    // 创建表情的 InlineContent 映射
+    val inlineContent = emojiNodes.mapValues { (_, iconUrl) ->
+        InlineTextContent(
+            Placeholder(
+                width = 1.4.em,
+                height = 1.4.em,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+            )
+        ) {
+            AsyncImage(
+                model = coil.request.ImageRequest.Builder(LocalContext.current)
+                    .data(iconUrl.let { if (it.startsWith("http://")) it.replace("http://", "https://") else it })
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
     
     Text(
-        text = text,
+        text = annotatedText,
+        inlineContent = inlineContent,
         fontSize = 15.sp,
         lineHeight = 22.sp,
         color = MaterialTheme.colorScheme.onSurface

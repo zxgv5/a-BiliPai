@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.dynamic.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 //  Cupertino Icons - iOS SF Symbols 风格图标
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
@@ -52,72 +54,85 @@ fun DynamicSidebar(
     onTogglePin: (Long) -> Unit,
     onToggleHidden: (Long) -> Unit,
     onToggleExpand: () -> Unit,
+    topPadding: androidx.compose.ui.unit.Dp, // 新增：内部处理顶部间距
+    onBackClick: () -> Unit, // 新增：返回按钮回调
     modifier: Modifier = Modifier
 ) {
     val expandedWidth = 72.dp
-    val collapsedWidth = 56.dp
+    val collapsedWidth = 64.dp //稍微加宽一点，让头像不拥挤
     val animatedWidth by animateFloatAsState(
         targetValue = if (isExpanded) expandedWidth.value else collapsedWidth.value,
         label = "sidebarWidth"
     )
     
-    Surface(
+    // 侧边栏容器 - Glassmorphism 升级版
+    Box(
         modifier = modifier
             .width(animatedWidth.dp)
-            .fillMaxHeight(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.1f)) // 极淡的背景，几乎完全透明
+            .border(
+                width = 0.5.dp,
+                color = Color.White.copy(alpha = 0.15f), // 稍微增强一点边框以维持边界感，但背景更通透
+                shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
+            )
     ) {
-        LazyColumn(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(vertical = 8.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            //  [移除] 展开/收起按钮已删除，与顶栏返回按钮视觉重复
+        // 移除模拟的模糊层，使用纯净的深色玻璃感
+        
+        Column(modifier = Modifier.fillMaxSize()) {
+            Spacer(modifier = Modifier.height(topPadding))
             
-            //  [简化] 移除「全部」按钮，直接显示 UP 主列表
+            // 返回按钮区域
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clickable { onBackClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                 Icon(
+                    imageVector = CupertinoIcons.Default.ChevronBackward,
+                    contentDescription = "Back",
+                    tint = Color.Black.copy(alpha = 0.8f), // 适配浅色背景
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            LazyColumn(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp), // 减少顶部及间距，因为有了返回按钮
+                modifier = Modifier.weight(1f)
+            ) {
+            //  隐藏用户切换按钮 (胶囊样式)
             if (hiddenCount > 0 || showHiddenUsers) {
                 item(key = "hidden_toggle") {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onToggleShowHidden() }
-                            .padding(vertical = 8.dp)
+                            .padding(bottom = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (showHiddenUsers) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) 
+                                else Color.Black.copy(alpha = 0.05f) // 更适合浅色背景
+                            )
+                            .clickable { onToggleShowHidden() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (showHiddenUsers) {
-                                    CupertinoIcons.Default.Eye
-                                } else {
-                                    CupertinoIcons.Default.EyeSlash
-                                },
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (isExpanded) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = if (showHiddenUsers) "隐藏中" else "显示隐藏",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
-                            )
-                        }
+                        Icon(
+                            imageVector = if (showHiddenUsers) CupertinoIcons.Default.Eye else CupertinoIcons.Default.EyeSlash,
+                            contentDescription = null,
+                            tint = if (showHiddenUsers) MaterialTheme.colorScheme.primary else Color.Gray, // 强制深色/灰色
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
+
             // 关注的UP主列表 - 带瀑布入场动画
             itemsIndexed(users, key = { _, u -> "sidebar_${u.uid}" }) { index, user ->
                 CascadeSidebarItem(
-                    index = index,  // 从 0 开始
+                    index = index,
                     content = {
                         SidebarUserItem(
                             user = user,
@@ -131,6 +146,16 @@ fun DynamicSidebar(
                 )
             }
         }
+    } // End ColumnWrapper
+        
+        // 右侧边框线 - 极细
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(0.5.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        )
     }
 }
 
@@ -246,11 +271,17 @@ fun SidebarUserItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(vertical = 4.dp, horizontal = 4.dp) // 增加水平间距以适应选中背景
+                .clip(RoundedCornerShape(12.dp)) // 选中态圆角背景
+                .then(
+                    if (isSelected) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                    else Modifier
+                )
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = { showMenu = true }
                 )
-                .padding(vertical = 8.dp)
+                .padding(vertical = 8.dp) // 内部间距
                 .alpha(if (user.isHidden) 0.5f else 1f)
         ) {
             Box {
@@ -266,44 +297,43 @@ fun SidebarUserItem(
                     }
                 }
 
-                AsyncImage(
-                    model = coil.request.ImageRequest.Builder(LocalContext.current)
-                        .data(faceUrl.ifEmpty { null })
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = user.name,
+                Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                            else MaterialTheme.colorScheme.surfaceVariant,
-                            CircleShape
-                        ),
-                    contentScale = ContentScale.Crop
-                )
+                        .size(44.dp) // 稍大一点的头像
+                        // 选中态边框
+                        .then(
+                            if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            else Modifier.border(1.dp, Color.Black.copy(alpha = 0.1f), CircleShape) // 适配浅色背景的深色描边
+                        )
+                        .padding(2.dp) // 边框与头像间距
+                ) {
+                    AsyncImage(
+                        model = coil.request.ImageRequest.Builder(LocalContext.current)
+                            .data(faceUrl.ifEmpty { null })
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = user.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
-                //  在线状态指示器（红点）
+                //  在线状态指示器（带白色描边）
                 if (user.isLive) {
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
-                            .align(Alignment.TopEnd)
-                            .background(Color.Red, CircleShape)
+                            .size(14.dp)
+                            .align(Alignment.BottomEnd)
+                            .background(Color.White, CircleShape) // 强制白色描边以适应头像
                             .padding(2.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.White, CircleShape)
-                                .padding(2.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Red, CircleShape)
-                            )
-                        }
+                                .background(Color(0xFFFF4081), CircleShape) // 鲜艳的粉红色
+                        )
                     }
                 }
             }
@@ -312,11 +342,12 @@ fun SidebarUserItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = displayName,
-                    fontSize = 10.sp,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.8f), // 强制深色文字
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    modifier = Modifier.padding(horizontal = 2.dp)
                 )
             }
         }

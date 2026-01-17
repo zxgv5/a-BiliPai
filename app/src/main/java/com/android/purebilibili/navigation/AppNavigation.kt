@@ -194,22 +194,12 @@ fun AppNavigation(
                 navArgument("cover") { type = NavType.StringType; defaultValue = "" },
                 navArgument("fullscreen") { type = NavType.BoolType; defaultValue = false }
             ),
-            //  进入动画：当卡片过渡开启时用缩放，关闭时用滑入
+            //  进入动画：当卡片过渡开启时用淡入（配合共享元素），关闭时用滑入
             enterTransition = { 
                 if (cardTransitionEnabled) {
-                    //  从记录的卡片位置展开（缩放动画）
-                    val origin = CardPositionManager.lastClickedCardCenter?.let {
-                        TransformOrigin(it.x, it.y)
-                    } ?: TransformOrigin.Center
-                    
-                    scaleIn(
-                        initialScale = 0.85f,
-                        transformOrigin = origin,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
-                    ) + fadeIn(animationSpec = tween(250))
+                    // 🔧 [修复] 使用简单淡入，避免与 sharedBounds 共享元素动画冲突
+                    // 原来使用 scaleIn + fadeIn 会导致与 VideoCard 的 sharedBounds 产生双重动画闪烁
+                    fadeIn(animationSpec = tween(300))
                 } else {
                     //  位置感知滑入动画
                     if (CardPositionManager.isSingleColumnCard) {
@@ -226,22 +216,11 @@ fun AppNavigation(
                     }
                 }
             },
-            //  返回动画：当卡片过渡开启时用缩放，关闭时用滑出
+            //  返回动画：当卡片过渡开启时用淡出（配合共享元素），关闭时用滑出
             popExitTransition = { 
                 if (cardTransitionEnabled) {
-                    //  收缩回到记录的卡片位置（缩放动画）
-                    val origin = CardPositionManager.lastClickedCardCenter?.let {
-                        TransformOrigin(it.x, it.y)
-                    } ?: TransformOrigin.Center
-                    
-                    scaleOut(
-                        targetScale = 0.6f,
-                        transformOrigin = origin,
-                        animationSpec = spring(
-                            dampingRatio = 0.5f,
-                            stiffness = 200f
-                        )
-                    ) + fadeOut(animationSpec = tween(300))
+                    // 🔧 [修复] 使用简单淡出，避免与 sharedBounds 共享元素动画冲突
+                    fadeOut(animationSpec = tween(250))
                 } else {
                     //  位置感知滑出动画
                     if (CardPositionManager.isSingleColumnCard) {
@@ -492,9 +471,30 @@ fun AppNavigation(
         ) {
             com.android.purebilibili.feature.download.DownloadListScreen(
                 onBack = { navController.popBackStack() },
-                onVideoClick = { bvid -> navigateToVideo(bvid, 0L, "") }
+                onVideoClick = { bvid -> navigateToVideo(bvid, 0L, "") },
+                // 🔧 [新增] 离线播放回调
+                onOfflineVideoClick = { taskId ->
+                    navController.navigate(ScreenRoutes.OfflineVideoPlayer.createRoute(taskId))
+                }
             )
         }
+        
+        // --- 5.7 🔧 [新增] 离线视频播放 ---
+        composable(
+            route = ScreenRoutes.OfflineVideoPlayer.route,
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.StringType }
+            ),
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(animDuration)) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(animDuration)) }
+        ) { backStackEntry ->
+            val taskId = android.net.Uri.decode(backStackEntry.arguments?.getString("taskId") ?: "")
+            com.android.purebilibili.feature.download.OfflineVideoPlayerScreen(
+                taskId = taskId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
 
         // --- 6. 动态页面 ---
         composable(

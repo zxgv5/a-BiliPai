@@ -116,75 +116,148 @@ fun ProfileScreen(
 
     //  未登录状态使用沉浸式全屏布局，已登录使用正常 Scaffold
     val currentUiState = state
-    if (currentUiState is ProfileUiState.Loading) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
-            LoadingAnimation(size = 80.dp)
+    when (currentUiState) {
+        is ProfileUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+                LoadingAnimation(size = 80.dp)
+            }
         }
-    } else if (currentUiState is ProfileUiState.LoggedOut) {
-        //  沉浸式全屏布局
-        GuestProfileContent(
-            onGoToLogin = onGoToLogin,
-            onBack = onBack,
-            onSettingsClick = onSettingsClick
-        )
-    } else if (currentUiState is ProfileUiState.Success) {
-        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-        
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                if (!windowSizeClass.shouldUseSplitLayout) {
-                    LargeTopAppBar(
-                        title = { Text("我的", fontWeight = FontWeight.Bold) },
+        is ProfileUiState.LoggedOut -> {
+            //  沉浸式全屏布局
+            GuestProfileContent(
+                onGoToLogin = onGoToLogin,
+                onBack = onBack,
+                onSettingsClick = onSettingsClick
+            )
+        }
+        is ProfileUiState.Error -> {
+            // 🔧 [新增] 离线/错误状态 - 显示错误信息并提供重试和离线缓存入口
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = { Text("我的") },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
-                                Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
+                                Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back")
                             }
                         },
                         actions = {
                             IconButton(onClick = onSettingsClick) {
-                                Icon(CupertinoIcons.Default.Gearshape, contentDescription = "Settings", tint = MaterialTheme.colorScheme.primary)
+                                Icon(CupertinoIcons.Default.Gearshape, contentDescription = "Settings")
                             }
-                        },
-                        scrollBehavior = scrollBehavior,
-                        colors = TopAppBarDefaults.largeTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background,
-                            scrolledContainerColor = MaterialTheme.colorScheme.surface
-                        )
+                        }
                     )
                 }
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // 错误图标
+                    Icon(
+                        CupertinoIcons.Default.WifiSlash,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = currentUiState.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // 重试按钮
+                    Button(
+                        onClick = { viewModel.loadProfile() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(CupertinoIcons.Default.ArrowClockwise, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("重试")
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // 离线缓存入口
+                    OutlinedButton(onClick = onDownloadClick) {
+                        Icon(CupertinoIcons.Default.ArrowDownCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("查看离线缓存")
+                    }
+                }
             }
-        ) { padding ->
-            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                if (windowSizeClass.shouldUseSplitLayout) {
-                    TabletProfileContent(
-                        user = currentUiState.user,
-                        onLogout = {
-                            viewModel.logout()
-                            onLogoutSuccess()
-                        },
-                        onHistoryClick = onHistoryClick,
-                        onFavoriteClick = onFavoriteClick,
-                        onFollowingClick = { onFollowingClick(currentUiState.user.mid) },
-                        onDownloadClick = onDownloadClick,
-                        onSettingsClick = onSettingsClick,
-                        onBack = onBack,
-                        onWatchLaterClick = onWatchLaterClick
-                    )
-                } else {
-                    MobileProfileContent(
-                        user = currentUiState.user,
-                        onLogout = {
-                            viewModel.logout()
-                            onLogoutSuccess()
-                        },
-                        onHistoryClick = onHistoryClick,
-                        onFavoriteClick = onFavoriteClick,
-                        onFollowingClick = { onFollowingClick(currentUiState.user.mid) },
-                        onDownloadClick = onDownloadClick,
-                        onWatchLaterClick = onWatchLaterClick
-                    )
+        }
+        is ProfileUiState.Success -> {
+            val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+            
+            Scaffold(
+                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                containerColor = MaterialTheme.colorScheme.background,
+                topBar = {
+                    if (!windowSizeClass.shouldUseSplitLayout) {
+                        LargeTopAppBar(
+                            title = { Text("我的", fontWeight = FontWeight.Bold) },
+                            navigationIcon = {
+                                IconButton(onClick = onBack) {
+                                    Icon(CupertinoIcons.Default.ChevronBackward, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = onSettingsClick) {
+                                    Icon(CupertinoIcons.Default.Gearshape, contentDescription = "Settings", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            },
+                            scrollBehavior = scrollBehavior,
+                            colors = TopAppBarDefaults.largeTopAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.background,
+                                scrolledContainerColor = MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    }
+                }
+            ) { padding ->
+                Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                    if (windowSizeClass.shouldUseSplitLayout) {
+                        TabletProfileContent(
+                            user = currentUiState.user,
+                            onLogout = {
+                                viewModel.logout()
+                                onLogoutSuccess()
+                            },
+                            onHistoryClick = onHistoryClick,
+                            onFavoriteClick = onFavoriteClick,
+                            onFollowingClick = { onFollowingClick(currentUiState.user.mid) },
+                            onDownloadClick = onDownloadClick,
+                            onSettingsClick = onSettingsClick,
+                            onBack = onBack,
+                            onWatchLaterClick = onWatchLaterClick
+                        )
+                    } else {
+                        MobileProfileContent(
+                            user = currentUiState.user,
+                            onLogout = {
+                                viewModel.logout()
+                                onLogoutSuccess()
+                            },
+                            onHistoryClick = onHistoryClick,
+                            onFavoriteClick = onFavoriteClick,
+                            onFollowingClick = { onFollowingClick(currentUiState.user.mid) },
+                            onDownloadClick = onDownloadClick,
+                            onWatchLaterClick = onWatchLaterClick
+                        )
+                    }
                 }
             }
         }

@@ -136,7 +136,18 @@ class VideoPlaybackUseCase(
             return detailResult.fold(
                 onSuccess = { (info, playData) ->
                     //  [网络感知] 使用 API 返回的画质或传入的默认画质
-                    val targetQn = playData.quality.takeIf { it > 0 } ?: defaultQuality
+                    // 🚀 [修复] 当 defaultQuality >= 127 时（自动最高画质），选择 accept_quality 中的最高画质
+                    val targetQn = if (defaultQuality >= 127) {
+                        // 自动最高画质：使用 API 返回的 accept_quality 列表
+                        // 排除 127(8K), 126(杜比), 125(HDR) 等可能超出设备解码能力的画质
+                        val acceptQualities = playData.accept_quality ?: emptyList()
+                        val deviceSafeQualities = acceptQualities.filter { it <= 120 }  // 最高支持 4K
+                        val maxAccept = deviceSafeQualities.maxOrNull() ?: 80
+                        Logger.d("VideoPlaybackUseCase", "🚀 自动最高画质: accept_quality=$acceptQualities, 设备安全画质=$deviceSafeQualities, 选择 $maxAccept")
+                        maxAccept
+                    } else {
+                        playData.quality.takeIf { it > 0 } ?: defaultQuality
+                    }
                     
                     val isHevcSupported = com.android.purebilibili.core.util.MediaUtils.isHevcSupported()
                     val isAv1Supported = com.android.purebilibili.core.util.MediaUtils.isAv1Supported()

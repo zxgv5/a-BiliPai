@@ -35,8 +35,7 @@ object DownloadManager {
     private val _tasks = MutableStateFlow<Map<String, DownloadTask>>(emptyMap())
     val tasks: StateFlow<Map<String, DownloadTask>> = _tasks.asStateFlow()
     
-    // 正在下载的任务协程
-    private val downloadJobs = ConcurrentHashMap<String, Job>()
+    // 🔧 [移除] downloadJobs 已被 WorkManager 替代
     
     // 下载目录
     private var downloadDir: File? = null
@@ -102,27 +101,35 @@ object DownloadManager {
     }
     
     /**
-     * 开始下载
+     * 开始下载（使用 WorkManager 调度）
      */
     fun startDownload(taskId: String) {
         val task = _tasks.value[taskId] ?: return
         if (task.isDownloading) return
         
-        downloadJobs[taskId]?.cancel()
-        downloadJobs[taskId] = scope.launch {
-            try {
-                downloadTask(task)
-            } catch (e: CancellationException) {
-                updateTask(taskId) { it.copy(status = DownloadStatus.PAUSED) }
-            } catch (e: Exception) {
-                com.android.purebilibili.core.util.Logger.e("DownloadManager", "Download failed", e)
-                updateTask(taskId) { 
-                    it.copy(
-                        status = DownloadStatus.FAILED, 
-                        errorMessage = e.message ?: "下载失败"
-                    ) 
-                }
-            }
+        val context = appContext ?: return
+        
+        // 🔧 [修复] 使用 WorkManager 调度下载，确保后台持续运行
+        updateTask(taskId) { it.copy(status = DownloadStatus.PENDING) }
+        DownloadWorker.enqueue(context, taskId)
+    }
+    
+    /**
+     * 🔧 [新增] 执行下载（由 WorkManager 调用）
+     * @throws Exception 下载失败时抛出异常
+     */
+    suspend fun executeDownload(taskId: String) {
+        val task = _tasks.value[taskId] 
+            ?: throw IllegalStateException("任务不存在: $taskId")
+        downloadTask(task)
+    }
+    
+    /**
+     * 🔧 [新增] 标记下载失败（由 WorkManager 调用）
+     */
+    fun markFailed(taskId: String, errorMessage: String) {
+        updateTask(taskId) {
+            it.copy(status = DownloadStatus.FAILED, errorMessage = errorMessage)
         }
     }
     
@@ -130,8 +137,9 @@ object DownloadManager {
      * 暂停下载
      */
     fun pauseDownload(taskId: String) {
-        downloadJobs[taskId]?.cancel()
-        downloadJobs.remove(taskId)
+        val context = appContext ?: return
+        // 🔧 [修复] 取消 WorkManager 任务
+        DownloadWorker.cancel(context, taskId)
         updateTask(taskId) { it.copy(status = DownloadStatus.PAUSED) }
     }
     
@@ -139,8 +147,9 @@ object DownloadManager {
      * 删除任务
      */
     fun removeTask(taskId: String) {
-        downloadJobs[taskId]?.cancel()
-        downloadJobs.remove(taskId)
+        val context = appContext ?: return
+        // 🔧 取消 WorkManager 任务
+        DownloadWorker.cancel(context, taskId)
         
         // 删除文件
         val task = _tasks.value[taskId]

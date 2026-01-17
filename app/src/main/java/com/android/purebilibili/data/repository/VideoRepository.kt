@@ -183,11 +183,18 @@ object VideoRepository {
             
             if (cid == 0L) throw Exception("CID 获取失败")
 
-            //  [优化] 使用缓存加速重复播放
-            val cachedPlayData = PlayUrlCache.get(bvid, cid)
-            if (cachedPlayData != null) {
-                com.android.purebilibili.core.util.Logger.d("VideoRepo", " Using cached PlayUrlData for bvid=$bvid")
-                return@withContext Result.success(Pair(info, cachedPlayData))
+            // 🚀 [修复] 自动最高画质模式：跳过缓存，确保获取最新的高清流
+            val isAutoHighestQuality = targetQuality != null && targetQuality >= 127
+            
+            //  [优化] 使用缓存加速重复播放 (但自动最高画质模式除外)
+            if (!isAutoHighestQuality) {
+                val cachedPlayData = PlayUrlCache.get(bvid, cid)
+                if (cachedPlayData != null) {
+                    com.android.purebilibili.core.util.Logger.d("VideoRepo", " Using cached PlayUrlData for bvid=$bvid")
+                    return@withContext Result.success(Pair(info, cachedPlayData))
+                }
+            } else {
+                com.android.purebilibili.core.util.Logger.d("VideoRepo", "🚀 Auto highest quality: skipping cache for bvid=$bvid")
             }
 
             //  [优化] 根据登录和大会员状态选择起始画质
@@ -203,14 +210,16 @@ object VideoRepository {
                 true // 出错时默认开启
             }
             
-            //  [关键修复] 优先使用传入的用户画质设置，否则使用内部逻辑
-            val startQuality = targetQuality ?: when {
+            // 🚀 [关键修复] 自动最高画质：使用 120 (4K) 作为请求画质，确保 API 返回所有高清流
+            val startQuality = when {
+                isAutoHighestQuality -> 120  // 4K - 请求最高画质以获取完整 DASH 流列表
+                targetQuality != null -> targetQuality
                 isVip -> 116     // 大会员：优先 1080P+ (HDR)
                 isLogin && auto1080pEnabled -> 80  //  已登录 + 开启1080p：优先 1080p
                 isLogin -> 64    // 已登录非大会员（关闭1080p设置）：优先 720p
                 else -> 32       // 未登录：优先 480p（避免限制）
             }
-            com.android.purebilibili.core.util.Logger.d("VideoRepo", " Selected startQuality=$startQuality (userSetting=$targetQuality, isLogin=$isLogin, isVip=$isVip, auto1080p=$auto1080pEnabled)")
+            com.android.purebilibili.core.util.Logger.d("VideoRepo", " Selected startQuality=$startQuality (userSetting=$targetQuality, isAutoHighest=$isAutoHighestQuality, isLogin=$isLogin, isVip=$isVip)")
 
             val playData = fetchPlayUrlRecursive(bvid, cid, startQuality)
                 ?: throw Exception("无法获取任何画质的播放地址")

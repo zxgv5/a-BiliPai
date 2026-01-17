@@ -18,6 +18,7 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -211,39 +212,86 @@ fun VideoPlayerSection(
         else -> null
     }
 
+    //  [新增] 缩放和平移状态
+    var scale by remember { mutableFloatStateOf(1f) }
+    var panX by remember { mutableFloatStateOf(0f) }
+    var panY by remember { mutableFloatStateOf(0f) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clipToBounds()  //  确保所有内容（包括弹幕）不会超出边界
             .background(Color.Black)
-            //  先处理拖拽手势
+            //  [新增] 处理双指缩放和平移
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(1f, 5f)
+                    
+                    if (scale > 1f) {
+                        // 缩放状态下，允许平移
+                        val maxPanX = (size.width * scale - size.width) / 2
+                        val maxPanY = (size.height * scale - size.height) / 2
+                        panX = (panX + pan.x * scale).coerceIn(-maxPanX, maxPanX)
+                        panY = (panY + pan.y * scale).coerceIn(-maxPanY, maxPanY)
+                        
+                        // 如果正在缩放/平移，隐藏手势图标和控制栏
+                        isGestureVisible = false
+                        showControls = false
+                    } else {
+                        // 恢复原始比例时，重置平移
+                        panX = 0f
+                        panY = 0f
+                    }
+                }
+            }
+            //  先处理拖拽手势 (音量/亮度/进度)
             .pointerInput(isInPipMode) {
                 if (!isInPipMode) {
                     detectDragGestures(
                         onDragStart = { offset ->
-                            isGestureVisible = true
-                            gestureMode = VideoGestureMode.None
-                            totalDragDistanceY = 0f
-                            totalDragDistanceX = 0f
+                            // [新增] 如果处于缩放状态，禁用常规拖拽手势，优先处理平移
+                            if (scale > 1.01f) {  // 留一点浮点数buffer
+                                return@detectDragGestures
+                            }
+                            
+                            //  [新增] 边缘防误触检测
+                            //  如果在屏幕顶部或底部区域开始滑动，则视为系统手势（如下拉通知栏），不触发播放器手势
+                            val density = context.resources.displayMetrics.density
+                            val safeZonePx = 48 * density  //  48dp 安全区域
+                            val screenHeight = size.height
 
-                            startVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                            startPosition = playerState.player.currentPosition
-
-                            val attributes = getActivity()?.window?.attributes
-                            val currentWindowBrightness = attributes?.screenBrightness ?: -1f
-
-                            if (currentWindowBrightness < 0) {
-                                try {
-                                    val sysBrightness = Settings.System.getInt(
-                                        context.contentResolver,
-                                        Settings.System.SCREEN_BRIGHTNESS
-                                    )
-                                    startBrightness = sysBrightness / 255f
-                                } catch (e: Exception) {
-                                    startBrightness = 0.5f
-                                }
+                            // 检查是否在安全区域内 (顶部或底部)
+                            val isEdgeGesture = offset.y < safeZonePx || offset.y > (screenHeight - safeZonePx)
+                            
+                            if (isEdgeGesture) {
+                                isGestureVisible = false
+                                gestureMode = VideoGestureMode.None
+                                // 不需要 return，直接不执行下面的初始化逻辑即可
                             } else {
-                                startBrightness = currentWindowBrightness
+                                isGestureVisible = true
+                                gestureMode = VideoGestureMode.None
+                                totalDragDistanceY = 0f
+                                totalDragDistanceX = 0f
+
+                                startVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                startPosition = playerState.player.currentPosition
+
+                                val attributes = getActivity()?.window?.attributes
+                                val currentWindowBrightness = attributes?.screenBrightness ?: -1f
+
+                                if (currentWindowBrightness < 0) {
+                                    try {
+                                        val sysBrightness = Settings.System.getInt(
+                                            context.contentResolver,
+                                            Settings.System.SCREEN_BRIGHTNESS
+                                        )
+                                        startBrightness = sysBrightness / 255f
+                                    } catch (e: Exception) {
+                                        startBrightness = 0.5f
+                                    }
+                                } else {
+                                    startBrightness = currentWindowBrightness
+                                }
                             }
                         },
                         onDragEnd = {
@@ -260,6 +308,11 @@ fun VideoPlayerSection(
                         },
                         //  [修复点] 使用 dragAmount 而不是 change.positionChange()
                         onDrag = { change, dragAmount ->
+                            // 如果手势不可见（即在 safe zone 中启动被忽略），则停止处理
+                            if (!isGestureVisible && gestureMode == VideoGestureMode.None) {
+                                // do nothing
+                            } else {
+
                             if (gestureMode == VideoGestureMode.None) {
                                 if (abs(dragAmount.x) > abs(dragAmount.y)) {
                                     gestureMode = VideoGestureMode.Seek
@@ -316,6 +369,7 @@ fun VideoPlayerSection(
                                     }
                                 }
                                 else -> {}
+                            }
                             }
                         }
                     )
@@ -505,9 +559,11 @@ fun VideoPlayerSection(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        //  应用翻转效果
-                        scaleX = if (isFlippedHorizontal) -1f else 1f
-                        scaleY = if (isFlippedVertical) -1f else 1f
+                        //  [新增] 应用缩放和平移
+                        scaleX = if (isFlippedHorizontal) -scale else scale
+                        scaleY = if (isFlippedVertical) -scale else scale
+                        translationX = panX
+                        translationY = panY
                     }
             )
         }

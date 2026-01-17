@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,10 +31,23 @@ import coil.compose.AsyncImage
 @Composable
 fun DownloadListScreen(
     onBack: () -> Unit,
-    onVideoClick: (String) -> Unit  // bvid
+    onVideoClick: (String) -> Unit,  // bvid - 在线播放
+    onOfflineVideoClick: (String) -> Unit = {}  // 🔧 [新增] taskId - 离线播放
 ) {
+    val context = LocalContext.current
     val tasks by DownloadManager.tasks.collectAsState()
     val taskList = tasks.values.toList().sortedByDescending { it.createdAt }
+    
+    // 🔧 检测网络状态
+    val connectivityManager = remember {
+        context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    }
+    
+    fun isNetworkAvailable(): Boolean {
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
     
     Scaffold(
         topBar = {
@@ -89,7 +103,14 @@ fun DownloadListScreen(
                         task = task,
                         onClick = { 
                             if (task.isComplete) {
-                                onVideoClick(task.bvid)
+                                // 🔧 [修复] 根据网络状态选择播放方式
+                                if (isNetworkAvailable()) {
+                                    // 有网络：打开在线视频详情（可以加载评论等）
+                                    onVideoClick(task.bvid)
+                                } else {
+                                    // 无网络：直接播放本地文件
+                                    onOfflineVideoClick(task.id)
+                                }
                             }
                         },
                         onPauseResume = {
@@ -108,6 +129,7 @@ fun DownloadListScreen(
         }
     }
 }
+
 
 @Composable
 private fun DownloadTaskItem(

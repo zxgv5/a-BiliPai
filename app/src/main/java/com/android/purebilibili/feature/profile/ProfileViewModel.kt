@@ -10,12 +10,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.net.UnknownHostException
+import java.net.SocketTimeoutException
 
 sealed class ProfileUiState {
     object Loading : ProfileUiState()
     data class Success(val user: UserState) : ProfileUiState()
     // LoggedOut 代表“当前是游客/未登录状态”，UI 应该显示“去登录”
     object LoggedOut : ProfileUiState()
+    // 🔧 [新增] 网络错误状态 — 保持登录但显示离线提示
+    data class Error(val message: String) : ProfileUiState()
 }
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
@@ -73,10 +77,32 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // 网络错误也暂时显示未登录，或者你可以加一个 Error 状态重试
-                _uiState.value = ProfileUiState.LoggedOut
+                // 🔧 [修复] 网络错误时不清除 Token，保持登录状态
+                // 区分「无网络」和「真正的服务器错误」
+                val hasToken = !TokenManager.sessDataCache.isNullOrEmpty()
+                if (hasToken && isNetworkError(e)) {
+                    // 有 Token 但网络不可用 → 显示离线提示，不退出登录
+                    _uiState.value = ProfileUiState.Error("网络不可用，请检查网络连接")
+                } else if (hasToken) {
+                    // 有 Token 但其他错误 → 也显示错误，不清除登录
+                    _uiState.value = ProfileUiState.Error("加载失败，点击重试")
+                } else {
+                    // 无 Token → 显示未登录
+                    _uiState.value = ProfileUiState.LoggedOut
+                }
             }
         }
+    }
+    
+    /**
+     * 判断是否为网络相关错误
+     */
+    private fun isNetworkError(e: Exception): Boolean {
+        return e is UnknownHostException ||
+               e is SocketTimeoutException ||
+               e is java.net.ConnectException ||
+               e.cause is UnknownHostException ||
+               e.cause is SocketTimeoutException
     }
 
     fun logout() {

@@ -238,6 +238,10 @@ fun VideoDetailScreen(
             //  [关键] 标记页面正在退出，防止 SideEffect 覆盖
             isScreenActive = false
             
+            // 🎯 [修复] 通知小窗管理器这是导航离开（用于控制后台音频）
+            // 移动到这里以支持预测性返回手势（原来在 BackHandler 中会阻止手势动画）
+            miniPlayerManager?.markLeavingByNavigation()
+            
             val layoutParams = window?.attributes
             layoutParams?.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
             window?.attributes = layoutParams
@@ -457,11 +461,9 @@ fun VideoDetailScreen(
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 
-    // 🎯 [修复] 默认拦截系统返回键（非全屏状态下）
-    // 确保通过系统手势返回也能触发 markLeavingByNavigation，从而停止后台音频
-    BackHandler(enabled = !isFullscreenMode && !isPortraitFullscreen && !isPhoneInLandscapeSplitView) {
-        handleBack()
-    }
+    // 🎯 [修复] 移除了原来的 "catch-all" BackHandler
+    // 这样可以启用 Android 14+ 的预测性返回手势动画
+    // 清理逻辑（markLeavingByNavigation、restoreStatusBar）已移至 DisposableEffect.onDispose
 
     // 沉浸式状态栏控制
     val backgroundColor = MaterialTheme.colorScheme.background

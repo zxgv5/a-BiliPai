@@ -46,6 +46,14 @@ object NetworkUtils {
      */
     fun getDefaultQualityId(context: Context): Int {
         val prefs = context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
+        
+        // 🚀 [新增] 自动最高画质：忽略网络类型，始终返回最高画质
+        val autoHighest = prefs.getBoolean("auto_highest_quality", false)
+        if (autoHighest) {
+            Logger.d("NetworkUtils", "🚀 自动最高画质已开启，使用最高画质 127 (8K)")
+            return 127  // 8K (实际会降级到视频可用的最高画质)
+        }
+        
         val isOnWifi = isWifi(context)
         val quality = if (isOnWifi) {
             prefs.getInt("wifi_quality", 80)  // 默认 WiFi=1080P

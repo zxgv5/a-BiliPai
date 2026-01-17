@@ -454,6 +454,10 @@ fun PlaybackSettingsContent(
                 val mobileQuality by com.android.purebilibili.core.store.SettingsManager
                     .getMobileQuality(context).collectAsState(initial = 64)
                 
+                // 🚀 [新增] 自动最高画质
+                val autoHighestQuality by com.android.purebilibili.core.store.SettingsManager
+                    .getAutoHighestQuality(context).collectAsState(initial = false)
+                
                 // 画质选项列表
                 val qualityOptions = listOf(
                     116 to "1080P60",
@@ -466,6 +470,22 @@ fun PlaybackSettingsContent(
                 fun getQualityLabel(id: Int) = qualityOptions.find { it.first == id }?.second ?: "720P"
                 
                 IOSGroup {
+                    // 🚀 自动最高画质开关（置顶）
+                    IOSSwitchItem(
+                        icon = CupertinoIcons.Default.Sparkles,
+                        title = "自动最高画质",
+                        subtitle = if (autoHighestQuality) "已开启：始终使用视频最高可用画质" else "开启后忽略下方画质设置",
+                        checked = autoHighestQuality,
+                        onCheckedChange = {
+                            scope.launch {
+                                com.android.purebilibili.core.store.SettingsManager
+                                    .setAutoHighestQuality(context, it)
+                            }
+                        },
+                        iconTint = com.android.purebilibili.core.theme.iOSPurple
+                    )
+                    
+                    Divider()
                     // WiFi 画质选择
                     var wifiExpanded by remember { mutableStateOf(false) }
                     Column {

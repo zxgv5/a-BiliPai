@@ -5,7 +5,9 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.purebilibili.core.network.NetworkModule
 import com.android.purebilibili.data.model.response.DynamicItem
+import com.android.purebilibili.data.model.response.FollowingUser
 import com.android.purebilibili.data.model.response.LiveRoom
 import com.android.purebilibili.data.repository.DynamicRepository
 import com.android.purebilibili.data.repository.LiveRepository
@@ -32,12 +34,18 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
     private val json = Json { ignoreUnknownKeys = true }
 
     private var cachedLiveRooms: List<LiveRoom> = emptyList()
+    
+    //  [新增] 缓存关注列表
+    private var cachedFollowings: List<FollowingUser> = emptyList()
 
     private val _uiState = MutableStateFlow(DynamicUiState())
     val uiState: StateFlow<DynamicUiState> = _uiState.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    
+    //  [修复] 加载锁，防止并发加载请求
+    private var isLoadingLocked = false
 
     //  侧边栏相关状态
     private val _followedUsers = MutableStateFlow<List<SidebarUser>>(emptyList())
@@ -63,6 +71,8 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
         loadCachedDynamics()
         rebuildFollowedUsers()
         refreshInBackground()
+        //  [新增] 加载关注列表
+        viewModelScope.launch { loadAllFollowings() }
     }
     
     private fun loadUserPreferences() {
@@ -119,8 +129,10 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                 loadDynamicFeedInternal(refresh = true, showLoading = _uiState.value.items.isEmpty())
             }
             val liveJob = async { loadFollowedUsersInternal() }
+            val followingsJob = async { loadAllFollowings() }
             dynamicJob.await()
             liveJob.await()
+            followingsJob.await()
         }
         if (showRefreshIndicator) {
             _isRefreshing.value = false
@@ -138,6 +150,31 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
         LiveRepository.getFollowedLive(page = 1).onSuccess { liveRooms ->
             cachedLiveRooms = liveRooms
             rebuildFollowedUsers()
+        }
+    }
+    
+    /**
+     *  [新增] 加载完整的关注列表
+     */
+    private suspend fun loadAllFollowings() {
+        try {
+            // 先获取当前用户 mid
+            val navResponse = NetworkModule.api.getNavInfo()
+            val myMid = navResponse.data?.mid ?: return
+            
+            // 加载关注列表（最多加载前 5 页，共 250 人）
+            val allFollowings = mutableListOf<FollowingUser>()
+            for (page in 1..5) {
+                val response = NetworkModule.api.getFollowings(vmid = myMid, pn = page, ps = 50)
+                val users = response.data?.list ?: break
+                allFollowings.addAll(users)
+                if (users.size < 50) break // 没有更多了
+            }
+            
+            cachedFollowings = allFollowings
+            rebuildFollowedUsers()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -182,17 +219,35 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
     private fun rebuildFollowedUsers() {
         val mergedUsers = mergeUsers(
             extractUsersFromDynamics(_uiState.value.items),
-            extractUsersFromLive(cachedLiveRooms)
+            extractUsersFromLive(cachedLiveRooms),
+            extractUsersFromFollowings(cachedFollowings)  //  [新增]
         )
         _followedUsers.value = applyUserPreferences(mergedUsers)
+    }
+    
+    /**
+     *  [新增] 从关注列表转换为侧边栏用户
+     */
+    private fun extractUsersFromFollowings(followings: List<FollowingUser>): List<SidebarUser> {
+        return followings.map { user ->
+            SidebarUser(
+                uid = user.mid,
+                name = user.uname,
+                face = user.face,
+                isLive = false,
+                lastActiveTs = 0  // 关注列表没有活跃时间，排序优先级最低
+            )
+        }
     }
 
     private fun mergeUsers(
         dynamicUsers: List<SidebarUser>,
-        liveUsers: List<SidebarUser>
+        liveUsers: List<SidebarUser>,
+        followingUsers: List<SidebarUser> = emptyList()  //  [新增]
     ): List<SidebarUser> {
         val merged = mutableMapOf<Long, SidebarUser>()
-        (dynamicUsers + liveUsers).forEach { user ->
+        //  先添加关注列表（基础优先级），再添加动态和直播用户覆盖
+        (followingUsers + dynamicUsers + liveUsers).forEach { user ->
             val existing = merged[user.uid]
             if (existing == null) {
                 merged[user.uid] = user
@@ -229,10 +284,69 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
     }
     
     /**
-     * 选择用户过滤动态
+     *  [修改] 选择用户过滤动态 - 改为加载该用户的专属动态
      */
     fun selectUser(uid: Long?) {
+        val previousUid = _selectedUserId.value
         _selectedUserId.value = uid
+        
+        if (uid != null && uid != previousUid) {
+            // 加载该用户的动态
+            viewModelScope.launch {
+                DynamicRepository.resetUserPagination()
+                loadUserDynamics(uid, refresh = true)
+            }
+        } else if (uid == null) {
+            // 清空用户动态
+            _uiState.value = _uiState.value.copy(userItems = emptyList(), hasUserMore = true)
+        }
+    }
+    
+    /**
+     *  [新增] 加载指定用户的动态
+     */
+    private suspend fun loadUserDynamics(uid: Long, refresh: Boolean = false) {
+        if (isLoadingLocked && !refresh) return
+        isLoadingLocked = true
+        
+        try {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            
+            val result = DynamicRepository.getUserDynamicFeed(uid, refresh)
+            
+            result.fold(
+                onSuccess = { items ->
+                    val currentItems = if (refresh) emptyList() else _uiState.value.userItems
+                    val mergedItems = currentItems + items
+                    _uiState.value = _uiState.value.copy(
+                        userItems = mergedItems,
+                        isLoading = false,
+                        error = null,
+                        hasUserMore = DynamicRepository.userHasMoreData()
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = error.message ?: "加载失败"
+                    )
+                }
+            )
+        } finally {
+            kotlinx.coroutines.delay(300)
+            isLoadingLocked = false
+        }
+    }
+    
+    /**
+     *  [新增] 加载更多用户动态
+     */
+    fun loadMoreUserDynamics() {
+        val uid = _selectedUserId.value ?: return
+        if (!_uiState.value.hasUserMore || _uiState.value.isLoading || isLoadingLocked) return
+        viewModelScope.launch {
+            loadUserDynamics(uid, refresh = false)
+        }
     }
     
     /**
@@ -292,7 +406,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
      * 加载动态列表
      */
     fun loadDynamicFeed(refresh: Boolean = false) {
-        if (!refresh && (_uiState.value.isLoading || _isRefreshing.value)) return
+        if (!refresh && (_uiState.value.isLoading || _isRefreshing.value || isLoadingLocked)) return
         viewModelScope.launch {
             loadDynamicFeedInternal(
                 refresh = refresh,
@@ -305,38 +419,48 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
         refresh: Boolean,
         showLoading: Boolean = false
     ) {
-        if (refresh) {
-            if (showLoading) {
-                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        //  [修复] 使用加载锁防止并发请求
+        if (isLoadingLocked && !refresh) return
+        isLoadingLocked = true
+        
+        try {
+            if (refresh) {
+                if (showLoading) {
+                    _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+                } else {
+                    _uiState.value = _uiState.value.copy(error = null)
+                }
             } else {
-                _uiState.value = _uiState.value.copy(error = null)
+                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             }
-        } else {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            val result = DynamicRepository.getDynamicFeed(refresh)
+
+            result.fold(
+                onSuccess = { items ->
+                    val currentItems = if (refresh) emptyList() else _uiState.value.items
+                    val mergedItems = currentItems + items
+                    _uiState.value = _uiState.value.copy(
+                        items = mergedItems,
+                        isLoading = false,
+                        error = null,
+                        hasMore = DynamicRepository.hasMoreData()
+                    )
+                    saveDynamicCache(mergedItems)
+                    rebuildFollowedUsers()
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = error.message ?: "加载失败"
+                    )
+                }
+            )
+        } finally {
+            //  延迟解锁，防止快速连续请求
+            kotlinx.coroutines.delay(300)
+            isLoadingLocked = false
         }
-
-        val result = DynamicRepository.getDynamicFeed(refresh)
-
-        result.fold(
-            onSuccess = { items ->
-                val currentItems = if (refresh) emptyList() else _uiState.value.items
-                val mergedItems = currentItems + items
-                _uiState.value = _uiState.value.copy(
-                    items = mergedItems,
-                    isLoading = false,
-                    error = null,
-                    hasMore = DynamicRepository.hasMoreData()
-                )
-                saveDynamicCache(mergedItems)
-                rebuildFollowedUsers()
-            },
-            onFailure = { error ->
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = error.message ?: "加载失败"
-                )
-            }
-        )
     }
     
     fun refresh() {
@@ -344,7 +468,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
     }
     
     fun loadMore() {
-        if (!_uiState.value.hasMore || _uiState.value.isLoading || _isRefreshing.value) return
+        if (!_uiState.value.hasMore || _uiState.value.isLoading || _isRefreshing.value || isLoadingLocked) return
         loadDynamicFeed(refresh = false)
     }
     
@@ -372,11 +496,12 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
     val likedDynamics: StateFlow<Set<String>> = _likedDynamics.asStateFlow()
     
     /**
-     *  根据动态类型获取评论 oid 和 type
+     *  [修复] 根据动态类型获取评论 oid 和 type
      * - 视频动态: type=1, oid=aid
-     * - 图片动态: type=11, oid=draw.id
+     * - 图片动态: type=11, oid=draw.id 或 id_str
      * - 文字动态: type=17, oid=id_str
      * - 转发动态: 使用原动态的信息
+     * - 其他/未知: type=17, oid=id_str (动态评论通用类型)
      */
     private fun getCommentParams(item: DynamicItem): Pair<Long, Int>? {
         val dynamicType = com.android.purebilibili.data.model.response.DynamicType.fromApiValue(item.type)
@@ -387,9 +512,14 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                 if (aid != null) Pair(aid, 1) else null
             }
             com.android.purebilibili.data.model.response.DynamicType.DRAW -> {
-                // 图片动态: type=11, oid=draw.id  
+                // 图片动态: type=11, oid=draw.id，如果没有则用 id_str
                 val drawId = item.modules.module_dynamic?.major?.draw?.id
-                if (drawId != null && drawId > 0) Pair(drawId, 11) else null
+                if (drawId != null && drawId > 0) {
+                    Pair(drawId, 11)
+                } else {
+                    // 使用 id_str 作为 fallback
+                    item.id_str.toLongOrNull()?.let { Pair(it, 17) }
+                }
             }
             com.android.purebilibili.data.model.response.DynamicType.WORD -> {
                 // 纯文字动态: type=17, oid=id_str
@@ -400,15 +530,22 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                 // 转发动态: 使用原动态的信息
                 item.orig?.let { getCommentParams(it) }
             }
-            else -> null
+            else -> {
+                //  [修复] 未知类型: 统一使用 type=17 (动态评论), oid=id_str
+                com.android.purebilibili.core.util.Logger.w("DynamicVM", "未知动态类型: ${item.type}, 使用 id_str 作为 oid")
+                item.id_str.toLongOrNull()?.let { Pair(it, 17) }
+            }
         }
     }
     
     /**
-     *  根据动态ID获取动态对象
+     *  [修复] 根据动态ID获取动态对象 - 同时搜索 items 和 userItems
      */
     private fun findDynamicById(dynamicId: String): DynamicItem? {
-        return _uiState.value.items.find { it.id_str == dynamicId }
+        // 先在全部动态中搜索
+        _uiState.value.items.find { it.id_str == dynamicId }?.let { return it }
+        // 再在用户专属动态中搜索
+        return _uiState.value.userItems.find { it.id_str == dynamicId }
     }
     
     /**
@@ -584,7 +721,9 @@ data class SidebarUser(
  */
 data class DynamicUiState(
     val items: List<DynamicItem> = emptyList(),
+    val userItems: List<DynamicItem> = emptyList(), //  [新增] 选中 UP主的动态
     val isLoading: Boolean = false,
     val error: String? = null,
-    val hasMore: Boolean = true
+    val hasMore: Boolean = true,
+    val hasUserMore: Boolean = true //  [新增] UP主动态是否有更多
 )

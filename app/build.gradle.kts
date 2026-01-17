@@ -22,8 +22,8 @@ android {
         targetSdk = 35  // 保持35以避免Android 16的新运行时行为
         // 🔥🔥 [版本号] 发布新版前记得更新！格式：versionCode +1, versionName 递增
         // 更新日志：CHANGELOG.md
-        versionCode = 33
-        versionName = "4.0.1"
+        versionCode = 34
+        versionName = "4.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -200,6 +200,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("androidx.lifecycle:lifecycle-process:2.9.4")  // 🔋 ProcessLifecycleOwner 后台检测
+    
+    // --- 8.1 WorkManager (后台下载任务) ---
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     implementation("androidx.navigation:navigation-compose:2.9.0")
     
