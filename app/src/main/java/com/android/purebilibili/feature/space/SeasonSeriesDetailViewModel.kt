@@ -131,7 +131,6 @@ class SeasonSeriesDetailViewModel(application: Application) : BaseListViewModel(
             response?.medias
                 .orEmpty()
                 .map { it.toVideoItem() }
-                .filter { it.bvid.isNotBlank() } // 收藏夹里可能有合集资源，当前列表页仅展示可播放视频
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
@@ -188,7 +187,6 @@ class SeasonSeriesDetailViewModel(application: Application) : BaseListViewModel(
                     newItems = response?.medias
                         .orEmpty()
                         .map { it.toVideoItem() }
-                        .filter { it.bvid.isNotBlank() }
                 }
                 
                 if (newItems.isNotEmpty()) {

@@ -15,7 +15,8 @@ data class ListUiState(
     val title: String = "",
     val items: List<VideoItem> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val canRemoveItems: Boolean = true
 )
 
 // 基类 ViewModel
@@ -401,7 +402,7 @@ class FavoriteViewModel(application: Application) : BaseListViewModel(applicatio
     // 分页状态
     private var currentPage = 1
     private var hasMore = true
-    private var allFolderIds: List<Long> = emptyList()  //  所有收藏夹 ID
+    private var allFolderIds: List<Long> = emptyList()  //  自建收藏夹 media_id
     private var currentFolderIndex = 0  //  当前正在加载的收藏夹索引
     private var isLoadingMore = false
     
@@ -412,9 +413,13 @@ class FavoriteViewModel(application: Application) : BaseListViewModel(applicatio
     private val _hasMoreState = MutableStateFlow(true)
     val hasMoreState = _hasMoreState.asStateFlow()
     
-    // 📁 [新增] 收藏夹列表
+    // 📁 [新增] 自建收藏夹列表
     private val _folders = MutableStateFlow<List<com.android.purebilibili.data.model.response.FavFolder>>(emptyList())
     val folders = _folders.asStateFlow()
+
+    // 📁 [新增] 订阅收藏夹列表
+    private val _subscribedFolders = MutableStateFlow<List<com.android.purebilibili.data.model.response.FavFolder>>(emptyList())
+    val subscribedFolders = _subscribedFolders.asStateFlow()
     
     // 📁 [新增] 当前选中的收藏夹索引
     private val _selectedFolderIndex = MutableStateFlow(0)
@@ -487,10 +492,16 @@ class FavoriteViewModel(application: Application) : BaseListViewModel(applicatio
                     val resultData = listResult.getOrNull()
                     val items = resultData?.medias?.map { it.toVideoItem() } ?: emptyList()
                     
-                     // Update Title if possible
+                    // Update Title if possible
                     val title = if (index < _folders.value.size) _folders.value[index].title else currentState.title
+                    val canRemoveItems = _folders.value.getOrNull(index)?.source != com.android.purebilibili.data.model.response.FavFolderSource.SUBSCRIBED
 
-                    stateFlow.value = currentState.copy(isLoading = false, items = items, title = title)
+                    stateFlow.value = currentState.copy(
+                        isLoading = false,
+                        items = items,
+                        title = title,
+                        canRemoveItems = canRemoveItems
+                    )
                     com.android.purebilibili.core.util.Logger.d("FavoriteVM", "📁 Loaded folder $index ($title): ${items.size} items")
                 } else {
                      // Index still out of bounds (maybe empty folders?)
@@ -512,12 +523,18 @@ class FavoriteViewModel(application: Application) : BaseListViewModel(applicatio
         val navResp = api.getNavInfo()
         val mid = navResp.data?.mid
         if (mid != null && mid != 0L) {
-             val foldersResult = com.android.purebilibili.data.repository.FavoriteRepository.getFavFolders(mid)
-             val foldersList = foldersResult.getOrNull()
-             if (!foldersList.isNullOrEmpty()) {
-                 _folders.value = foldersList
-                 allFolderIds = foldersList.map { it.id }
-             }
+            val ownedFolders = com.android.purebilibili.data.repository.FavoriteRepository.getFavFolders(mid)
+                .getOrNull()
+                .orEmpty()
+            val subscribedFolders = com.android.purebilibili.data.repository.FavoriteRepository.getCollectedFavFolders(
+                mid = mid,
+                pn = 1,
+                ps = 40,
+                platform = "web"
+            ).getOrNull().orEmpty()
+            _folders.value = ownedFolders
+            _subscribedFolders.value = subscribedFolders
+            allFolderIds = ownedFolders.map(::resolveFavoriteFolderMediaId)
         }
     }
 

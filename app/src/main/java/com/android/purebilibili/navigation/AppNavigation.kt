@@ -90,6 +90,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 // 定义路由参数结构
 object VideoRoute {
@@ -123,6 +125,25 @@ object VideoRoute {
             autoPortrait = autoPortrait
         )
     }
+}
+
+internal fun shouldAutoEnterPortraitForStandardVideoNavigation(): Boolean = false
+
+internal fun resolveStandardVideoRoute(
+    bvid: String,
+    cid: Long,
+    coverUrl: String,
+    startAudio: Boolean = false,
+    autoPortrait: Boolean = shouldAutoEnterPortraitForStandardVideoNavigation()
+): String {
+    val encodedCover = URLEncoder.encode(coverUrl, StandardCharsets.UTF_8.toString())
+    return VideoRoute.resolveVideoRoutePath(
+        bvid = bvid,
+        cid = cid,
+        encodedCover = encodedCover,
+        startAudio = startAudio,
+        autoPortrait = autoPortrait
+    )
 }
 
 @androidx.media3.common.util.UnstableApi
@@ -185,10 +206,10 @@ fun AppNavigation(
         cid: Long = 0L,
         coverUrl: String = "",
         startAudio: Boolean = false,
-        autoPortrait: Boolean = true
+        autoPortrait: Boolean = shouldAutoEnterPortraitForStandardVideoNavigation()
     ) {
         navigateToVideoRoute(
-            VideoRoute.createRoute(
+            resolveStandardVideoRoute(
                 bvid = bvid,
                 cid = cid,
                 coverUrl = coverUrl,
@@ -1038,6 +1059,26 @@ fun AppNavigation(
                     onBack = { navController.popBackStack() },
                     globalHazeState = mainHazeState, // [新增] 传入全局 HazeState
                     onVideoClick = { bvid, cid -> navigateToVideo(bvid, cid, "") },
+                    onFavoriteFolderClick = { mediaId, ownerMid, title ->
+                        navController.navigate(
+                            ScreenRoutes.SeasonSeriesDetail.createRoute(
+                                type = "favorite",
+                                id = mediaId,
+                                mid = ownerMid,
+                                title = title
+                            )
+                        )
+                    },
+                    onCollectionClick = { collectionId, collectionMid, title ->
+                        navController.navigate(
+                            ScreenRoutes.SeasonSeriesDetail.createRoute(
+                                type = "season",
+                                id = collectionId,
+                                mid = collectionMid,
+                                title = title
+                            )
+                        )
+                    },
                     onPlayAllAudioClick = { bvid, cid ->
                         navigateToVideo(bvid, cid, "", startAudio = true)
                     }
@@ -1526,7 +1567,17 @@ fun AppNavigation(
                 CommonListScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
-                    onVideoClick = { bvid, cid -> navigateToVideo(bvid, cid, "") }
+                    onVideoClick = { bvid, cid -> navigateToVideo(bvid, cid, "") },
+                    onCollectionClick = { collectionId, collectionMid, collectionTitle ->
+                        navController.navigate(
+                            ScreenRoutes.SeasonSeriesDetail.createRoute(
+                                type = "season",
+                                id = collectionId,
+                                mid = collectionMid,
+                                title = collectionTitle
+                            )
+                        )
+                    }
                 )
             }
         }
