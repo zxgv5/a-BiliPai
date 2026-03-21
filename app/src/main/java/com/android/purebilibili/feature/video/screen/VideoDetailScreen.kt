@@ -10,6 +10,7 @@ import android.content.res.Configuration
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
+import android.view.OrientationEventListener
 import android.view.Window
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedContent
@@ -1264,6 +1265,47 @@ fun VideoDetailScreen(
             "VideoDetailScreen",
             "🔄 Auto-rotate: enabled=$autoRotateEnabled, mode=$fullscreenMode, horizontal=$horizontalAdaptationEnabled, requested=$requestedOrientation, fullscreen=$isFullscreenMode, verticalVideo=$isVerticalVideo"
         )
+    }
+    DisposableEffect(
+        activity,
+        autoRotateEnabled,
+        fullscreenMode,
+        useTabletLayout,
+        isOrientationDrivenFullscreen
+    ) {
+        val hostActivity = activity
+        if (
+            hostActivity == null ||
+            !autoRotateEnabled ||
+            !isOrientationDrivenFullscreen ||
+            !shouldApplyPhoneAutoRotatePolicy(useTabletLayout) ||
+            fullscreenMode == com.android.purebilibili.core.store.FullscreenMode.NONE ||
+            fullscreenMode == com.android.purebilibili.core.store.FullscreenMode.VERTICAL
+        ) {
+            return@DisposableEffect onDispose {}
+        }
+
+        val orientationListener = object : OrientationEventListener(context) {
+            override fun onOrientationChanged(orientation: Int) {
+                val isCurrentlyLandscape =
+                    hostActivity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val targetOrientation = resolvePhoneAutoRotateRequestedOrientation(
+                    orientationDegrees = orientation,
+                    isCurrentlyLandscape = isCurrentlyLandscape
+                ) ?: return
+                if (hostActivity.requestedOrientation != targetOrientation) {
+                    hostActivity.requestedOrientation = targetOrientation
+                }
+            }
+        }
+
+        if (orientationListener.canDetectOrientation()) {
+            orientationListener.enable()
+        }
+
+        onDispose {
+            orientationListener.disable()
+        }
     }
     val portraitExperienceEnabled = shouldEnablePortraitExperience()
     val useOfficialInlinePortraitDetailExperience = shouldUseOfficialInlinePortraitDetailExperience(
@@ -3747,7 +3789,8 @@ internal fun resolvePhoneVideoRequestedOrientation(
                     isVerticalVideo = isVerticalVideo
                 ) ?: ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
-            else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+            isFullscreenMode -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
     return if (isFullscreenMode) {
@@ -3757,6 +3800,42 @@ internal fun resolvePhoneVideoRequestedOrientation(
         ) ?: ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     } else {
         ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
+}
+
+internal fun resolvePhoneAutoRotateRequestedOrientation(
+    orientationDegrees: Int,
+    isCurrentlyLandscape: Boolean,
+    portraitSnapDegrees: Int = 25,
+    landscapeEnterMinDegrees: Int = 60,
+    landscapeEnterMaxDegrees: Int = 120,
+    landscapeKeepMinDegrees: Int = 40,
+    landscapeKeepMaxDegrees: Int = 140
+): Int? {
+    if (orientationDegrees == OrientationEventListener.ORIENTATION_UNKNOWN) return null
+    val normalized = ((orientationDegrees % 360) + 360) % 360
+
+    fun withinWrappedRange(min: Int, max: Int): Boolean {
+        return if (min <= max) {
+            normalized in min..max
+        } else {
+            normalized >= min || normalized <= max
+        }
+    }
+
+    val portraitStable = withinWrappedRange(0, portraitSnapDegrees) ||
+        withinWrappedRange(180 - portraitSnapDegrees, 180 + portraitSnapDegrees) ||
+        withinWrappedRange(360 - portraitSnapDegrees, 359)
+    val landscapeEntry = withinWrappedRange(landscapeEnterMinDegrees, landscapeEnterMaxDegrees) ||
+        withinWrappedRange(240, 300)
+    val landscapeKeep = withinWrappedRange(landscapeKeepMinDegrees, landscapeKeepMaxDegrees) ||
+        withinWrappedRange(220, 320)
+
+    return when {
+        isCurrentlyLandscape && landscapeKeep -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        portraitStable -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        !isCurrentlyLandscape && landscapeEntry -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        else -> null
     }
 }
 

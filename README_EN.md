@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-03-20 · Synced to v7.0.0 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-03-21 · Synced to v7.0.1 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-7.0.0-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-7.0.1-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -405,12 +405,12 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v7.0.0 · 2026-03-20)
+### Latest (v7.0.1 · 2026-03-21)
 
-- 🎨 **A full visual pass landed for the official 7.0.0 release**: `iOS / MD3` presets, home chrome, liquid-glass modes and strength, adaptive accents, Material You fixes, and in-app font/scale/DPI controls are now part of one consolidated release.
-- 🔎 **Navigation and inbound routing are now unified**: `b23.tv / bilibili.com / bilibili://`, in-app WebView links, search deep links, and top-level entries such as history, favorites, watch later, and space all share the same target-resolution path.
-- 🎬 **Playback and background behavior are substantially more stable**: quality switching, audio mode, offline/background playback, notification/system media controls, richer debug info, and multiple detail-page interaction issues were cleaned up across the release cycle.
-- 🧪 **The release favors stability over experiments**: key policy tests were expanded across home/search/display/theme/player/update flows, and the experimental “video interface realtime blur” entry was removed.
+- 🧭 **Home top chrome was refined again**: search collapse distance, status-bar integration, unified top-panel behavior, and tap haptics for top tabs and bottom navigation now feel more deliberate.
+- 🎬 **Portrait fullscreen now supports viewport zooming**: pinch-to-zoom, pan, and a one-tap reset action were added, with conflicting seek/tap/long-press gestures suppressed while zoomed.
+- 📰 **The dynamic feed is denser on wide screens**: the feed width was tightened and wide video cards now switch to a left-cover, right-info layout for faster scanning.
+- 🔄 **Phone auto-rotate is less twitchy**: fullscreen orientation now stays portrait by default and only enters landscape on clearer sensor intent, reducing accidental rotation churn.
 
 ---
 
