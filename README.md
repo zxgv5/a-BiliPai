@@ -9,11 +9,11 @@
 </p>
 
 <p align="center">
-  <sub>最后更新：2026-04-04 · 文档已同步至 v7.4.1（以 <a href="CHANGELOG.md">CHANGELOG</a> 与源码为准）</sub>
+  <sub>最后更新：2026-04-05 · 文档已同步至 v7.4.2（以 <a href="CHANGELOG.md">CHANGELOG</a> 与源码为准）</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-7.4.1-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-7.4.2-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -527,7 +527,7 @@ app/src/main/java/com/android/purebilibili
 ## 🗺️ 路线图
 
 > [!TIP]
-> 路线图最后同步于 2026-04-04（v7.4.1）。功能以最新 Release、`CHANGELOG.md` 与主分支代码为准。
+> 路线图最后同步于 2026-04-05（v7.4.2）。功能以最新 Release、`CHANGELOG.md` 与主分支代码为准。
 
 ### ✅ 已完成功能
 
@@ -572,14 +572,14 @@ app/src/main/java/com/android/purebilibili
 
 查看完整更新记录：[CHANGELOG.md](CHANGELOG.md)
 
-### 最近更新 (v7.4.1 · 2026-04-04)
+### 最近更新 (v7.4.2 · 2026-04-05)
 
-- 🫧 **Android Native / Miuix 底栏与液态玻璃继续收口**：首页底栏壳层、指示器和设置页共享同一套材质策略，Android 13 现在也能正式启用安卓原生液态玻璃。
-- 🌫️ **指示器折射补齐模糊链路**：选中胶囊内部现在会先模糊再折射，和外层玻璃区域的质感保持一致，不再显得局部过清。
-- 📺 **直播多源切换更稳**：新版 `xlive` 成为主播放来源，遇到 CDN 异常、超时或特定 HTTP 错误时会更积极地切下一条源或重载当前画质。
-- 🔊 **后台播放策略放宽到真正跟随设置**：切后台瞬间的临时状态不再误触发暂停，按 Home 临时离开应用时也不会被错误当成“离开播放页后停止”。
-- 💬 **弹幕设置与同步能力增强**：新增更细的滚动/字重/行高/静态时长配置，屏蔽规则管理更清晰，并补上弹幕云同步状态模型。
-- 🧪 **补强底栏、直播、后台播放与弹幕回归测试**：新增或补强 Android Native/Miuix 底栏、直播多源策略、后台音频保活、弹幕过滤/同步等单元测试。
+- 🎯 **普通视频起播继续向 PiliPlus 对齐**：首个 `WBI` 请求固定从 `qn=80` 起步，可播但降级的结果也会先接住，再交给播放层本地选轨。
+- 🛟 **播放地址获取失败时的回退链更完整**：登录态补上 `APP access_token -> legacy -> guest`，游客态保留 `legacy` 兜底，减少“无法获取任何画质播放地址”的硬失败页。
+- 🌫️ **玻璃封面上的时长与进度更清楚**：历史记录、收藏等封面胶囊统一改成深色玻璃基底，亮封面下也能保持白字对比度。
+- 💬 **弹幕不再整片挤成一团**：行高设置会正确换算成像素行高，调整行高、显示区域和海量模式时终于会真实生效。
+- 🔒 **播放器误触和锁定图标语义修正**：观看时不再响应双指改画面比例，横屏锁定按钮的开锁/闭锁图标与高亮状态也已修正。
+- ⚙️ **构建链更稳**：补上 KSP 增量与 configuration-cache-safe 的目录预创建任务，并把播放器大文件的纯策略逻辑拆出，增量编译稳定性更好。
 
 ### 历史版本
 

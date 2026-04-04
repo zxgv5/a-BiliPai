@@ -83,6 +83,18 @@ class DanmakuConfigPolicyTest {
     }
 
     @Test
+    fun `line height multiplier should be converted to engine px spacing`() {
+        assertEquals(
+            67.2f,
+            resolveDanmakuLayerLineHeightPx(
+                fontSize = 42f,
+                lineHeightMultiplier = 1.6f
+            ),
+            0.001f
+        )
+    }
+
+    @Test
     fun `static to scroll should remap pinned danmaku to scrolling layer`() {
         assertEquals(
             LAYER_TYPE_SCROLL,

@@ -544,7 +544,7 @@ fun DanmakuSettingsPanel(
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "对齐 PiliPlus 的进阶渲染控制",
+                                    text = "更细的弹幕渲染控制",
                                     color = Color.White.copy(0.5f),
                                     fontSize = 11.sp
                                 )

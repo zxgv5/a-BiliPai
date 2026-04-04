@@ -1080,18 +1080,18 @@ object VideoRepository {
                             )
                             continue
                         }
+                        if (payload.quality < dashQn || dashQn !in dashVideoIds) {
+                            com.android.purebilibili.core.util.Logger.d(
+                                "VideoRepo",
+                                " [LoggedIn] DASH returned downgraded playable result: requestedQn=$dashQn, quality=${payload.quality}, dashIds=$dashVideoIds; defer actual selection to playback layer"
+                            )
+                        }
                         if (!shouldAcceptAppApiResultForTargetQuality(
                                 targetQn = dashQn,
                                 returnedQuality = payload.quality,
                                 dashVideoIds = dashVideoIds
                             )
-                        ) {
-                            com.android.purebilibili.core.util.Logger.d(
-                                "VideoRepo",
-                                " [LoggedIn] DASH downgraded qn=$dashQn to quality=${payload.quality}, dashIds=$dashVideoIds, continue fallback chain"
-                            )
-                            continue
-                        }
+                        ) continue
                         com.android.purebilibili.core.util.Logger.d(
                             "VideoRepo",
                             " [LoggedIn] DASH success: quality=${payload.quality}, requestedQn=$dashQn"
@@ -1113,6 +1113,49 @@ object VideoRepository {
                         }
                     }
                 }
+            }
+        }
+
+        if (PlayUrlSource.APP in fallbackOrder) {
+            val canUseAppFallback = shouldCallAccessTokenApi(
+                nowMs = System.currentTimeMillis(),
+                cooldownUntilMs = appApiCooldownUntilMs,
+                hasAccessToken = !TokenManager.accessTokenCache.isNullOrEmpty()
+            )
+            if (canUseAppFallback) {
+                com.android.purebilibili.core.util.Logger.d(
+                    "VideoRepo",
+                    " [LoggedIn] WBI chain exhausted, trying APP access_token fallback..."
+                )
+                for (appQn in dashQualities) {
+                    val appData = fetchPlayUrlWithAccessToken(bvid, cid, appQn, audioLang = audioLang)
+                    if (hasPlayableStreams(appData)) {
+                        val payload = appData ?: continue
+                        val appDashIds = payload.dash?.video?.map { it.id }?.distinct() ?: emptyList()
+                        if (!shouldAcceptAppApiResultForTargetQuality(
+                                targetQn = appQn,
+                                returnedQuality = payload.quality,
+                                dashVideoIds = appDashIds
+                            )
+                        ) {
+                            com.android.purebilibili.core.util.Logger.w(
+                                "VideoRepo",
+                                " [LoggedIn] APP fallback downgraded qn=$appQn to quality=${payload.quality}, dashIds=$appDashIds; use downgraded playable result to avoid hard failure"
+                            )
+                        } else {
+                            com.android.purebilibili.core.util.Logger.d(
+                                "VideoRepo",
+                                " [LoggedIn] APP fallback success: quality=${payload.quality}, requestedQn=$appQn"
+                            )
+                        }
+                        return PlayUrlFetchResult(payload, PlayUrlSource.APP)
+                    }
+                }
+            } else {
+                com.android.purebilibili.core.util.Logger.d(
+                    "VideoRepo",
+                    " [LoggedIn] Skip APP fallback: no access token or cooldown active"
+                )
             }
         }
 

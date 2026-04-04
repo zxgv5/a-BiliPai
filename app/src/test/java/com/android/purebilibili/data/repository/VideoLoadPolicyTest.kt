@@ -43,7 +43,7 @@ class VideoLoadPolicyTest {
     }
 
     @Test
-    fun `resolveInitialStartQuality keeps high quality for vip auto highest`() {
+    fun `resolveInitialStartQuality keeps stable first request for vip auto highest`() {
         val quality = resolveInitialStartQuality(
             targetQuality = 127,
             isAutoHighestQuality = true,
@@ -52,7 +52,20 @@ class VideoLoadPolicyTest {
             auto1080pEnabled = true
         )
 
-        assertEquals(120, quality)
+        assertEquals(80, quality)
+    }
+
+    @Test
+    fun `resolveInitialStartQuality keeps stable first request for explicit low preference`() {
+        val quality = resolveInitialStartQuality(
+            targetQuality = 32,
+            isAutoHighestQuality = false,
+            isLogin = false,
+            isVip = false,
+            auto1080pEnabled = false
+        )
+
+        assertEquals(80, quality)
     }
 
     @Test
@@ -192,8 +205,8 @@ class VideoLoadPolicyTest {
     }
 
     @Test
-    fun `shouldAcceptAppApiResultForTargetQuality rejects downgraded 1080 response without target track`() {
-        assertFalse(
+    fun `shouldAcceptAppApiResultForTargetQuality accepts downgraded playable 1080 response without target track`() {
+        assertTrue(
             shouldAcceptAppApiResultForTargetQuality(
                 targetQn = 80,
                 returnedQuality = 64,
@@ -303,24 +316,24 @@ class VideoLoadPolicyTest {
     }
 
     @Test
-    fun `buildLoggedInPlaybackFallbackOrder keeps PiliPlus parity main path lean`() {
+    fun `buildLoggedInPlaybackFallbackOrder keeps WBI main path but preserves auth recovery chain`() {
         assertEquals(
-            listOf(PlayUrlSource.DASH),
+            listOf(PlayUrlSource.DASH, PlayUrlSource.APP, PlayUrlSource.LEGACY, PlayUrlSource.GUEST),
             buildLoggedInPlaybackFallbackOrder()
         )
     }
 
     @Test
-    fun `buildGuestPlaybackFallbackOrder keeps PiliPlus parity on a single Web WBI path`() {
+    fun `buildGuestPlaybackFallbackOrder keeps legacy fallback when WBI returns empty payload`() {
         assertEquals(
-            listOf(PlayUrlSource.DASH),
+            listOf(PlayUrlSource.DASH, PlayUrlSource.LEGACY),
             buildGuestPlaybackFallbackOrder()
         )
     }
 
     @Test
-    fun `shouldAcceptAppApiResultForTargetQuality rejects downgraded high quality response`() {
-        assertFalse(
+    fun `shouldAcceptAppApiResultForTargetQuality accepts downgraded high quality response for first frame parity`() {
+        assertTrue(
             shouldAcceptAppApiResultForTargetQuality(
                 targetQn = 120,
                 returnedQuality = 80,

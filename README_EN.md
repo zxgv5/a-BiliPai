@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-04-04 · Synced to v7.4.1 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-04-05 · Synced to v7.4.2 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-7.4.1-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-7.4.2-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -388,7 +388,7 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 ## 🗺️ Roadmap
 
 > [!TIP]
-> Roadmap last refreshed on 2026-04-04 (v7.4.1). For current behavior, prefer the latest release notes, `CHANGELOG.md`, and code.
+> Roadmap last refreshed on 2026-04-05 (v7.4.2). For current behavior, prefer the latest release notes, `CHANGELOG.md`, and code.
 
 ### ✅ Completed
 
@@ -430,14 +430,14 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v7.4.1 · 2026-04-04)
+### Latest (v7.4.2 · 2026-04-05)
 
-- 🫧 **Android Native / Miuix bottom bar and liquid-glass polish**: the home chrome, indicator, and settings now share one material strategy, and Android 13 devices are officially allowed to use the native liquid-glass path.
-- 🌫️ **Indicator refraction now includes blur like the rest of the glass**: the selected capsule no longer looks unnaturally clear compared with the outer shell.
-- 📺 **Live playback failover is more resilient**: `xlive` is now the primary source, and the player switches sources or reloads the current quality more aggressively on CDN failures, timeouts, and selected HTTP errors.
-- 🔊 **Background audio now follows playback settings more closely**: temporary state changes during app switching no longer pause playback too eagerly, and pressing Home is no longer misread as “leave playback page and stop”.
-- 💬 **Danmaku controls and sync state got a broader upgrade**: more tuning knobs, clearer block-rule management, and a dedicated cloud-sync status model were added.
-- 🧪 **Regression coverage expanded for chrome, live, background audio, and danmaku**: added or strengthened tests around native/Miuix bottom bars, live source policy, background playback, and danmaku filtering/sync behavior.
+- 🎯 **Regular video startup is now closer to PiliPlus**: the first `WBI` request starts from `qn=80`, and downgraded-but-playable results are accepted so playback can choose the actual track locally.
+- 🛟 **Playback URL fallback is more resilient**: logged-in users now keep `APP access_token -> legacy -> guest` as recovery paths, while guest playback retains a `legacy` fallback for empty `WBI` payloads.
+- 🌫️ **Glass badges on thumbnails are easier to read**: history/favorites/home cover pills now use a darker glass base so duration and watched-progress text stay legible on bright thumbnails.
+- 💬 **Danmaku spacing settings finally take effect**: line-height settings are now converted into the pixel values expected by the renderer, fixing the “comments collapse into each other” issue.
+- 🔒 **Player gesture/lock behavior is cleaner**: pinch-based viewport transforms are no longer active during playback, and the fullscreen lock button now shows the correct lock/unlock icon state.
+- ⚙️ **Build stability improved**: KSP incremental flags, configuration-cache-safe directory prep, and a policy split for the large player section file make incremental builds steadier.
 
 ---
 

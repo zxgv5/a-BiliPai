@@ -12,6 +12,16 @@ plugins {
     // id("com.google.firebase.crashlytics")
 }
 
+abstract class PrepareKspGeneratedDirsTask : org.gradle.api.DefaultTask() {
+    @get:org.gradle.api.tasks.OutputDirectories
+    abstract val outputDirs: org.gradle.api.file.ConfigurableFileCollection
+
+    @org.gradle.api.tasks.TaskAction
+    fun prepare() {
+        outputDirs.files.forEach { it.mkdirs() }
+    }
+}
+
 fun String.toBuildConfigStringLiteral(): String {
     val escaped = this
         .replace("\\", "\\\\")
@@ -67,8 +77,8 @@ android {
         targetSdk = 35  // 保持35以避免Android 16的新运行时行为
         // 🔥🔥 [版本号] 发布新版前记得更新！格式：versionCode +1, versionName 递增
         // 更新日志：CHANGELOG.md
-        versionCode = 137
-        versionName = "7.4.1"
+        versionCode = 138
+        versionName = "7.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -196,6 +206,34 @@ kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
+}
+
+ksp {
+    arg("room.incremental", "true")
+    arg("room.generateKotlin", "true")
+}
+
+val prepareKspGeneratedVariants = listOf(
+    "debug",
+    "debugUnitTest",
+    "release",
+    "releaseUnitTest",
+    "dev",
+    "devUnitTest"
+)
+
+val prepareKspGeneratedDirs by tasks.registering(PrepareKspGeneratedDirsTask::class) {
+    outputDirs.from(
+        prepareKspGeneratedVariants.map { variantName ->
+            layout.buildDirectory.dir("generated/ksp/$variantName")
+        }
+    )
+}
+
+tasks.matching { task ->
+    task.name.startsWith("ksp") && task.name.endsWith("Kotlin")
+}.configureEach {
+    dependsOn(prepareKspGeneratedDirs)
 }
 
 // 🔥 Compose 编译器性能指标 (仅在需要分析时启用，会拖慢编译速度)

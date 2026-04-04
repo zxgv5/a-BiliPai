@@ -197,6 +197,35 @@ internal fun shouldShowBufferingIndicator(
     return isBuffering && !isQualitySwitching && (!isVisible || isScrubbing)
 }
 
+internal enum class FullscreenLockButtonIcon {
+    LOCKED,
+    UNLOCKED
+}
+
+internal data class FullscreenLockButtonVisualState(
+    val icon: FullscreenLockButtonIcon,
+    val contentDescription: String,
+    val highlighted: Boolean
+)
+
+internal fun resolveFullscreenLockButtonVisualState(
+    isScreenLocked: Boolean
+): FullscreenLockButtonVisualState {
+    return if (isScreenLocked) {
+        FullscreenLockButtonVisualState(
+            icon = FullscreenLockButtonIcon.LOCKED,
+            contentDescription = "已锁定",
+            highlighted = true
+        )
+    } else {
+        FullscreenLockButtonVisualState(
+            icon = FullscreenLockButtonIcon.UNLOCKED,
+            contentDescription = "未锁定",
+            highlighted = false
+        )
+    }
+}
+
 internal fun resolvePageSelectorSheetOuterBottomPaddingDp(
     isFullscreen: Boolean
 ): Int {
@@ -442,6 +471,9 @@ fun VideoPlayerOverlay(
     
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val fullscreenLockButtonState = remember(isScreenLocked) {
+        resolveFullscreenLockButtonVisualState(isScreenLocked = isScreenLocked)
+    }
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     val hostLifecycleStarted = lifecycleState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
@@ -1071,9 +1103,16 @@ fun VideoPlayerOverlay(
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(
-                            if (isScreenLocked) CupertinoIcons.Default.LockOpen else CupertinoIcons.Default.Lock,
-                            contentDescription = if (isScreenLocked) "解锁" else "锁定",
-                            tint = if (isScreenLocked) MaterialTheme.colorScheme.primary else Color.White,
+                            when (fullscreenLockButtonState.icon) {
+                                FullscreenLockButtonIcon.LOCKED -> CupertinoIcons.Default.Lock
+                                FullscreenLockButtonIcon.UNLOCKED -> CupertinoIcons.Default.LockOpen
+                            },
+                            contentDescription = fullscreenLockButtonState.contentDescription,
+                            tint = if (fullscreenLockButtonState.highlighted) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                Color.White
+                            },
                             modifier = Modifier.size(overlayVisualPolicy.lockIconSizeDp.dp)
                         )
                     }

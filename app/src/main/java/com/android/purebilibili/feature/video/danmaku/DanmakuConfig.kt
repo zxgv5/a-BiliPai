@@ -88,6 +88,10 @@ class DanmakuConfig {
             // 文字配置 - 字体大小 (增大基准值以提高可见性)
             text.size = 42f * fontScale
             text.typeface = resolveDanmakuTypeface(fontWeight)
+            val layerLineHeightPx = resolveDanmakuLayerLineHeightPx(
+                fontSize = text.size,
+                lineHeightMultiplier = lineHeight
+            )
             
             // [问题9修复] 描边配置 - 提高弹幕可见性
             if (strokeEnabled) {
@@ -104,7 +108,7 @@ class DanmakuConfig {
                 scrollFixedVelocity = scrollFixedVelocity,
                 viewportWidthPx = viewWidth
             )
-            scroll.lineHeight = lineHeight
+            scroll.lineHeight = layerLineHeightPx
 
             val activeBand = resolveActiveDisplayBand(displayAreaRatio)
             val visibleHeightPx = if (viewHeight > 0) {
@@ -131,8 +135,8 @@ class DanmakuConfig {
             scroll.marginTop = topMargin
             top.marginTop = topMargin
             bottom.marginBottom = bottomInset
-            top.lineHeight = lineHeight
-            bottom.lineHeight = lineHeight
+            top.lineHeight = layerLineHeightPx
+            bottom.lineHeight = layerLineHeightPx
             val pinnedDuration = resolveDanmakuPinnedDurationMillis(staticDurationSeconds)
             top.showTimeMin = pinnedDuration
             top.showTimeMax = pinnedDuration
@@ -148,7 +152,7 @@ class DanmakuConfig {
                 "DanmakuConfig",
                 " Applied: opacity=$opacity, fontSize=${text.size}, moveTime=${scroll.moveTime}ms, " +
                     "displayArea=$displayAreaRatio, band=${activeBand.topRatio}-${activeBand.bottomRatio}, " +
-                    "lineHeight=$lineHeight, maxLines=$maxLines, staticMs=$pinnedDuration " +
+                    "lineHeight=$lineHeight, lineHeightPx=$layerLineHeightPx, maxLines=$maxLines, staticMs=$pinnedDuration " +
                     "(w=$viewWidth, h=$viewHeight, visiblePx=$visibleHeightPx, marginTop=$topMargin)"
             )
         }
@@ -202,6 +206,13 @@ internal fun resolveDanmakuScrollDurationMillis(
         1.0f
     }
     return (scaledBySpeed * viewportFactor).toLong().coerceIn(2000L, 20000L)
+}
+
+internal fun resolveDanmakuLayerLineHeightPx(
+    fontSize: Float,
+    lineHeightMultiplier: Float
+): Float {
+    return fontSize * lineHeightMultiplier.coerceIn(0.8f, 2.2f)
 }
 
 internal fun resolveDanmakuPinnedDurationMillis(staticDurationSeconds: Float): Long {
