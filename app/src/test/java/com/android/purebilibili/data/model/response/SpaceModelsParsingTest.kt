@@ -60,13 +60,15 @@ class SpaceModelsParsingTest {
                     "cover": {
                       "url": "http://i0.hdslb.com/bfs/article/cover.jpg"
                     },
+                    "jump_url": "//www.bilibili.com/opus/1056353752004427792",
                     "stat": {
                       "like": "3",
                       "view": "120"
                     }
                   }
                 ],
-                "has_more": true
+                "has_more": true,
+                "offset": "1056353752004427792"
               }
             }
         """.trimIndent()
@@ -78,6 +80,62 @@ class SpaceModelsParsingTest {
         assertEquals("通过 DevTools 绕过 SSR 抓包某站专栏正文接口", article?.title)
         assertEquals(120, article?.stats?.view)
         assertEquals(3, article?.stats?.like)
+        assertEquals(true, response.data?.has_more)
+        assertEquals("1056353752004427792", response.data?.offset)
+        assertEquals("//www.bilibili.com/opus/1056353752004427792", article?.jump_url)
         assertEquals(listOf("http://i0.hdslb.com/bfs/article/cover.jpg"), article?.displayImageUrls())
+    }
+
+    @Test
+    fun decodeSpaceDynamicResponse_acceptsArticleMajorFromSpaceDynamic() {
+        val payload = """
+            {
+              "code": 0,
+              "message": "0",
+              "data": {
+                "items": [
+                  {
+                    "id_str": "1200069469486972932",
+                    "type": "DYNAMIC_TYPE_ARTICLE",
+                    "modules": {
+                      "module_dynamic": {
+                        "major": {
+                          "type": "MAJOR_TYPE_ARTICLE",
+                          "article": {
+                            "id": 1200069469486972932,
+                            "title": "长图文标题",
+                            "desc": "完整长图文摘要",
+                            "covers": [
+                              "https://i0.hdslb.com/bfs/article/cover-a.jpg",
+                              "https://i0.hdslb.com/bfs/article/cover-b.jpg"
+                            ],
+                            "jump_url": "https://www.bilibili.com/opus/1200069469486972932"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+
+        val response = json.decodeFromString<SpaceDynamicResponse>(payload)
+        val article = response.data?.items?.single()
+            ?.modules
+            ?.module_dynamic
+            ?.major
+            ?.article
+
+        assertEquals(1200069469486972932L, article?.id)
+        assertEquals("长图文标题", article?.title)
+        assertEquals("完整长图文摘要", article?.desc)
+        assertEquals(
+            listOf(
+                "https://i0.hdslb.com/bfs/article/cover-a.jpg",
+                "https://i0.hdslb.com/bfs/article/cover-b.jpg"
+            ),
+            article?.covers
+        )
     }
 }

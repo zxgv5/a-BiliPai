@@ -59,6 +59,27 @@ class DynamicApiContractTest {
     }
 
     @Test
+    fun getOpusDetail_usesDocumentedOpusDetailEndpointAndIdQuery() {
+        val method = DynamicApi::class.java.methods.first { it.name == "getOpusDetail" }
+        val get = method.getAnnotation(GET::class.java)
+        assertEquals("x/polymer/web-dynamic/v1/opus/detail", get?.value)
+
+        val firstParamAnnotations = method.parameterAnnotations[0].toList()
+        val idQuery = firstParamAnnotations.filterIsInstance<Query>().firstOrNull()
+        assertEquals("id", idQuery?.value)
+    }
+
+    @Test
+    fun getSpaceArticleList_usesDocumentedOpusSpaceFeedEndpointAndQueryMap() {
+        val method = SpaceApi::class.java.methods.first { it.name == "getSpaceArticleList" }
+        val get = method.getAnnotation(GET::class.java)
+        assertEquals("x/polymer/web-dynamic/v1/opus/feed/space", get?.value)
+
+        val firstParamAnnotations = method.parameterAnnotations[0].toList()
+        assertTrue(firstParamAnnotations.any { it is QueryMap })
+    }
+
+    @Test
     fun getUserDynamicFeed_usesDynamicFeedAllEndpointAndQueryMap() {
         val method = DynamicApi::class.java.methods.first { it.name == "getUserDynamicFeed" }
         val get = method.getAnnotation(GET::class.java)

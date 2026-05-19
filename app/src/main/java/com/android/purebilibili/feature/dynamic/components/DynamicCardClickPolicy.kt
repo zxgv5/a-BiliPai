@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 internal sealed interface DynamicCardPrimaryAction {
     data class OpenVideo(val bvid: String) : DynamicCardPrimaryAction
     data class OpenBangumi(val seasonId: Long, val epId: Long) : DynamicCardPrimaryAction
+    data class OpenArticle(val articleId: Long, val title: String) : DynamicCardPrimaryAction
     data class OpenDynamicDetail(val dynamicId: String) : DynamicCardPrimaryAction
     data class OpenLive(val roomId: Long, val title: String, val uname: String) : DynamicCardPrimaryAction
     data class OpenUser(val mid: Long) : DynamicCardPrimaryAction
@@ -134,6 +135,15 @@ internal fun resolveDynamicCardPrimaryAction(item: DynamicItem): DynamicCardPrim
         return DynamicCardPrimaryAction.OpenVideo(bvid)
     }
 
+    major?.article
+        ?.takeIf { it.id > 0L }
+        ?.let { article ->
+            return DynamicCardPrimaryAction.OpenArticle(
+                articleId = article.id,
+                title = article.title.ifBlank { article.desc }
+            )
+        }
+
     major?.live_rcmd?.let { live ->
         resolveLivePrimaryAction(
             liveRcmd = live,
@@ -177,6 +187,7 @@ internal fun dispatchDynamicCardPrimaryAction(
     action: DynamicCardPrimaryAction,
     onVideoClick: (String) -> Unit,
     onBangumiClick: (Long, Long) -> Unit,
+    onArticleClick: ((Long, String) -> Unit)? = null,
     onDynamicDetailClick: ((String) -> Unit)?,
     onUserClick: (Long) -> Unit,
     onLiveClick: (Long, String, String) -> Unit
@@ -184,6 +195,7 @@ internal fun dispatchDynamicCardPrimaryAction(
     when (action) {
         is DynamicCardPrimaryAction.OpenVideo -> onVideoClick(action.bvid)
         is DynamicCardPrimaryAction.OpenBangumi -> onBangumiClick(action.seasonId, action.epId)
+        is DynamicCardPrimaryAction.OpenArticle -> onArticleClick?.invoke(action.articleId, action.title)
         is DynamicCardPrimaryAction.OpenDynamicDetail -> onDynamicDetailClick?.invoke(action.dynamicId)
         is DynamicCardPrimaryAction.OpenLive -> onLiveClick(action.roomId, action.title, action.uname)
         is DynamicCardPrimaryAction.OpenUser -> onUserClick(action.mid)

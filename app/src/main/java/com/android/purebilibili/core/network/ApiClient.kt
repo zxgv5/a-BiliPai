@@ -1140,7 +1140,7 @@ private const val DYNAMIC_FEED_FEATURES =
     "itemOpusStyle,listOnlyfans"
 
 private const val DYNAMIC_DETAIL_FEATURES =
-    "itemOpusStyle,listOnlyfans,opusBigCover,commentsNewVersion,onlyfansVote,onlyfansAssetsV2,decorationCard,forwardListHidden,ugcDelete"
+    "itemOpusStyle,listOnlyfans,opusBigCover,commentsNewVersion,onlyfansVote,onlyfansAssetsV2,decorationCard,forwardListHidden,ugcDelete,htmlNewStyle"
 
 interface DynamicApi {
     //  添加 features 参数以获取 rich_text_nodes 表情数据
@@ -1170,6 +1170,13 @@ interface DynamicApi {
     //  [降级] 旧版详情接口，某些动态类型在 desktop 接口会返回不支持
     @GET("x/polymer/web-dynamic/v1/detail")
     suspend fun getDynamicDetailFallback(
+        @Query("id") id: String,
+        @Query("features") features: String = DYNAMIC_DETAIL_FEATURES
+    ): DynamicDetailResponse
+
+    // 长图文/专栏 opus 详情接口，htmlNewStyle 用于兼容旧专栏正文结构。
+    @GET("x/polymer/web-dynamic/v1/opus/detail")
+    suspend fun getOpusDetail(
         @Query("id") id: String,
         @Query("features") features: String = DYNAMIC_DETAIL_FEATURES
     ): DynamicDetailResponse
@@ -1321,8 +1328,8 @@ interface SpaceApi {
         @Query("jsonp") jsonp: String = "jsonp"
     ): com.android.purebilibili.data.model.response.SpaceAudioResponse
 
-    //  [New] Get User Article List
-    @GET("x/space/wbi/article")
+    // 空间图文列表。API 文档为 /opus/feed/space，返回 opus_id/content/cover/jump_url。
+    @GET("x/polymer/web-dynamic/v1/opus/feed/space")
     suspend fun getSpaceArticleList(
         @QueryMap params: Map<String, String>
     ): com.android.purebilibili.data.model.response.SpaceArticleResponse

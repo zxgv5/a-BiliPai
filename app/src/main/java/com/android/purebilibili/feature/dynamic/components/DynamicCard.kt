@@ -61,6 +61,7 @@ fun DynamicCardV2(
     onBangumiClick: (Long, Long) -> Unit = { _, _ -> },
     onUserClick: (Long) -> Unit,
     onLiveClick: (roomId: Long, title: String, uname: String) -> Unit = { _, _, _ -> },
+    onArticleClick: ((articleId: Long, title: String) -> Unit)? = null,
     onDynamicDetailClick: ((dynamicId: String) -> Unit)? = null,
     isDetail: Boolean = false,
     gifImageLoader: ImageLoader,
@@ -85,8 +86,9 @@ fun DynamicCardV2(
     val type = DynamicType.fromApiValue(item.type)
     val cardClickAction = remember(item) { resolveDynamicCardPrimaryAction(item) }
     val watchLaterAid = remember(item) { resolveDynamicWatchLaterAid(item) }
-    val isPrimaryClickEnabled = remember(cardClickAction, onDynamicDetailClick) {
+    val isPrimaryClickEnabled = remember(cardClickAction, onArticleClick, onDynamicDetailClick) {
         when (cardClickAction) {
+            is DynamicCardPrimaryAction.OpenArticle -> onArticleClick != null
             is DynamicCardPrimaryAction.OpenDynamicDetail -> onDynamicDetailClick != null
             DynamicCardPrimaryAction.None -> false
             else -> true
@@ -102,6 +104,7 @@ fun DynamicCardV2(
                     action = cardClickAction,
                     onVideoClick = onVideoClick,
                     onBangumiClick = onBangumiClick,
+                    onArticleClick = onArticleClick,
                     onDynamicDetailClick = onDynamicDetailClick,
                     onUserClick = onUserClick,
                     onLiveClick = onLiveClick
@@ -139,6 +142,7 @@ fun DynamicCardV2(
                                 action = DynamicCardPrimaryAction.OpenUser(author.mid),
                                 onVideoClick = onVideoClick,
                                 onBangumiClick = onBangumiClick,
+                                onArticleClick = onArticleClick,
                                 onDynamicDetailClick = onDynamicDetailClick,
                                 onUserClick = onUserClick,
                                 onLiveClick = onLiveClick
@@ -482,6 +486,7 @@ fun DynamicCardV2(
                         action = DynamicCardPrimaryAction.OpenLive(roomId, title, uname),
                         onVideoClick = onVideoClick,
                         onBangumiClick = onBangumiClick,
+                        onArticleClick = onArticleClick,
                         onDynamicDetailClick = onDynamicDetailClick,
                         onUserClick = onUserClick,
                         onLiveClick = onLiveClick

@@ -2,6 +2,7 @@ package com.android.purebilibili.feature.space
 
 import com.android.purebilibili.data.model.response.ArchiveMajor
 import com.android.purebilibili.data.model.response.ArchiveStat
+import com.android.purebilibili.data.model.response.ArticleMajor
 import com.android.purebilibili.data.model.response.DrawItem
 import com.android.purebilibili.data.model.response.DrawMajor
 import com.android.purebilibili.data.model.response.DynamicAuthorModule
@@ -65,7 +66,9 @@ private fun resolveSpaceDynamicSearchText(item: SpaceDynamicItem): String {
         major?.archive?.title,
         major?.archive?.desc,
         major?.opus?.title,
-        major?.opus?.summary?.text
+        major?.opus?.summary?.text,
+        major?.article?.title,
+        major?.article?.desc
     )
         .filter { it.isNotBlank() }
         .joinToString(separator = "\n")
@@ -167,6 +170,16 @@ internal fun resolveSpaceDynamicCardItem(item: SpaceDynamicItem): DynamicItem {
                                         )
                                     },
                                     title = opus.title
+                                )
+                            },
+                            article = major.article?.let { article ->
+                                ArticleMajor(
+                                    id = article.id,
+                                    title = article.title,
+                                    desc = article.desc,
+                                    covers = article.covers,
+                                    jump_url = article.jump_url,
+                                    label = article.label
                                 )
                             }
                         )

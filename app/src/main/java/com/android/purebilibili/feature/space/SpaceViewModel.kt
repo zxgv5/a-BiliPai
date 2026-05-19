@@ -92,6 +92,7 @@ sealed class SpaceUiState {
         val totalArticles: Int = 0,
         val audioPage: Int = 1,
         val articlePage: Int = 1,
+        val articleOffset: String = "",
         val isLoadingAudios: Boolean = false,
         val isLoadingArticles: Boolean = false,
         val hasMoreAudios: Boolean = true,
@@ -1444,19 +1445,22 @@ class SpaceViewModel(
             val page = if (refresh) 1 else current.articlePage + 1
             
             try {
-                val result = fetchSpaceArticleList(currentMid, page)
+                val articleOffset = if (refresh) "" else current.articleOffset
+                val result = fetchSpaceArticleList(currentMid, page, articleOffset)
                  val currentState = _uiState.value as? SpaceUiState.Success ?: return@launch
                  
                  if (result != null && result.code == 0) {
                      val newItems = result.data?.lists ?: emptyList()
                      val allItems = if (refresh) newItems else currentState.articles + newItems
-                     val totalCount = result.data?.total ?: currentState.totalArticles
-                     val hasMore = allItems.size < totalCount.coerceAtLeast(allItems.size)
+                     val totalCount = result.data?.total?.takeIf { it > 0 } ?: allItems.size
+                     val hasMore = result.data?.has_more
+                         ?: (allItems.size < totalCount.coerceAtLeast(allItems.size))
                      
                      _uiState.value = currentState.copy(
                          articles = allItems,
                          totalArticles = totalCount,
                          articlePage = page,
+                         articleOffset = result.data?.offset.orEmpty(),
                          hasMoreArticles = hasMore,
                          isLoadingArticles = false
                      ).markTabResult(SpaceMainTab.CONTRIBUTION)
@@ -1489,15 +1493,16 @@ class SpaceViewModel(
         }
     }
 
-    private suspend fun fetchSpaceArticleList(mid: Long, page: Int): SpaceArticleResponse? {
+    private suspend fun fetchSpaceArticleList(mid: Long, page: Int, offset: String): SpaceArticleResponse? {
         return try {
             if (!ensureWbiKeysLoaded()) return null
             val params = WbiUtils.sign(
                 mapOf(
-                    "mid" to mid.toString(),
-                    "pn" to page.toString(),
-                    "ps" to pageSize.toString(),
-                    "sort" to "publish_time"
+                    "host_mid" to mid.toString(),
+                    "page" to page.toString(),
+                    "offset" to offset,
+                    "type" to "all",
+                    "web_location" to "333.1387"
                 ),
                 cachedImgKey,
                 cachedSubKey

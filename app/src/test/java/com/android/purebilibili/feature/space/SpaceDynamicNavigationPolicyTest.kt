@@ -6,6 +6,7 @@ import com.android.purebilibili.data.model.response.SpaceDynamicItem
 import com.android.purebilibili.data.model.response.SpaceDynamicMajor
 import com.android.purebilibili.data.model.response.SpaceDynamicModules
 import com.android.purebilibili.data.model.response.SpaceDynamicOpus
+import com.android.purebilibili.data.model.response.SpaceDynamicArticle
 import com.android.purebilibili.data.model.response.SpaceDynamicDrawItem
 import com.android.purebilibili.feature.dynamic.components.DynamicCardPrimaryAction
 import com.android.purebilibili.feature.dynamic.components.resolveDynamicCardPrimaryAction
@@ -78,5 +79,34 @@ class SpaceDynamicNavigationPolicyTest {
         )
 
         assertEquals(sharedAction.dynamicId, spaceAction.dynamicId)
+    }
+
+    @Test
+    fun resolveSpaceDynamicClickAction_opensArticleWhenArticleMajorHasId() {
+        val dynamic = SpaceDynamicItem(
+            id_str = "1200069469486972932",
+            type = "DYNAMIC_TYPE_ARTICLE",
+            modules = SpaceDynamicModules(
+                module_dynamic = SpaceDynamicContent(
+                    major = SpaceDynamicMajor(
+                        type = "MAJOR_TYPE_ARTICLE",
+                        article = SpaceDynamicArticle(
+                            id = 1200069469486972932L,
+                            title = "长图文标题"
+                        )
+                    )
+                )
+            )
+        )
+
+        val sharedAction = assertIs<DynamicCardPrimaryAction.OpenArticle>(
+            resolveDynamicCardPrimaryAction(resolveSpaceDynamicCardItem(dynamic))
+        )
+        val spaceAction = assertIs<SpaceDynamicClickAction.OpenArticle>(
+            resolveSpaceDynamicClickAction(dynamic)
+        )
+
+        assertEquals(sharedAction.articleId, spaceAction.articleId)
+        assertEquals("长图文标题", spaceAction.title)
     }
 }

@@ -591,7 +591,8 @@ data class SpaceDynamicMajor(
     val type: String = "",  // MAJOR_TYPE_ARCHIVE, MAJOR_TYPE_DRAW, MAJOR_TYPE_OPUS 等
     val archive: SpaceDynamicArchive? = null,
     val draw: SpaceDynamicDraw? = null,
-    val opus: SpaceDynamicOpus? = null
+    val opus: SpaceDynamicOpus? = null,
+    val article: SpaceDynamicArticle? = null
 )
 
 @kotlinx.serialization.Serializable
@@ -635,6 +636,17 @@ data class SpaceDynamicOpus(
 data class SpaceDynamicOpusSummary(
     val text: String = "",
     val rich_text_nodes: List<SpaceDynamicRichText> = emptyList()
+)
+
+@kotlinx.serialization.Serializable
+data class SpaceDynamicArticle(
+    @Serializable(with = FlexibleLongSerializer::class)
+    val id: Long = 0,
+    val title: String = "",
+    val desc: String = "",
+    val covers: List<String> = emptyList(),
+    val jump_url: String = "",
+    val label: String = ""
 )
 
 @kotlinx.serialization.Serializable
@@ -708,7 +720,9 @@ data class SpaceArticleData(
     val pn: Int = 1,
     val ps: Int = 30,
     @JsonNames("count")
-    val total: Int = 0
+    val total: Int = 0,
+    val has_more: Boolean = false,
+    val offset: String = ""
 )
 
 @Serializable
@@ -722,6 +736,7 @@ data class SpaceArticleItem(
     val summary: String = "",
     val banner_url: String = "",
     val cover: SpaceArticleCover? = null,
+    val jump_url: String = "",
     val template_id: Int = 0,
     val state: Int = 0,
     val author: SpaceArticleAuthor? = null,

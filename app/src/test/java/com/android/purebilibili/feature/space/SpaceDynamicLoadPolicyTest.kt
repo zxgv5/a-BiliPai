@@ -8,6 +8,7 @@ import com.android.purebilibili.data.model.response.SpaceDynamicDesc
 import com.android.purebilibili.data.model.response.SpaceDynamicMajor
 import com.android.purebilibili.data.model.response.SpaceDynamicModules
 import com.android.purebilibili.data.model.response.SpaceDynamicArchive
+import com.android.purebilibili.data.model.response.SpaceDynamicArticle
 import com.android.purebilibili.data.model.response.SpaceDynamicOpus
 import com.android.purebilibili.data.model.response.SpaceDynamicOpusSummary
 import com.android.purebilibili.feature.dynamic.components.DynamicCardMediaAction
@@ -177,5 +178,41 @@ class SpaceDynamicLoadPolicyTest {
 
         assertEquals(listOf("a", "b"), mediaAction.images)
         assertEquals(1, mediaAction.initialIndex)
+    }
+
+    @Test
+    fun resolveSpaceDynamicCardItems_maps_space_article_to_shared_article_card() {
+        val mapped = resolveSpaceDynamicCardItems(
+            listOf(
+                SpaceDynamicItem(
+                    id_str = "1200069469486972932",
+                    type = "DYNAMIC_TYPE_ARTICLE",
+                    modules = SpaceDynamicModules(
+                        module_dynamic = SpaceDynamicContent(
+                            major = SpaceDynamicMajor(
+                                type = "MAJOR_TYPE_ARTICLE",
+                                article = SpaceDynamicArticle(
+                                    id = 1200069469486972932L,
+                                    title = "长图文标题",
+                                    desc = "完整长图文摘要",
+                                    covers = listOf("https://i0.hdslb.com/bfs/article/cover.jpg"),
+                                    jump_url = "https://www.bilibili.com/opus/1200069469486972932"
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        ).first()
+
+        val article = mapped.modules.module_dynamic?.major?.article
+        val mediaAction = assertIs<DynamicCardMediaAction.PreviewImages>(
+            resolveDynamicCardMediaAction(mapped, clickedIndex = 0)
+        )
+
+        assertEquals(1200069469486972932L, article?.id)
+        assertEquals("长图文标题", article?.title)
+        assertEquals("完整长图文摘要", article?.desc)
+        assertEquals(listOf("https://i0.hdslb.com/bfs/article/cover.jpg"), mediaAction.images)
     }
 }

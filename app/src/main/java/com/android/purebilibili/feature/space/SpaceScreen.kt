@@ -1054,6 +1054,7 @@ private fun SpaceContent(
                                     title.ifBlank { uname }
                                 )
                             },
+                            onArticleClick = onArticleClick,
                             onDynamicDetailClick = onDynamicDetailClick,
                             gifImageLoader = context.imageLoader,
                             onCommentClick = { onSpaceDynamicCommentClick(dynamic) },
