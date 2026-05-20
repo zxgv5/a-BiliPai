@@ -39,6 +39,19 @@ class AppNavigationNavigation3BridgeStructureTest {
     }
 
     @Test
+    fun cardPositionManagerKeepsOnlyGeometryFallbackState() {
+        val source = productionSourceExceptCardPositionManager()
+
+        assertFalse(source.contains("CardPositionManager.isReturningFromDetail"))
+        assertFalse(source.contains("CardPositionManager.isQuickReturnFromDetail"))
+        assertFalse(source.contains("CardPositionManager.lastVideoSourceRoute"))
+        assertFalse(source.contains("CardPositionManager.shouldLimitSharedElementsForQuickReturn()"))
+        assertFalse(source.contains("CardPositionManager.markReturning()"))
+        assertFalse(source.contains("CardPositionManager.clearReturning()"))
+        assertFalse(source.contains("CardPositionManager.recordVideoSourceRoute("))
+    }
+
+    @Test
     fun appNavigationUsesNavDisplayAsSingleMainChain() {
         val source = appNavigationSource()
 
@@ -64,5 +77,17 @@ class AppNavigationNavigation3BridgeStructureTest {
             File("app/src/main/java/com/android/purebilibili/navigation/AppNavigation.kt"),
             File("src/main/java/com/android/purebilibili/navigation/AppNavigation.kt")
         ).first { it.exists() }.readText()
+    }
+
+    private fun productionSourceExceptCardPositionManager(): String {
+        val root = listOf(
+            File("app/src/main/java"),
+            File("src/main/java")
+        ).first { it.exists() }
+
+        return root
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.name != "CardPositionManager.kt" }
+            .joinToString(separator = "\n") { it.readText() }
     }
 }

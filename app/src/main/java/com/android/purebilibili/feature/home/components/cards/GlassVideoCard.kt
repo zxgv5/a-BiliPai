@@ -75,6 +75,7 @@ fun GlassVideoCard(
     animationEnabled: Boolean = true,  //  卡片动画开关
     motionTier: MotionTier = MotionTier.Normal,
     transitionEnabled: Boolean = false, //  卡片过渡动画开关
+    isReturningFromVideoDetail: Boolean = false,
     isDataSaverActive: Boolean = false,
     preferLowQualityCover: Boolean = false,
     showCoverGlassBadges: Boolean = true,
@@ -192,7 +193,7 @@ fun GlassVideoCard(
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
             baseAnimationEnabled = animationEnabled,
-            isReturningFromDetail = CardPositionManager.isReturningFromDetail,
+            isReturningFromDetail = isReturningFromVideoDetail,
             isSwitchingCategory = CardPositionManager.isSwitchingCategory
         )
     }

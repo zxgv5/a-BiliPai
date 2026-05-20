@@ -75,6 +75,8 @@ fun StoryVideoCard(
     animationEnabled: Boolean = true,  //  卡片动画开关
     motionTier: MotionTier = MotionTier.Normal,
     transitionEnabled: Boolean = false, //  卡片过渡动画开关
+    isReturningFromVideoDetail: Boolean = false,
+    isQuickReturningFromVideoDetail: Boolean = false,
     scrollLiteModeEnabled: Boolean = false,
     isDataSaverActive: Boolean = false,
     preferLowQualityCover: Boolean = false,
@@ -178,9 +180,10 @@ fun StoryVideoCard(
         hasSharedTransitionScope = sharedTransitionScope != null,
         hasAnimatedVisibilityScope = animatedVisibilityScope != null
     )
+    val isQuickReturnLimited = isReturningFromVideoDetail && isQuickReturningFromVideoDetail
     val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
         coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = CardPositionManager.shouldLimitSharedElementsForQuickReturn()
+        isQuickReturnLimited = isQuickReturnLimited
     )
     
     val cardModifier = if (coverSharedEnabled) {
@@ -201,7 +204,7 @@ fun StoryVideoCard(
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
             baseAnimationEnabled = animationEnabled,
-            isReturningFromDetail = CardPositionManager.isReturningFromDetail,
+            isReturningFromDetail = isReturningFromVideoDetail,
             isSwitchingCategory = CardPositionManager.isSwitchingCategory
         )
     }

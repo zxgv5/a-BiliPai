@@ -27,6 +27,7 @@ internal fun AnimatedContentTransitionScope<NavBackStackEntry>.resolveVideoCardR
     predictiveBackAnimationEnabled: Boolean,
     isTabletLayout: Boolean,
     navMotionSpec: AppNavigationMotionSpec,
+    isQuickReturnFromDetail: Boolean,
     allowNoOpSharedElement: Boolean = false
 ): EnterTransition {
     val sharedTransitionReady =
@@ -38,7 +39,7 @@ internal fun AnimatedContentTransitionScope<NavBackStackEntry>.resolveVideoCardR
             targetRoute = targetRoute,
             cardTransitionEnabled = cardTransitionEnabled,
             predictiveBackAnimationEnabled = predictiveBackAnimationEnabled,
-            isQuickReturnFromDetail = CardPositionManager.isQuickReturnFromDetail,
+            isQuickReturnFromDetail = isQuickReturnFromDetail,
             sharedTransitionReady = sharedTransitionReady,
             isTabletLayout = isTabletLayout,
             allowNoOpSharedElement = allowNoOpSharedElement,

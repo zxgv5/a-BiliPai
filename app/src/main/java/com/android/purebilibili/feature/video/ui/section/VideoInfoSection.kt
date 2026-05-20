@@ -58,7 +58,6 @@ import com.android.purebilibili.core.ui.components.resolveUpStatsText
 import com.android.purebilibili.core.ui.components.UserUpBadge
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
-import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.BgmDetailData
 import com.android.purebilibili.data.model.response.BgmInfo
 import com.android.purebilibili.data.model.response.AiSummaryData
@@ -271,6 +270,7 @@ fun VideoTitleWithDesc(
     onlineCount: String = "",
     showOnlineCount: Boolean = true,
     transitionEnabled: Boolean = false,  // 🔗 共享元素过渡开关
+    isQuickReturnLimitedForSharedElements: Boolean = false,
     animateLayout: Boolean = true,
     onDescriptionUrlClick: ((String) -> Unit)? = null,
     onBgmClick: (BgmInfo) -> Unit = {},
@@ -322,7 +322,7 @@ fun VideoTitleWithDesc(
     )
     val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
         coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = CardPositionManager.shouldLimitSharedElementsForQuickReturn()
+        isQuickReturnLimited = isQuickReturnLimitedForSharedElements
     )
     
     Column(
@@ -657,6 +657,7 @@ fun UpInfoSection(
     followerCount: Int? = null,
     videoCount: Int? = null,
     transitionEnabled: Boolean = false,  // 🔗 共享元素过渡开关
+    isQuickReturnLimitedForSharedElements: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     //  尝试获取共享元素作用域
@@ -669,7 +670,7 @@ fun UpInfoSection(
     )
     val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
         coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = CardPositionManager.shouldLimitSharedElementsForQuickReturn()
+        isQuickReturnLimited = isQuickReturnLimitedForSharedElements
     )
     val upStatsText = resolveUpStatsText(
         followerCount = followerCount,

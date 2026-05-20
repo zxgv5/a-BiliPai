@@ -282,6 +282,7 @@ fun VideoContentSection(
     onToggleTopComment: (ReplyItem) -> Unit = {},
     // 🔗 [新增] 共享元素过渡开关
     transitionEnabled: Boolean = false,
+    isQuickReturnLimitedForSharedElements: Boolean = false,
     // [新增] 收藏夹相关参数
     onFavoriteLongClick: () -> Unit = {},
     favoriteFolderDialogVisible: Boolean = false,
@@ -448,6 +449,7 @@ fun VideoContentSection(
                         onShareClick = onShareClick,
                         contentPadding = PaddingValues(bottom = bottomContentPadding),
                         transitionEnabled = transitionEnabled,
+                        isQuickReturnLimitedForSharedElements = isQuickReturnLimitedForSharedElements,
                         ownerFollowerCount = ownerFollowerCount,
                         ownerVideoCount = ownerVideoCount,
                         showUpBadge = showUpBadge,
@@ -580,6 +582,7 @@ private fun VideoIntroTab(
     onDescriptionUrlClick: ((String) -> Unit)? = null,
     contentPadding: PaddingValues,
     transitionEnabled: Boolean = false,  // 🔗 共享元素过渡开关
+    isQuickReturnLimitedForSharedElements: Boolean = false,
     ownerFollowerCount: Int? = null,
     ownerVideoCount: Int? = null,
     showUpBadge: Boolean = true,
@@ -626,6 +629,7 @@ private fun VideoIntroTab(
 
                 onGloballyPositioned = { },
                 transitionEnabled = transitionEnabled,  // 🔗 传递共享元素开关
+                isQuickReturnLimitedForSharedElements = isQuickReturnLimitedForSharedElements,
                 ownerFollowerCount = ownerFollowerCount,
                 ownerVideoCount = ownerVideoCount,
                 onFavoriteLongClick = onFavoriteLongClick,
@@ -941,6 +945,7 @@ private fun VideoHeaderContent(
     onShareClick: () -> Unit = {},
     onGloballyPositioned: (Float) -> Unit,
     transitionEnabled: Boolean = false,  // 🔗 共享元素过渡开关
+    isQuickReturnLimitedForSharedElements: Boolean = false,
     ownerFollowerCount: Int? = null,
     ownerVideoCount: Int? = null,
     onFavoriteLongClick: () -> Unit = {},
@@ -982,13 +987,15 @@ private fun VideoHeaderContent(
             showOwnerAvatar = true,
             followerCount = ownerFollowerCount,
             videoCount = ownerVideoCount,
-            transitionEnabled = transitionEnabled  // 🔗 传递共享元素开关
+            transitionEnabled = transitionEnabled,  // 🔗 传递共享元素开关
+            isQuickReturnLimitedForSharedElements = isQuickReturnLimitedForSharedElements
         )
 
         VideoTitleWithDesc(
             info = info,
             videoTags = videoTags,
             transitionEnabled = transitionEnabled,  // 🔗 传递共享元素开关
+            isQuickReturnLimitedForSharedElements = isQuickReturnLimitedForSharedElements,
             bgmList = resolveDisplayBgmList(
                 bgmInfo = bgmInfo,
                 bgmInfoList = bgmInfoList

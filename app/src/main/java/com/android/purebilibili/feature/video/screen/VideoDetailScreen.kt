@@ -694,6 +694,10 @@ fun VideoDetailScreen(
     resumePositionMsFromRoute: Long = 0L,
     openCommentRootRpidFromRoute: Long = 0L,
     sourceRouteForSharedElement: String? = null,
+    isReturningFromDetail: Boolean = false,
+    isQuickReturningFromDetail: Boolean = false,
+    onMarkReturningFromDetail: () -> Unit = {},
+    onClearReturningFromDetail: () -> Unit = {},
     transitionEnabled: Boolean = false,
     predictiveBackAnimationEnabled: Boolean = true,
     transitionEnterDurationMillis: Int = 320,
@@ -1189,6 +1193,7 @@ fun VideoDetailScreen(
     //  [修复] 包装的 onBack，在导航之前立即恢复状态栏并通知小窗管理器
     val latestOnBack by rememberUpdatedState(onBack)
     val latestOnHomeClick by rememberUpdatedState(onHomeClick)
+    val latestOnMarkReturningFromDetail by rememberUpdatedState(onMarkReturningFromDetail)
     val topBarActionHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
     var pendingTopBarActionRunnable by remember { mutableStateOf<Runnable?>(null) }
     var isActuallyLeaving by rememberSaveable(currentBvid) { mutableStateOf(false) }
@@ -1201,7 +1206,7 @@ fun VideoDetailScreen(
     }
     val forceCoverOnlyForReturn = resolveForceCoverOnlyForReturn(
         forceCoverOnlyOnReturn = forceCoverOnlyOnReturn,
-        isReturningFromDetail = CardPositionManager.isReturningFromDetail,
+        isReturningFromDetail = isReturningFromDetail,
         isExitTransitionInProgress = isExitTransitionInProgress
     )
 
@@ -1216,8 +1221,8 @@ fun VideoDetailScreen(
             isActuallyLeaving = true // 标记确实是用户通过点击或返回键离开
             isScreenActive = false  // 标记页面正在退出
             forceCoverOnlyOnReturn = true
-            // 进入返回流程时立即标记，确保封面优先接管
-            CardPositionManager.markReturning()
+            // 进入返回流程时立即标记，确保封面优先接管。
+            latestOnMarkReturningFromDetail()
             // 🎯 通知小窗管理器这是用户主动导航离开（用于控制后台音频）
             miniPlayerManager?.markLeavingByNavigation(expectedBvid = currentBvid)
 
@@ -1262,8 +1267,8 @@ fun VideoDetailScreen(
         pendingTopBarActionRunnable = null
         isScreenActive = true
         forceCoverOnlyOnReturn = false
-        if (shouldClearStaleReturningStateOnVideoDetailEnter(CardPositionManager.isReturningFromDetail)) {
-            CardPositionManager.clearReturning()
+        if (shouldClearStaleReturningStateOnVideoDetailEnter(isReturningFromDetail)) {
+            onClearReturningFromDetail()
         }
     }
 
@@ -1274,8 +1279,8 @@ fun VideoDetailScreen(
                 pendingTopBarActionRunnable = null
                 isScreenActive = true
                 forceCoverOnlyOnReturn = false
-                if (shouldClearStaleReturningStateOnVideoDetailEnter(CardPositionManager.isReturningFromDetail)) {
-                    CardPositionManager.clearReturning()
+                if (shouldClearStaleReturningStateOnVideoDetailEnter(isReturningFromDetail)) {
+                    onClearReturningFromDetail()
                 }
             }
         }
@@ -1375,9 +1380,9 @@ fun VideoDetailScreen(
                 )
             )
             if (shouldMarkReturningStateOnVideoDetailDispose(shouldHandleAsNavigationExit)) {
-                CardPositionManager.markReturning()
+                onMarkReturningFromDetail()
             } else {
-                CardPositionManager.clearReturning()
+                onClearReturningFromDetail()
             }
 
             // ⚡ [性能优化] Phase 2: 延迟执行 — 非视觉的系统调用推迟到下一帧
@@ -2716,7 +2721,7 @@ fun VideoDetailScreen(
                     val sharedTransitionScope = LocalSharedTransitionScope.current
                     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
                     val coverSharedElementSourceRoute = resolveForcedReturnCoverSharedElementSourceRoute(
-                        CardPositionManager.lastVideoSourceRoute
+                        sourceRouteForSharedElement
                     )
                     
                     //  为播放器容器添加共享元素标记（受开关控制）
@@ -3013,6 +3018,8 @@ fun VideoDetailScreen(
                                                         },
                                                         // 🔗 [新增] 传递共享元素过渡开关
                                                         transitionEnabled = transitionEnabled,
+                                                        isQuickReturnLimitedForSharedElements =
+                                                            isReturningFromDetail && isQuickReturningFromDetail,
                                                         
                                                         // [新增] 收藏夹相关
                                                         favoriteFolderDialogVisible = showFavoriteFolderDialog,

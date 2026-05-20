@@ -165,6 +165,8 @@ fun ElegantVideoCard(
     animationEnabled: Boolean = true,   //  卡片进场动画开关
     motionTier: MotionTier = MotionTier.Normal,
     transitionEnabled: Boolean = false, //  卡片过渡动画开关
+    isReturningFromVideoDetail: Boolean = false,
+    isQuickReturningFromVideoDetail: Boolean = false,
     scrollLiteModeEnabled: Boolean = false,
     showPublishTime: Boolean = false,   //  是否显示发布时间（搜索结果用）
     isDataSaverActive: Boolean = false, // 🚀 [性能优化] 从父级传入，避免每个卡片重复计算
@@ -368,7 +370,7 @@ fun ElegantVideoCard(
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
             baseAnimationEnabled = animationEnabled,
-            isReturningFromDetail = CardPositionManager.isReturningFromDetail,
+            isReturningFromDetail = isReturningFromVideoDetail,
             isSwitchingCategory = CardPositionManager.isSwitchingCategory
         )
     }
@@ -416,9 +418,10 @@ fun ElegantVideoCard(
             hasSharedTransitionScope = sharedTransitionScope != null,
             hasAnimatedVisibilityScope = animatedVisibilityScope != null
         )
+        val isQuickReturnLimited = isReturningFromVideoDetail && isQuickReturningFromVideoDetail
         val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
             coverSharedEnabled = coverSharedEnabled,
-            isQuickReturnLimited = CardPositionManager.shouldLimitSharedElementsForQuickReturn()
+            isQuickReturnLimited = isQuickReturnLimited
         )
         val homeSharedElementSourceRoute = com.android.purebilibili.navigation.ScreenRoutes.Home.route
         
@@ -510,7 +513,7 @@ fun ElegantVideoCard(
                 }
                 
                 // 简单方案：当 VideoCard 重新组合且处于可见状态时（通常意味着转场结束）
-                // 但 Compose 重组频繁，需结合 CardPositionManager.isReturningFromDetail 状态
+                // 但 Compose 重组频繁，需结合当前返回会话状态
                 
                 // 优化方案：我们在 sharedElement 的 boundsTransform 中无法直接触发副作用
                 // 暂时方案：依靠 SharedTransitionScope 的 renderInOverlay 属性变化难以捕捉

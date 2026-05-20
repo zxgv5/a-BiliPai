@@ -174,7 +174,10 @@ fun HomeScreen(
     onStoryClick: () -> Unit = {},  //  [新增] 竖屏短视频
     onSpaceClick: (Long) -> Unit = {},
     globalHazeState: dev.chrisbanes.haze.HazeState? = null,  //  [新增] 全局底栏模糊状态
-    predictiveStableBackRouteMotionEnabled: Boolean = false
+    predictiveStableBackRouteMotionEnabled: Boolean = false,
+    isReturningFromVideoDetail: Boolean = false,
+    isQuickReturningFromVideoDetail: Boolean = false,
+    onVideoDetailReturnAnimationConsumed: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState(context = kotlin.coroutines.EmptyCoroutineContext)
     val isRefreshing by viewModel.isRefreshing.collectAsState(context = kotlin.coroutines.EmptyCoroutineContext)
@@ -678,11 +681,11 @@ fun HomeScreen(
         isTabletLayout = windowSizeClass.isTablet,
         cardAnimationEnabled = cardAnimationEnabled,
         cardTransitionEnabled = cardTransitionEnabled,
-        isQuickReturnFromDetail = CardPositionManager.isQuickReturnFromDetail
+        isQuickReturnFromDetail = isQuickReturningFromVideoDetail
     )
     // 从详情页返回时延后清理“返回中”状态，避免卡片进场动画在共享转场期间抢跑造成闪屏。
-    LaunchedEffect(returnAnimationSuppressionDurationMs, CardPositionManager.isReturningFromDetail) {
-        if (CardPositionManager.isReturningFromDetail) {
+    LaunchedEffect(returnAnimationSuppressionDurationMs, isReturningFromVideoDetail) {
+        if (isReturningFromVideoDetail) {
             val startElapsedMs = if (returnAnimationStartElapsedMs > 0L) {
                 returnAnimationStartElapsedMs
             } else {
@@ -690,14 +693,14 @@ fun HomeScreen(
             }
             delay(returnAnimationSuppressionDurationMs)
             val actualDurationMs = (SystemClock.elapsedRealtime() - startElapsedMs).coerceAtLeast(0L)
-            val isQuickReturn = CardPositionManager.isQuickReturnFromDetail
+            val isQuickReturn = isQuickReturningFromVideoDetail
             val sharedTransitionReady = cardTransitionEnabled &&
                 CardPositionManager.lastClickedCardBounds != null &&
                 CardPositionManager.isCardFullyVisible
 
             // 先解除“返回中”状态，避免后续埋点统计导致首页手势恢复滞后。
             returnAnimationStartElapsedMs = 0L
-            CardPositionManager.clearReturning()
+            onVideoDetailReturnAnimationConsumed()
 
             val builtinPluginEnabledCount = com.android.purebilibili.core.plugin.PluginManager.getEnabledCount()
             val playerPluginEnabledCount = com.android.purebilibili.core.plugin.PluginManager.getEnabledPlayerPlugins().size
@@ -1374,6 +1377,8 @@ fun HomeScreen(
                                      cardAnimationEnabled = cardAnimationEnabled,
                                      cardMotionTier = cardMotionTier,
                                      cardTransitionEnabled = cardTransitionEnabled,
+                                     isReturningFromVideoDetail = isReturningFromVideoDetail,
+                                     isQuickReturningFromVideoDetail = isQuickReturningFromVideoDetail,
                                      smartVisualGuardEnabled = false,
                                      isDataSaverActive = isDataSaverActive,
                                      preferLowQualityCover = homeSettings.lowQualityHomeCoverInDataSaver,
@@ -1555,7 +1560,7 @@ fun HomeScreen(
             topTabsVisible = resolveHomeTopTabsVisible(
                 isDelayedForCardSettle = delayTopTabsUntilCardSettled,
                 isForwardNavigatingToDetail = hideTopTabsForForwardDetailNav,
-                isReturningFromDetail = CardPositionManager.isReturningFromDetail
+                isReturningFromDetail = isReturningFromVideoDetail
             ),
             topTabsCollapsed = if (isHeaderCollapseEnabled) {
                 areTopTabsAutoCollapsed
@@ -1803,7 +1808,7 @@ fun HomeScreen(
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_START -> {
                     topTabsRevealJob?.cancel()
-                    val returningFromDetail = CardPositionManager.isReturningFromDetail
+                    val returningFromDetail = isReturningFromVideoDetail
                     if (hideTopTabsForForwardDetailNav || returningFromDetail) {
                         if (returningFromDetail) {
                             returnAnimationStartElapsedMs = SystemClock.elapsedRealtime()
@@ -1812,7 +1817,7 @@ fun HomeScreen(
                         val revealDelayMs = resolveHomeTopTabsRevealDelayMs(
                             isReturningFromDetail = returningFromDetail,
                             cardTransitionEnabled = cardTransitionEnabled,
-                            isQuickReturnFromDetail = CardPositionManager.isQuickReturnFromDetail
+                            isQuickReturnFromDetail = isQuickReturningFromVideoDetail
                         )
                         if (revealDelayMs > 0L) {
                             delayTopTabsUntilCardSettled = true
@@ -1828,7 +1833,7 @@ fun HomeScreen(
                     if (!bottomBarVisible && isVideoNavigating) {
                         val bottomBarRestoreDelayMs = resolveBottomBarRestoreDelayMs(
                             cardTransitionEnabled = cardTransitionEnabled,
-                            isQuickReturnFromDetail = CardPositionManager.isQuickReturnFromDetail
+                            isQuickReturnFromDetail = isQuickReturningFromVideoDetail
                         )
                         val resetNavigationDelayMs = if (cardTransitionEnabled) 200L else 80L
                         bottomBarRestoreJob = kotlinx.coroutines.MainScope().launch {

@@ -243,7 +243,7 @@ private fun resolveBiliPaiNavKeyForLegacyBackStackEntry(
             fullscreen = arguments.getBoolean("fullscreen"),
             resumePositionMs = arguments.getLong("resumePositionMs"),
             commentRootRpid = arguments.getLong("commentRootRpid"),
-            sourceRoute = videoSourceRoute ?: CardPositionManager.lastVideoSourceRoute
+            sourceRoute = videoSourceRoute
         )
     }
     return legacyRouteToBiliPaiNavKey(route)
@@ -343,7 +343,6 @@ fun AppNavigation(
         navigation3ReturnSession = navigation3ReturnSession
             .recordVideoSourceRoute(sourceRoute)
             .markDetailEntered(SystemClock.uptimeMillis())
-        CardPositionManager.recordVideoSourceRoute(sourceRoute)
         miniPlayerManager?.isNavigatingToVideo = true
         //  如果有小窗在播放，先退出小窗模式
         //  [修复] 点击新视频时，立即关闭小窗不播放退出动画，避免闪烁
@@ -863,7 +862,6 @@ fun AppNavigation(
             navigation3ReturnSession = navigation3ReturnSession
                 .recordVideoSource(source)
                 .markDetailEntered(SystemClock.uptimeMillis())
-            CardPositionManager.recordVideoSourceRoute(source.route)
             miniPlayerManager?.isNavigatingToVideo = true
             miniPlayerManager?.exitMiniMode(animate = false)
             val key = when (parsedKey) {
@@ -1176,7 +1174,8 @@ fun AppNavigation(
                             cardTransitionEnabled = cardTransitionEnabled,
                             predictiveBackAnimationEnabled = predictiveBackAnimationEnabled,
                             isTabletLayout = isTabletLayout,
-                            navMotionSpec = navMotionSpec
+                            navMotionSpec = navMotionSpec,
+                            isQuickReturnFromDetail = navigation3ReturnSession.isQuickReturnFromDetail
                         )
                     }
                 val bottomTabEnterTransition:
@@ -1272,7 +1271,12 @@ fun AppNavigation(
                                 },
                                 globalHazeState = mainHazeState,
                                 predictiveStableBackRouteMotionEnabled =
-                                    shouldUsePredictiveStableBackRouteMotion(backRouteMotionMode)
+                                    shouldUsePredictiveStableBackRouteMotion(backRouteMotionMode),
+                                isReturningFromVideoDetail = navigation3ReturnSession.isReturningFromDetail,
+                                isQuickReturningFromVideoDetail = navigation3ReturnSession.isQuickReturnFromDetail,
+                                onVideoDetailReturnAnimationConsumed = {
+                                    navigation3ReturnSession = navigation3ReturnSession.clearReturning()
+                                }
                             )
                         BiliPaiNavEntryContentRole.HISTORY -> {
                                 val historyViewModel: HistoryViewModel = viewModel()
@@ -1500,7 +1504,6 @@ fun AppNavigation(
 
                                     if (shouldClearReturningStateWhenDisposingVideoDestination(stillInVideoRoute)) {
                                         navigation3ReturnSession = navigation3ReturnSession.clearReturning()
-                                        CardPositionManager.clearReturning()
                                     }
 
                                     if (
@@ -1530,6 +1533,15 @@ fun AppNavigation(
                                 resumePositionMsFromRoute = videoKey.resumePositionMs,
                                 openCommentRootRpidFromRoute = videoKey.commentRootRpid,
                                 sourceRouteForSharedElement = videoKey.sourceRoute,
+                                isReturningFromDetail = navigation3ReturnSession.isReturningFromDetail,
+                                isQuickReturningFromDetail = navigation3ReturnSession.isQuickReturnFromDetail,
+                                onMarkReturningFromDetail = {
+                                    navigation3ReturnSession =
+                                        navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
+                                },
+                                onClearReturningFromDetail = {
+                                    navigation3ReturnSession = navigation3ReturnSession.clearReturning()
+                                },
                                 transitionEnabled = shouldEnableVideoDetailSharedTransition(
                                     cardTransitionEnabled = cardTransitionEnabled,
                                     predictiveBackAnimationEnabled = predictiveBackAnimationEnabled
@@ -1540,14 +1552,12 @@ fun AppNavigation(
                                 onBack = {
                                     navigation3ReturnSession =
                                         navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
-                                    CardPositionManager.markReturning()
                                     miniPlayerManager?.markLeavingByNavigation(expectedBvid = videoKey.bvid)
                                     navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)
                                 },
                                 onHomeClick = {
                                     navigation3ReturnSession =
                                         navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
-                                    CardPositionManager.markReturning()
                                     miniPlayerManager?.markLeavingByNavigation(expectedBvid = videoKey.bvid)
                                     pushNavigation3Key(BiliPaiNavKey.Home)
                                 },
@@ -1877,7 +1887,12 @@ fun AppNavigation(
                                     },
                                     globalHazeState = mainHazeState,
                                     predictiveStableBackRouteMotionEnabled =
-                                        shouldUsePredictiveStableBackRouteMotion(backRouteMotionMode)
+                                        shouldUsePredictiveStableBackRouteMotion(backRouteMotionMode),
+                                    isReturningFromVideoDetail = navigation3ReturnSession.isReturningFromDetail,
+                                    isQuickReturningFromVideoDetail = navigation3ReturnSession.isQuickReturnFromDetail,
+                                    onVideoDetailReturnAnimationConsumed = {
+                                        navigation3ReturnSession = navigation3ReturnSession.clearReturning()
+                                    }
                                 )
                             }
                         BottomNavItem.DYNAMIC -> {
@@ -2391,7 +2406,6 @@ fun AppNavigation(
                     if (shouldClearReturningStateWhenDisposingVideoDestination(stillInVideoRoute)) {
                         // videoB -> videoA 返回时，不应沿用“返回列表页”的封面接管状态。
                         navigation3ReturnSession = navigation3ReturnSession.clearReturning()
-                        CardPositionManager.clearReturning()
                     }
 
                     //  [修复] 只有在真正退出页面时才进入小窗模式
@@ -2431,6 +2445,14 @@ fun AppNavigation(
                     resumePositionMsFromRoute = resumePositionMsFromRoute,
                     openCommentRootRpidFromRoute = commentRootRpidFromRoute,
                     sourceRouteForSharedElement = navigation3ReturnSession.lastVideoSourceRoute,
+                    isReturningFromDetail = navigation3ReturnSession.isReturningFromDetail,
+                    isQuickReturningFromDetail = navigation3ReturnSession.isQuickReturnFromDetail,
+                    onMarkReturningFromDetail = {
+                        navigation3ReturnSession = navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
+                    },
+                    onClearReturningFromDetail = {
+                        navigation3ReturnSession = navigation3ReturnSession.clearReturning()
+                    },
                     transitionEnabled = shouldEnableVideoDetailSharedTransition(
                         cardTransitionEnabled = cardTransitionEnabled,
                         predictiveBackAnimationEnabled = predictiveBackAnimationEnabled
@@ -2441,7 +2463,6 @@ fun AppNavigation(
                     onBack = { 
                         //  标记正在返回，跳过首页卡片入场动画
                         navigation3ReturnSession = navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
-                        CardPositionManager.markReturning()
                         // 🎯 [新增] 标记通过导航离开，让播放器暂停
                         miniPlayerManager?.markLeavingByNavigation(expectedBvid = bvid)
                         //  [修复] 不再在这里调用 enterMiniMode，由 onDispose 统一处理
@@ -2449,7 +2470,6 @@ fun AppNavigation(
                     },
                     onHomeClick = {
                         navigation3ReturnSession = navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
-                        CardPositionManager.markReturning()
                         miniPlayerManager?.markLeavingByNavigation(expectedBvid = bvid)
                         forceNavigateToHome()
                     },
@@ -2599,7 +2619,7 @@ fun AppNavigation(
                 val fromRoute = initialState.destination.route
                 val articleSharedTransitionReady =
                     fromRoute?.startsWith("article/") == true &&
-                        CardPositionManager.isReturningFromDetail &&
+                        navigation3ReturnSession.isReturningFromDetail &&
                         CardPositionManager.lastClickedCardBounds != null &&
                         CardPositionManager.isCardFullyVisible &&
                         shouldUseArticleNoOpRouteTransition(
@@ -3263,7 +3283,7 @@ fun AppNavigation(
                 val targetRoute = targetState.destination.route
                 val articleSharedTransitionReady =
                     targetRoute == ScreenRoutes.History.route &&
-                        CardPositionManager.isReturningFromDetail &&
+                        navigation3ReturnSession.isReturningFromDetail &&
                         CardPositionManager.lastClickedCardBounds != null &&
                         CardPositionManager.isCardFullyVisible &&
                         shouldUseArticleNoOpRouteTransition(
@@ -3289,10 +3309,8 @@ fun AppNavigation(
                     onBack = { useSharedReturn ->
                         if (useSharedReturn) {
                             navigation3ReturnSession = navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
-                            CardPositionManager.markReturning()
                         } else {
                             navigation3ReturnSession = navigation3ReturnSession.clearReturning()
-                            CardPositionManager.clearReturning()
                         }
                         navController.popBackStack()
                     },
