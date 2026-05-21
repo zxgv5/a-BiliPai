@@ -6,6 +6,19 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 
 private const val BILI_PAI_NAV_ROUTE_BASE_METADATA_KEY = "biliPaiNavRouteBase"
+private const val VIDEO_ROUTE_BASE = "video"
+private val CARD_RETURN_TARGET_ROUTE_BASES = setOf(
+    "home",
+    "dynamic",
+    "search",
+    "history",
+    "favorite",
+    "watch_later",
+    "partition",
+    "dynamic_detail",
+    "space",
+    "category"
+)
 
 internal fun biliPaiNavEntryProvider(
     sourceMetadata: BiliPaiNavSourceMetadata,
@@ -99,7 +112,13 @@ internal fun biliPaiNavEntryMetadata(
         )
         resolveBiliPaiNavContentTransform(transition)
     } + NavDisplay.popTransitionSpec {
-        resolveBiliPaiNavContentTransform(transitions.pop)
+        val transition = resolveBiliPaiNavEntryPopRouteTransition(
+            defaultTransition = transitions.pop,
+            fromRoute = initialState.biliPaiRouteBase(),
+            toRoute = targetState.biliPaiRouteBase(),
+            sourceMetadata = sourceMetadata
+        )
+        resolveBiliPaiNavContentTransform(transition)
     }
 }
 
@@ -110,6 +129,32 @@ internal fun resolveBiliPaiNavEntryForwardRouteTransition(
     visibleBottomBarRoutes: Set<String>
 ): BiliPaiNavRouteTransition {
     return defaultTransition
+}
+
+internal fun resolveBiliPaiNavEntryPopRouteTransition(
+    defaultTransition: BiliPaiNavRouteTransition,
+    fromRoute: String?,
+    toRoute: String?,
+    sourceMetadata: BiliPaiNavSourceMetadata
+): BiliPaiNavRouteTransition {
+    val normalizedFromRoute = normalizeBiliPaiNavEntryRouteBase(fromRoute)
+    val normalizedToRoute = normalizeBiliPaiNavEntryRouteBase(toRoute)
+    val normalizedSourceRoute = normalizeBiliPaiNavEntryRouteBase(sourceMetadata.sourceRoute)
+    val sharedReadyVideoToSourceCard = sourceMetadata.sharedTransitionReady &&
+        normalizedFromRoute == VIDEO_ROUTE_BASE &&
+        normalizedToRoute != null &&
+        normalizedToRoute == normalizedSourceRoute &&
+        isCardReturnTargetRouteBase(normalizedToRoute)
+
+    if (sharedReadyVideoToSourceCard) {
+        return BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
+    }
+
+    return if (defaultTransition == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT) {
+        BiliPaiNavRouteTransition.FALLBACK
+    } else {
+        defaultTransition
+    }
 }
 
 private fun androidx.navigation3.scene.Scene<*>.biliPaiRouteBase(): String? {
@@ -136,21 +181,23 @@ internal fun resolveBiliPaiNavEntryRouteTransitions(
         sourceMetadata.sourceKey == "${sourceMetadata.sourceRoute}:${key.bvid}"
     val sharedReadyVideoPush = recordedMatchingVideoSource &&
         sourceMetadata.sharedTransitionReady
-    val sharedReadyCardReturnTarget = key !is BiliPaiNavKey.VideoDetail &&
-        isCardReturnTargetNavKey(key) &&
-        sourceMetadata.sharedTransitionReady
     val forward = when {
         sharedReadyVideoPush -> BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
         else -> BiliPaiNavRouteTransition.FALLBACK
     }
-    val pop = when {
-        sharedReadyVideoPush || sharedReadyCardReturnTarget ->
-            BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
-        else -> BiliPaiNavRouteTransition.FALLBACK
-    }
     return BiliPaiNavEntryRouteTransitions(
         forward = forward,
-        pop = pop,
-        predictivePop = pop
+        pop = BiliPaiNavRouteTransition.FALLBACK,
+        predictivePop = BiliPaiNavRouteTransition.FALLBACK
     )
+}
+
+private fun normalizeBiliPaiNavEntryRouteBase(route: String?): String? {
+    return route
+        ?.substringBefore("?")
+        ?.takeIf { it.isNotBlank() }
+}
+
+private fun isCardReturnTargetRouteBase(routeBase: String): Boolean {
+    return routeBase in CARD_RETURN_TARGET_ROUTE_BASES
 }

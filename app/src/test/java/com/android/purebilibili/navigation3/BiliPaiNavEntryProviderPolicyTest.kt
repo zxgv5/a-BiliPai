@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 class BiliPaiNavEntryProviderPolicyTest {
 
     @Test
-    fun sharedReadyMetadataDisablesRouteLayerForReturnTarget() {
+    fun sharedReadyMetadataAloneDoesNotDisableRouteLayerForReturnTarget() {
         val transitions = resolveBiliPaiNavEntryRouteTransitions(
             key = BiliPaiNavKey.Home,
             sourceMetadata = BiliPaiNavSourceMetadata(
@@ -22,8 +22,8 @@ class BiliPaiNavEntryProviderPolicyTest {
         )
 
         assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.forward)
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.pop)
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.predictivePop)
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.pop)
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.predictivePop)
     }
 
     @Test
@@ -39,8 +39,8 @@ class BiliPaiNavEntryProviderPolicyTest {
         )
 
         assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.forward)
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.pop)
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.predictivePop)
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.pop)
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.predictivePop)
     }
 
     @Test
@@ -136,8 +136,8 @@ class BiliPaiNavEntryProviderPolicyTest {
         )
 
         assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.forward)
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.pop)
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.predictivePop)
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.pop)
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.predictivePop)
     }
 
     @Test

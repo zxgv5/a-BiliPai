@@ -178,6 +178,57 @@ class BiliPaiNavMotionPolicyTest {
     }
 
     @Test
+    fun entryPop_videoReturnToRecordedSource_keepsRouteLayerNoOp() {
+        val transition = resolveBiliPaiNavEntryPopRouteTransition(
+            defaultTransition = BiliPaiNavRouteTransition.FALLBACK,
+            fromRoute = "video",
+            toRoute = "home",
+            sourceMetadata = BiliPaiNavSourceMetadata(
+                sourceKey = "home:BV1",
+                sourceRoute = "home",
+                clickedBoundsRecorded = true,
+                cardFullyVisible = true
+            )
+        )
+
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transition)
+    }
+
+    @Test
+    fun entryPop_videoReturnToDifferentSource_usesFallbackRouteLayer() {
+        val transition = resolveBiliPaiNavEntryPopRouteTransition(
+            defaultTransition = BiliPaiNavRouteTransition.FALLBACK,
+            fromRoute = "video",
+            toRoute = "dynamic",
+            sourceMetadata = BiliPaiNavSourceMetadata(
+                sourceKey = "home:BV1",
+                sourceRoute = "home",
+                clickedBoundsRecorded = true,
+                cardFullyVisible = true
+            )
+        )
+
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transition)
+    }
+
+    @Test
+    fun entryPop_dynamicDetailReturnWithStaleVideoMetadata_usesFallbackRouteLayer() {
+        val transition = resolveBiliPaiNavEntryPopRouteTransition(
+            defaultTransition = BiliPaiNavRouteTransition.FALLBACK,
+            fromRoute = "dynamic_detail",
+            toRoute = "dynamic",
+            sourceMetadata = BiliPaiNavSourceMetadata(
+                sourceKey = "home:BV1",
+                sourceRoute = "home",
+                clickedBoundsRecorded = true,
+                cardFullyVisible = true
+            )
+        )
+
+        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transition)
+    }
+
+    @Test
     fun navDisplayPredictivePop_withoutSharedReady_usesNavDisplayDefaultPredictivePop() {
         val transition = resolveBiliPaiNavDisplayPredictivePopRouteTransition(
             motionMode = BiliPaiNavMotionMode.PREDICTIVE_NAV_DISPLAY,
