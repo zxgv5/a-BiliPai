@@ -1730,6 +1730,14 @@ class PlayerViewModel : ViewModel() {
                     return
                 }
 
+                if (_isInAudioMode.value) {
+                    val didContinue = handleAudioModePlaybackEnded(ignoreSavedProgress = true)
+                    if (!didContinue) {
+                        _showPlaybackEndedDialog.value = false
+                    }
+                    return
+                }
+
                 val behavior = com.android.purebilibili.core.store.SettingsManager
                     .getPlaybackCompletionBehaviorSync(context)
                 val action = playbackCoordinator.resolvePlaybackEnded(
@@ -2187,6 +2195,52 @@ class PlayerViewModel : ViewModel() {
 
     fun playPreviousRecommended(ignoreSavedProgress: Boolean = false): Boolean {
         return playPreviousPageOrRecommended(ignoreSavedProgress = ignoreSavedProgress)
+    }
+
+    fun playNextAudioModeTrack(ignoreSavedProgress: Boolean = false): Boolean {
+        return playAudioModePlaylistItem(
+            item = PlaylistManager.playNext(),
+            emptyMessage = "播放列表结束",
+            ignoreSavedProgress = ignoreSavedProgress
+        )
+    }
+
+    fun playPreviousAudioModeTrack(ignoreSavedProgress: Boolean = false): Boolean {
+        return playAudioModePlaylistItem(
+            item = PlaylistManager.playPrevious(),
+            emptyMessage = "没有上一个视频",
+            ignoreSavedProgress = ignoreSavedProgress
+        )
+    }
+
+    private fun handleAudioModePlaybackEnded(ignoreSavedProgress: Boolean): Boolean {
+        if (PlaylistManager.playMode.value == PlayMode.REPEAT_ONE) {
+            exoPlayer?.seekTo(0)
+            exoPlayer?.playWhenReady = true
+            exoPlayer?.play()
+            return exoPlayer != null
+        }
+        return playNextAudioModeTrack(ignoreSavedProgress = ignoreSavedProgress)
+    }
+
+    private fun playAudioModePlaylistItem(
+        item: PlaylistItem?,
+        emptyMessage: String,
+        ignoreSavedProgress: Boolean
+    ): Boolean {
+        if (item == null) {
+            toast(emptyMessage)
+            return false
+        }
+        viewModelScope.launch {
+            toast("正在播放: ${item.title}")
+        }
+        loadVideo(
+            bvid = item.bvid,
+            autoPlay = true,
+            ignoreSavedProgress = ignoreSavedProgress
+        )
+        return true
     }
 
     private fun playPreviousFromRecommendedQueue(ignoreSavedProgress: Boolean = false): Boolean {

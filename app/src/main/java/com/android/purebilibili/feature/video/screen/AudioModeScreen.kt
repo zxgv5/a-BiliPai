@@ -116,6 +116,8 @@ internal fun shouldCreateAudioModeStandalonePlayer(
 
 internal fun resolveAudioModePageSwitchAutoPlay(): Boolean = true
 
+internal fun resolveAudioModeCollectionSwitchAutoPlay(): Boolean = true
+
 internal fun shouldShowAudioModePipButton(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.O
 
 internal fun parseAudioModeSleepTimerInput(raw: String): Int? {
@@ -275,6 +277,7 @@ fun AudioModeScreen(
     
     // 📂 [新增] 合集弹窗状态
     var showCollectionSheet by remember { mutableStateOf(false) }
+    var pendingCollectionSwitchBvid by remember { mutableStateOf<String?>(null) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     val controlsBottomPadding = resolveBottomSafeAreaPadding(
         navigationBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
@@ -337,9 +340,15 @@ fun AudioModeScreen(
                 val density = LocalDensity.current
 
                 // 同步 Pager 和 PlaylistManager
-                LaunchedEffect(currentIndex) {
+                LaunchedEffect(currentIndex, playlist, pendingCollectionSwitchBvid) {
                     if (pagerState.currentPage != currentIndex && currentIndex in 0 until playlist.size) {
-                        pagerState.animateScrollToPage(currentIndex)
+                        val currentPlaylistBvid = playlist.getOrNull(currentIndex)?.bvid
+                        if (pendingCollectionSwitchBvid != null && pendingCollectionSwitchBvid == currentPlaylistBvid) {
+                            pagerState.scrollToPage(currentIndex)
+                            pendingCollectionSwitchBvid = null
+                        } else {
+                            pagerState.animateScrollToPage(currentIndex)
+                        }
                     }
                 }
                 // 当用户滑动 Pager 时，直接加载对应视频
@@ -544,9 +553,8 @@ fun AudioModeScreen(
                                     // [修复] 确保 seek 后音量正常
                                     player.volume = 1.0f
                                 },
-                                onPrevious = { viewModel.playPreviousRecommended() },
-                                // 🎵 [修复] 使用分P优先播放方法
-                                onNext = { viewModel.playNextPageOrRecommended() },
+                                onPrevious = { viewModel.playPreviousAudioModeTrack() },
+                                onNext = { viewModel.playNextAudioModeTrack() },
                                 currentPlayMode = currentPlayMode,
                                 onSelectPlayMode = { PlaylistManager.setPlayMode(it) },
                                 useLiquidPlayModeControl = useLiquidPlayModeControl
@@ -777,7 +785,12 @@ fun AudioModeScreen(
                 onDismiss = { showCollectionSheet = false },
                 onEpisodeClick = { episode ->
                     showCollectionSheet = false
-                    viewModel.loadVideo(episode.bvid, cid = episode.cid)
+                    pendingCollectionSwitchBvid = episode.bvid
+                    viewModel.loadVideo(
+                        bvid = episode.bvid,
+                        cid = episode.cid,
+                        autoPlay = resolveAudioModeCollectionSwitchAutoPlay()
+                    )
                 }
             )
         }

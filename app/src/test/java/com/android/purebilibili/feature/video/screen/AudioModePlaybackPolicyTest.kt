@@ -90,4 +90,9 @@ class AudioModePlaybackPolicyTest {
     fun `audio mode page switch forces playback to resume`() {
         assertTrue(resolveAudioModePageSwitchAutoPlay())
     }
+
+    @Test
+    fun `audio mode collection switch forces playback to resume`() {
+        assertTrue(resolveAudioModeCollectionSwitchAutoPlay())
+    }
 }
