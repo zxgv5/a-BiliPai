@@ -36,13 +36,13 @@ class BottomBarMiuixStructureTest {
         assertTrue(source.contains("val collapsedSearchWidth = searchCircleSize"))
         assertTrue(source.contains("label = \"bottomBarDockWidth\""))
         assertTrue(kernelSuRendererSource.contains("label = \"bottomBarDockContentAlpha\""))
-        assertTrue(kernelSuRendererSource.contains("val searchLaunchProgressState = remember { Animatable(0f) }"))
         assertTrue(kernelSuRendererSource.contains("easing = AppMotionEasing.Continuity"))
-        assertTrue(source.contains("launchAdjustedSearchGap = searchGap * (1f - searchLaunchProgress)"))
-        assertTrue(kernelSuRendererSource.contains("scaleX = lerp(1f, searchLaunchSpec.targetScaleX, searchLaunchProgress)"))
-        assertTrue(kernelSuRendererSource.contains("scaleY = lerp(1f, searchLaunchSpec.targetScaleY, searchLaunchProgress)"))
-        assertTrue(kernelSuRendererSource.contains("alpha = lerp(1f, searchLaunchSpec.targetAlpha, searchLaunchProgress)"))
-        assertTrue(kernelSuRendererSource.contains("onSearchLaunchTransitionFinished(searchLaunchKey)"))
+        assertTrue(source.contains("launchAdjustedSearchGap = searchGap"))
+        assertFalse(kernelSuRendererSource.contains("val searchLaunchProgressState = remember { Animatable(0f) }"))
+        assertFalse(kernelSuRendererSource.contains("scaleX = lerp(1f, searchLaunchSpec.targetScaleX, searchLaunchProgress)"))
+        assertFalse(kernelSuRendererSource.contains("scaleY = lerp(1f, searchLaunchSpec.targetScaleY, searchLaunchProgress)"))
+        assertFalse(kernelSuRendererSource.contains("alpha = lerp(1f, searchLaunchSpec.targetAlpha, searchLaunchProgress)"))
+        assertFalse(kernelSuRendererSource.contains("onSearchLaunchTransitionFinished(searchLaunchKey)"))
         assertTrue(kernelSuRendererSource.contains(".width(dockWidth)"))
         assertTrue(kernelSuRendererSource.contains("resolveSharedBottomBarCapsuleShape("))
         assertTrue(kernelSuRendererSource.contains(".kernelSuFloatingDockSurface("))
@@ -341,7 +341,7 @@ class BottomBarMiuixStructureTest {
     }
 
     @Test
-    fun `bottom bar nonlinear search motion does not change indicator dispersion or item scale`() {
+    fun `bottom bar search click keeps capsule scale stable`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
         val refractionProfileSource = source
             .substringAfter("internal fun resolveBottomBarRefractionMotionProfile(")
@@ -353,6 +353,8 @@ class BottomBarMiuixStructureTest {
         assertTrue(searchCapsuleSource.contains("label = \"bottomBarSearchFieldAlpha\""))
         assertTrue(searchCapsuleSource.contains("label = \"bottomBarSearchIconScale\""))
         assertTrue(searchCapsuleSource.contains("label = \"bottomBarSearchLongPressHorizontalScale\""))
+        assertFalse(searchCapsuleSource.contains("rememberBottomBarClickPulseTransform(searchClickPulseKey)"))
+        assertFalse(searchCapsuleSource.contains("searchClickPulseKey += 1"))
         assertTrue(searchCapsuleSource.contains("detectTapGestures("))
         assertTrue(searchCapsuleSource.contains("onLongPress = {"))
         assertTrue(searchCapsuleSource.contains("currentHaptic(HapticType.SELECTION)"))
@@ -376,20 +378,16 @@ class BottomBarMiuixStructureTest {
     }
 
     @Test
-    fun `search launch transition compresses bottom bar before navigation callback`() {
+    fun `search launch does not compress bottom bar before navigation`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
-
-        val spec = resolveBottomBarSearchLaunchTransitionSpec()
-        assertTrue(spec.durationMillis in 160..240)
-        assertTrue(spec.targetScaleX < 1f)
-        assertTrue(spec.targetScaleY < 1f)
-        assertTrue(spec.targetAlpha < 1f)
 
         assertTrue(source.contains("searchLaunchKey: Int = 0"))
         assertTrue(source.contains("onSearchLaunchTransitionFinished: (Int) -> Unit = {}"))
-        assertTrue(source.contains("if (searchLaunchKey <= 0) return@LaunchedEffect"))
-        assertTrue(source.contains("searchLaunchProgressState.animateTo("))
-        assertTrue(source.contains("launchAdjustedSearchGap = searchGap * (1f - searchLaunchProgress)"))
+        assertFalse(source.contains("searchLaunchProgressState.animateTo("))
+        assertFalse(source.contains("scaleX = lerp(1f, searchLaunchSpec.targetScaleX, searchLaunchProgress)"))
+        assertFalse(source.contains("scaleY = lerp(1f, searchLaunchSpec.targetScaleY, searchLaunchProgress)"))
+        assertFalse(source.contains("alpha = lerp(1f, searchLaunchSpec.targetAlpha, searchLaunchProgress)"))
+        assertTrue(source.contains("launchAdjustedSearchGap = searchGap"))
         assertFalse(source.contains("Spacer(modifier = Modifier.width(searchGap))"))
         assertTrue(source.contains("Spacer(modifier = Modifier.width(launchAdjustedSearchGap))"))
     }

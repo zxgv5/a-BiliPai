@@ -341,8 +341,6 @@ fun AppNavigation(
     var inAppSearchKeyword by remember { mutableStateOf<String?>(null) }
     var searchEntryMotionSource by remember { mutableStateOf(SearchEntryMotionSource.NONE) }
     var searchEntryMotionKey by remember { mutableStateOf(0) }
-    var bottomBarSearchLaunchKey by remember { mutableStateOf(0) }
-    var pendingBottomBarSearchLaunchKey by remember { mutableStateOf<Int?>(null) }
     var navigation3ReturnSession by remember { mutableStateOf(BiliPaiReturnSessionState()) }
     val effectiveInitialSearchKeyword = inAppSearchKeyword ?: initialSearchKeyword
     val consumeInitialSearchKeyword: (String) -> Unit = { consumedKeyword ->
@@ -352,12 +350,6 @@ fun AppNavigation(
             onInitialSearchKeywordConsumed(consumedKeyword)
         }
     }
-    fun requestSearchFromBottomBar() {
-        if (pendingBottomBarSearchLaunchKey != null) return
-        bottomBarSearchLaunchKey += 1
-        pendingBottomBarSearchLaunchKey = bottomBarSearchLaunchKey
-    }
-
     // 🚀 [新手引导] 检查是否首次启动
     // 如果是首次启动，则进入 OnboardingScreen，否则进入 HomeScreen
     val welcomePrefs = androidx.compose.runtime.remember { context.getSharedPreferences("app_welcome", android.content.Context.MODE_PRIVATE) }
@@ -596,6 +588,15 @@ fun AppNavigation(
             if (!canNavigate(shouldBypassNavigationDebounceForRoute(route))) return
             if (requestBottomPagerPageForRoute(route, beforeNavigation)) return
             pushNavigation3Key(legacyRouteToBiliPaiNavKey(route), beforeNavigation)
+        }
+        fun navigateToSearchFromBottomBar() {
+            pushNavigation3Route(ScreenRoutes.Search.route) {
+                searchEntryMotionSource = SearchEntryMotionSource.BOTTOM_BAR
+                searchEntryMotionKey += 1
+            }
+        }
+        fun requestSearchFromBottomBar() {
+            navigateToSearchFromBottomBar()
         }
         fun navigateToVideoRouteInNavigation3(route: String, sourceRoute: String?) {
             if (!canNavigate(false)) return
@@ -2188,16 +2189,6 @@ fun AppNavigation(
                                     onDynamicDoubleTap = { dynamicScrollChannel.trySend(Unit) },
                                     onSearchClick = { requestSearchFromBottomBar() },
                                     onSearchKeywordSubmit = submitSearchKeywordInNavigation3,
-                                    searchLaunchKey = bottomBarSearchLaunchKey,
-                                    onSearchLaunchTransitionFinished = { completedKey ->
-                                        if (pendingBottomBarSearchLaunchKey == completedKey) {
-                                            pendingBottomBarSearchLaunchKey = null
-                                            pushNavigation3Route(ScreenRoutes.Search.route) {
-                                                searchEntryMotionSource = SearchEntryMotionSource.BOTTOM_BAR
-                                                searchEntryMotionKey += 1
-                                            }
-                                        }
-                                    },
                                     hazeState = if (isBottomBarBlurEnabled) mainHazeState else null,
                                     isFloating = true,
                                     labelMode = bottomBarLabelMode,
@@ -2230,16 +2221,6 @@ fun AppNavigation(
                                 onDynamicDoubleTap = { dynamicScrollChannel.trySend(Unit) },
                                 onSearchClick = { requestSearchFromBottomBar() },
                                 onSearchKeywordSubmit = submitSearchKeywordInNavigation3,
-                                searchLaunchKey = bottomBarSearchLaunchKey,
-                                onSearchLaunchTransitionFinished = { completedKey ->
-                                    if (pendingBottomBarSearchLaunchKey == completedKey) {
-                                        pendingBottomBarSearchLaunchKey = null
-                                        pushNavigation3Route(ScreenRoutes.Search.route) {
-                                            searchEntryMotionSource = SearchEntryMotionSource.BOTTOM_BAR
-                                            searchEntryMotionKey += 1
-                                        }
-                                    }
-                                },
                                 hazeState = if (isBottomBarBlurEnabled) mainHazeState else null,
                                 isFloating = false,
                                 labelMode = bottomBarLabelMode,

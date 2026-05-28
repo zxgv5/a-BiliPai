@@ -67,7 +67,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer  //  晃动动画
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.lerp as lerpColor
@@ -480,8 +479,7 @@ private fun rememberKernelSuBottomBarSearchLayoutState(
     minEdgePadding: Dp,
     searchEnabled: Boolean,
     searchExpanded: Boolean,
-    hasUiSkinDecoration: Boolean,
-    searchLaunchProgress: Float
+    hasUiSkinDecoration: Boolean
 ): KernelSuBottomBarSearchLayoutState {
     val targetSearchLayout = resolveKernelSuBottomBarSearchLayout(
         containerWidth = containerWidth,
@@ -573,7 +571,7 @@ private fun rememberKernelSuBottomBarSearchLayoutState(
         searchWidth = searchWidth,
         searchHeight = searchHeight,
         searchGap = searchGap,
-        launchAdjustedSearchGap = searchGap * (1f - searchLaunchProgress),
+        launchAdjustedSearchGap = searchGap,
         shellHeight = shellHeight
     )
 }
@@ -1129,24 +1127,6 @@ internal data class BottomBarBackdropPresetProgress(
     val captureProgress: Float,
     val indicatorProgress: Float
 )
-
-internal data class BottomBarSearchLaunchTransitionSpec(
-    val durationMillis: Int,
-    val resetDelayMillis: Long,
-    val targetScaleX: Float,
-    val targetScaleY: Float,
-    val targetAlpha: Float
-)
-
-internal fun resolveBottomBarSearchLaunchTransitionSpec(): BottomBarSearchLaunchTransitionSpec {
-    return BottomBarSearchLaunchTransitionSpec(
-        durationMillis = 190,
-        resetDelayMillis = 220L,
-        targetScaleX = 0.92f,
-        targetScaleY = 0.94f,
-        targetAlpha = 0.82f
-    )
-}
 
 internal data class BottomBarItemMotionVisual(
     val coverage: Float,
@@ -2696,9 +2676,6 @@ private fun KernelSuAlignedBottomBar(
         mutableStateOf(BottomBarSearchExpansionOverride.FOLLOW_AUTO)
     }
     var searchQuery by remember { mutableStateOf("") }
-    val searchLaunchSpec = remember { resolveBottomBarSearchLaunchTransitionSpec() }
-    val searchLaunchProgressState = remember { Animatable(0f) }
-    val searchLaunchProgress = searchLaunchProgressState.value
     val indicatorSettleReboundTransform = rememberBottomBarSettleReboundTransform(
         dampedDragState.settledReleaseCount
     )
@@ -2749,21 +2726,6 @@ private fun KernelSuAlignedBottomBar(
             searchExpansionOverride = BottomBarSearchExpansionOverride.FOLLOW_AUTO
         }
     }
-    LaunchedEffect(searchLaunchKey) {
-        if (searchLaunchKey <= 0) return@LaunchedEffect
-        searchLaunchProgressState.snapTo(0f)
-        searchLaunchProgressState.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = searchLaunchSpec.durationMillis,
-                easing = AppMotionEasing.Continuity
-            )
-        )
-        onSearchLaunchTransitionFinished(searchLaunchKey)
-        delay(searchLaunchSpec.resetDelayMillis)
-        searchLaunchProgressState.snapTo(0f)
-    }
-
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.BottomCenter
@@ -2785,8 +2747,7 @@ private fun KernelSuAlignedBottomBar(
                 minEdgePadding = tuning.outerHorizontalPaddingDp.dp,
                 searchEnabled = searchEnabled,
                 searchExpanded = effectiveSearchExpanded,
-                hasUiSkinDecoration = uiSkinDecoration != null,
-                searchLaunchProgress = searchLaunchProgress
+                hasUiSkinDecoration = uiSkinDecoration != null
             )
             val dockWidth = searchLayoutState.dockWidth
             val searchWidth = searchLayoutState.searchWidth
@@ -2917,8 +2878,7 @@ private fun KernelSuAlignedBottomBar(
             )
             val isBottomBarInteractionActive = dampedDragState.isDragging ||
                 dampedDragState.isRunning ||
-                dampedDragState.pressProgress > BottomBarTransientAlphaThreshold ||
-                searchLaunchProgress > BottomBarTransientAlphaThreshold
+                dampedDragState.pressProgress > BottomBarTransientAlphaThreshold
             val shouldRenderRefractionCaptureRaw = shouldRenderBottomBarRefractionCapture(
                 glassEnabled = glassEnabled,
                 hasBackdrop = backdrop != null,
@@ -3035,13 +2995,7 @@ private fun KernelSuAlignedBottomBar(
             Row(
                 modifier = Modifier
                     .height(shellHeight)
-                    .align(Alignment.Center)
-                    .graphicsLayer {
-                        scaleX = lerp(1f, searchLaunchSpec.targetScaleX, searchLaunchProgress)
-                        scaleY = lerp(1f, searchLaunchSpec.targetScaleY, searchLaunchProgress)
-                        alpha = lerp(1f, searchLaunchSpec.targetAlpha, searchLaunchProgress)
-                        transformOrigin = TransformOrigin(0.5f, 1f)
-                    },
+                    .align(Alignment.Center),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 KernelSuBottomBarShell(
@@ -3748,11 +3702,9 @@ private fun KernelSuBottomBarSearchCapsule(
     accentColor: Color,
     haptic: (HapticType) -> Unit
 ) {
-    var searchClickPulseKey by remember { mutableIntStateOf(0) }
     var searchLongPressHeld by remember { mutableStateOf(false) }
     val currentOnSubmit by rememberUpdatedState(onSubmit)
     val currentHaptic by rememberUpdatedState(haptic)
-    val searchClickPulseTransform = rememberBottomBarClickPulseTransform(searchClickPulseKey)
     val longPressHorizontalScale by animateFloatAsState(
         targetValue = if (searchLongPressHeld) 0.94f else 1f,
         animationSpec = spring(
@@ -3791,8 +3743,7 @@ private fun KernelSuBottomBarSearchCapsule(
             .width(width)
             .height(height)
             .graphicsLayer {
-                scaleX = searchClickPulseTransform.scaleX * longPressHorizontalScale
-                scaleY = searchClickPulseTransform.scaleY
+                scaleX = longPressHorizontalScale
             }
             .kernelSuFloatingDockSurface(
                 shape = shape,
@@ -3816,12 +3767,10 @@ private fun KernelSuBottomBarSearchCapsule(
                                 } finally {
                                     if (searchLongPressHeld) {
                                         searchLongPressHeld = false
-                                        searchClickPulseKey += 1
                                     }
                                 }
                             },
                             onTap = {
-                                searchClickPulseKey += 1
                                 currentHaptic(HapticType.LIGHT)
                                 currentOnSubmit()
                             },
@@ -3841,7 +3790,6 @@ private fun KernelSuBottomBarSearchCapsule(
             query = query,
             onQueryChange = onQueryChange,
             onSubmit = {
-                searchClickPulseKey += 1
                 currentOnSubmit()
             },
             contentColor = contentColor,
