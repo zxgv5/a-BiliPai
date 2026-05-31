@@ -483,6 +483,31 @@ internal fun resolveKernelSuBottomBarSearchHeight(searchExpanded: Boolean): Dp {
     return 64.dp
 }
 
+internal data class BottomBarRefractionCaptureGeometry(
+    val captureMotionOverscan: Dp,
+    val captureEdgeGuard: Dp,
+    val captureHorizontalOverscan: Dp,
+    val captureWidth: Dp
+)
+
+internal fun resolveBottomBarRefractionCaptureGeometry(
+    rawCaptureWidth: Dp,
+    shellHeight: Dp,
+    exportCaptureWidthScale: Float,
+    lensEdgeGuard: Dp = 24.dp
+): BottomBarRefractionCaptureGeometry {
+    val captureMotionOverscan = rawCaptureWidth *
+        ((exportCaptureWidthScale - 1f) / 2f).coerceAtLeast(0f)
+    val captureEdgeGuard = shellHeight / 2f + lensEdgeGuard
+    val captureHorizontalOverscan = captureMotionOverscan.coerceAtLeast(captureEdgeGuard)
+    return BottomBarRefractionCaptureGeometry(
+        captureMotionOverscan = captureMotionOverscan,
+        captureEdgeGuard = captureEdgeGuard,
+        captureHorizontalOverscan = captureHorizontalOverscan,
+        captureWidth = rawCaptureWidth + captureHorizontalOverscan * 2f
+    )
+}
+
 private data class KernelSuBottomBarSearchLayoutState(
     val dockWidth: Dp,
     val dockHeight: Dp,
@@ -3290,27 +3315,20 @@ private fun KernelSuAlignedBottomBar(
                 }
 
                 if (shouldRenderIndicatorContentCapture && backdrop != null) {
-                    // 对齐 KSU：tabsBackdrop 只录制 dock 区域的 item 内容供指示器透镜采样。
-                    // 搜索胶囊独立渲染在捕获层 Box 外部（它有自己的 kernelSuFloatingDockSurface），
-                    // 不纳入 tabsBackdrop 录制范围，否则 shellShape 胶囊端帽会超限采样到搜索槽位，
-                    // 导致指示器在最右端折射出 "第二个右边缘"。
+                    // 对齐 KSU：tabsBackdrop 只录制 dock item 内容和一块无端帽的矩形玻璃参考层。
+                    // 可见 dock 自己已经绘制胶囊外壳；若捕获层也录制 shellShape，最右项指示器会把
+                    // 捕获层或可见层的右端帽再次折射出来，形成截图里的“第二个右边缘”。
                     val rawCaptureWidth = dockWidth
-                    val captureHorizontalOverscan = rawCaptureWidth *
-                        ((refractionMotionProfile.exportCaptureWidthScale - 1f) / 2f).coerceAtLeast(0f)
-                    // 参考 Kyant0/AndroidLiquidGlass 的 LiquidBottomTabs：指示器采样的参考壳体按整条栏全宽录制。
-                    // BiliPai 把搜索拆成独立胶囊后，dock 自身的圆角右端帽落在 dock 与搜索之间的间隙里；指示器移到
-                    // 最右项时把这个孤立端帽折射出来，形成"第二个右边缘"（左侧端帽与真实左缘重合所以无碍，与"只有右侧出问题"吻合）。
-                    // 这里把不可见的参考壳体向右延伸到整条栏最右端（穿过搜索区），右端帽随之移到末项之外，最右项指示器
-                    // 只折射到平整玻璃。捕获层左缘与内部 item 行位置都不变 → 指示器采样对齐不受影响；可见 dock/搜索胶囊
-                    // 单独绘制 → 可见圆角不变。
-                    // 搜索开启时直接延伸穿过搜索区；关闭时 dock 即整条栏，仍需把端帽推出末项的折射半径
-                    // （端帽弧≈ shellHeight/2，外加指示器透镜伸展量），否则最右项依旧会折射出 dock 右端帽。
-                    val captureTrailingExtent = if (searchEnabled) {
-                        launchAdjustedSearchGap + searchWidth
-                    } else {
-                        shellHeight / 2f + 24.dp
-                    }
-                    val captureWidth = rawCaptureWidth + captureHorizontalOverscan * 2f + captureTrailingExtent
+                    val captureGeometry = resolveBottomBarRefractionCaptureGeometry(
+                        rawCaptureWidth = rawCaptureWidth,
+                        shellHeight = shellHeight,
+                        exportCaptureWidthScale = refractionMotionProfile.exportCaptureWidthScale
+                    )
+                    val captureMotionOverscan = captureGeometry.captureMotionOverscan
+                    // 透镜在边缘会横向取样，edge guard 至少覆盖半个端帽和一次透镜伸展量。
+                    val captureEdgeGuard = captureGeometry.captureEdgeGuard
+                    val captureHorizontalOverscan = captureGeometry.captureHorizontalOverscan
+                    val captureWidth = captureGeometry.captureWidth
                     Box(
                         modifier = Modifier
                             .width(captureWidth)
@@ -3324,7 +3342,7 @@ private fun KernelSuAlignedBottomBar(
                             }
                             .drawBackdrop(
                                 backdrop = backdrop,
-                                shape = { shellShape },
+                                shape = { androidx.compose.ui.graphics.RectangleShape },
                                 effects = {
                                     if (materialSpec.vibrancy) {
                                         vibrancy()

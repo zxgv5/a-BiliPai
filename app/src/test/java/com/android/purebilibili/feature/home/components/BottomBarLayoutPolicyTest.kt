@@ -131,6 +131,34 @@ class BottomBarLayoutPolicyTest {
     }
 
     @Test
+    fun `bottom bar refraction capture keeps shell end cap outside lens sample range`() {
+        val geometry = resolveBottomBarRefractionCaptureGeometry(
+            rawCaptureWidth = 353.dp,
+            shellHeight = 64.dp,
+            exportCaptureWidthScale = 1.16f
+        )
+
+        assertEquals(28.24f, geometry.captureMotionOverscan.value, 0.001f)
+        assertEquals(56.dp, geometry.captureEdgeGuard)
+        assertEquals(56.dp, geometry.captureHorizontalOverscan)
+        assertEquals(465.dp, geometry.captureWidth)
+    }
+
+    @Test
+    fun `bottom bar refraction capture uses motion overscan when it exceeds edge guard`() {
+        val geometry = resolveBottomBarRefractionCaptureGeometry(
+            rawCaptureWidth = 353.dp,
+            shellHeight = 64.dp,
+            exportCaptureWidthScale = 1.5f
+        )
+
+        assertEquals(88.25f, geometry.captureMotionOverscan.value, 0.001f)
+        assertEquals(56.dp, geometry.captureEdgeGuard)
+        assertEquals(88.25f, geometry.captureHorizontalOverscan.value, 0.001f)
+        assertEquals(529.5f, geometry.captureWidth.value, 0.001f)
+    }
+
+    @Test
     fun `home top automatically expands bottom search`() {
         assertEquals(
             true,
