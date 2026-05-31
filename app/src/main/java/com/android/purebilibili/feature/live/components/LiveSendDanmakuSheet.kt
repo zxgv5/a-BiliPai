@@ -25,13 +25,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.purebilibili.data.repository.LiveDanmakuPermission
+import com.android.purebilibili.feature.live.LiveDanmakuItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveSendDanmakuSheet(
     onDismiss: () -> Unit,
     onSend: (String) -> Unit,
-    permission: LiveDanmakuPermission = LiveDanmakuPermission()
+    permission: LiveDanmakuPermission = LiveDanmakuPermission(),
+    replyTarget: LiveDanmakuItem? = null
 ) {
     var message by remember { mutableStateOf("") }
     val maxLength = permission.maxLength.takeIf { it > 0 } ?: 40
@@ -43,7 +45,7 @@ fun LiveSendDanmakuSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "发弹幕",
+                text = if (replyTarget == null) "发弹幕" else "回复 @${replyTarget.uname.ifBlank { replyTarget.uid.toString() }}",
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
@@ -64,7 +66,7 @@ fun LiveSendDanmakuSheet(
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         maxLines = 4,
-                        placeholder = { Text("输入弹幕内容") },
+                        placeholder = { Text(if (replyTarget == null) "输入弹幕内容" else "输入回复内容") },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = {
                             val content = message.trim()

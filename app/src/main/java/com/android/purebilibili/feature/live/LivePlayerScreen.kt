@@ -76,7 +76,10 @@ import com.android.purebilibili.data.repository.LiveRedPocketInfo
 import com.android.purebilibili.feature.live.components.LandscapeChatOverlay
 import com.android.purebilibili.feature.live.components.LiveChatSection
 import com.android.purebilibili.feature.live.components.LiveContributionRankSheet
+import com.android.purebilibili.feature.live.components.LiveDmBlockSheet
+import com.android.purebilibili.feature.live.components.LiveEmoticonSheet
 import com.android.purebilibili.feature.live.components.LivePlayerControls
+import com.android.purebilibili.feature.live.components.LiveReportDialog
 import com.android.purebilibili.feature.live.components.LiveSendDanmakuSheet
 import com.android.purebilibili.feature.live.components.LiveSuperChatSection
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
@@ -144,6 +147,8 @@ fun LivePlayerScreen(
     var showShutdownTimerDialog by remember { mutableStateOf(false) }
     var showContributionRankSheet by remember { mutableStateOf(false) }
     var showSendDanmakuSheet by remember { mutableStateOf(false) }
+    var showEmoticonSheet by remember { mutableStateOf(false) }
+    var reportTarget by remember { mutableStateOf<LiveDanmakuItem?>(null) }
     var isFullscreen by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(true) }
     var isInteractionPanelVisible by remember {
@@ -164,6 +169,9 @@ fun LivePlayerScreen(
     val successState = uiState as? LivePlayerState.Success
     val isLiveAudioOnly = successState?.isAudioOnly == true
     val superChatItems by viewModel.superChatItems.collectAsState()
+    val replyTarget by viewModel.replyTarget.collectAsState()
+    val emoticonPackages by viewModel.emoticonPackages.collectAsState()
+    val shieldInfo by viewModel.shieldInfo.collectAsState()
     val roomInfo = successState?.roomInfo ?: RoomInfo()
     val anchorInfo = successState?.anchorInfo ?: AnchorInfo()
     val isPortraitLive = roomInfo.isPortrait
@@ -348,6 +356,16 @@ fun LivePlayerScreen(
         } catch (e: Exception) {
             isPipRequested = false
             Logger.e(TAG, "Enter live PiP failed", e)
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is LivePlayerEvent.Toast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
     
@@ -770,6 +788,7 @@ fun LivePlayerScreen(
                 onToggleBackgroundPlayback = { toggleBackgroundPlayback() },
                 onOpenShutdownTimer = { showShutdownTimerDialog = true },
                 onOpenPlayerInfo = { showPlayerInfoDialog = true },
+                onOpenSend = { showSendDanmakuSheet = true },
                 videoFitDesc = videoAspectRatio.displayName,
                 onVideoFitClick = { showVideoFitMenu = true },
                 currentQualityDesc = currentQualityDesc,
@@ -836,23 +855,23 @@ fun LivePlayerScreen(
             onToggleDanmaku = { viewModel.toggleDanmaku() },
             onLike = { count -> viewModel.clickLike(count) },
             onOpenEmote = {
-                Toast.makeText(context, "可输入表情关键词发送", Toast.LENGTH_SHORT).show()
+                showEmoticonSheet = true
             },
             onUserClick = onUserClick,
             onAtUser = { item ->
-                Toast.makeText(context, "@${item.uname}", Toast.LENGTH_SHORT).show()
+                viewModel.setReplyTarget(item)
+                showSendDanmakuSheet = true
             },
             onBlockUser = { item ->
                 if (item.uid > 0L) {
                     viewModel.shieldUser(item.uid)
-                    Toast.makeText(context, "已屏蔽该发送者", Toast.LENGTH_SHORT).show()
                 } else {
                     val keyword = item.uname.ifBlank { item.text }
                     if (keyword.isNotBlank()) addLiveBlockKeyword(keyword)
                 }
             },
-            onReportDanmaku = {
-                Toast.makeText(context, "已记录举报入口，后续将接入直播举报接口", Toast.LENGTH_SHORT).show()
+            onReportDanmaku = { item ->
+                reportTarget = item
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -1150,12 +1169,36 @@ fun LivePlayerScreen(
     }
 
     if (showBlockDialog) {
-        LiveDanmakuBlockDialog(
-            onConfirm = { keyword ->
-                addLiveBlockKeyword(keyword)
-                showBlockDialog = false
-            },
+        LiveDmBlockSheet(
+            shieldInfo = shieldInfo,
+            isLoggedIn = com.android.purebilibili.core.store.TokenManager.midCache != null,
+            onAddKeyword = { keyword -> viewModel.addShieldKeyword(keyword) },
+            onDeleteKeyword = { keyword -> viewModel.deleteShieldKeyword(keyword) },
+            onUnblockUser = { user -> viewModel.unshieldUser(user.uid) },
+            onSetRule = { type, level -> viewModel.setSilentRule(type, level) },
             onDismiss = { showBlockDialog = false }
+        )
+    }
+
+    reportTarget?.let { target ->
+        LiveReportDialog(
+            target = target,
+            onDismiss = { reportTarget = null },
+            onReport = { reason ->
+                viewModel.reportDanmaku(target, reason)
+                reportTarget = null
+            }
+        )
+    }
+
+    if (showEmoticonSheet) {
+        LiveEmoticonSheet(
+            packages = emoticonPackages,
+            onSelected = { item ->
+                viewModel.sendEmoticon(item)
+                showEmoticonSheet = false
+            },
+            onDismiss = { showEmoticonSheet = false }
         )
     }
 
@@ -1200,12 +1243,16 @@ fun LivePlayerScreen(
 
     if (showSendDanmakuSheet) {
         LiveSendDanmakuSheet(
-            onDismiss = { showSendDanmakuSheet = false },
+            onDismiss = {
+                showSendDanmakuSheet = false
+                viewModel.clearReplyTarget()
+            },
             onSend = { message ->
                 viewModel.sendDanmaku(message)
                 showSendDanmakuSheet = false
             },
-            permission = successState?.danmakuPermission ?: com.android.purebilibili.data.repository.LiveDanmakuPermission()
+            permission = successState?.danmakuPermission ?: com.android.purebilibili.data.repository.LiveDanmakuPermission(),
+            replyTarget = replyTarget
         )
     }
 }

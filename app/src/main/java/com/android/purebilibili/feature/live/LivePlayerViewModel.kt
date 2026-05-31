@@ -7,9 +7,16 @@ import com.android.purebilibili.core.network.NetworkModule
 import com.android.purebilibili.core.store.TokenManager
 import com.android.purebilibili.core.util.CrashReporter
 import com.android.purebilibili.data.model.response.LiveQuality
+import com.android.purebilibili.data.repository.LiveDanmakuReportRequest
+import com.android.purebilibili.data.repository.LiveDanmakuSendRequest
 import com.android.purebilibili.data.repository.LiveDanmakuPermission
+import com.android.purebilibili.data.repository.LiveEmoticonItem
+import com.android.purebilibili.data.repository.LiveEmoticonPackage
 import com.android.purebilibili.data.repository.LiveRedPocketInfo
+import com.android.purebilibili.data.repository.LiveReportReason
 import com.android.purebilibili.data.repository.LiveRepository
+import com.android.purebilibili.data.repository.LiveShieldInfo
+import com.android.purebilibili.data.repository.LiveSuperChatReportRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,7 +58,9 @@ data class LiveDanmakuItem(
     val dmType: Int = 0,
     val idStr: String = "",
     val reportTs: Long = 0,
-    val reportSign: String = ""
+    val reportSign: String = "",
+    val superChatToken: String = "",
+    val superChatReportTs: Long = 0
 )
 
 /**
@@ -111,6 +120,10 @@ sealed class LivePlayerState {
     ) : LivePlayerState()
 }
 
+sealed interface LivePlayerEvent {
+    data class Toast(val message: String) : LivePlayerEvent
+}
+
 /**
  * 直播播放器 ViewModel - 增强版
  */
@@ -131,6 +144,18 @@ class LivePlayerViewModel : ViewModel() {
 
     private val _superChatItems = MutableStateFlow<List<LiveDanmakuItem>>(emptyList())
     val superChatItems = _superChatItems.asStateFlow()
+
+    private val _events = MutableSharedFlow<LivePlayerEvent>(extraBufferCapacity = 16)
+    val events = _events.asSharedFlow()
+
+    private val _replyTarget = MutableStateFlow<LiveDanmakuItem?>(null)
+    val replyTarget = _replyTarget.asStateFlow()
+
+    private val _emoticonPackages = MutableStateFlow<List<LiveEmoticonPackage>>(emptyList())
+    val emoticonPackages = _emoticonPackages.asStateFlow()
+
+    private val _shieldInfo = MutableStateFlow<LiveShieldInfo?>(null)
+    val shieldInfo = _shieldInfo.asStateFlow()
     
     private var danmakuClient: com.android.purebilibili.core.network.socket.LiveDanmakuClient? = null
     private var danmakuCollectJob: Job? = null
@@ -375,11 +400,17 @@ class LivePlayerViewModel : ViewModel() {
             
             if (refreshEmoticons) {
                 launch(Dispatchers.IO) {
-                    val emojiResult = LiveRepository.getEmoticons(roomId)
-                    emojiResult.onSuccess { map ->
-                        com.android.purebilibili.feature.live.components.DanmakuEmoticonMapper.update(map)
+                    LiveRepository.getLiveEmoticonPackages(roomId).onSuccess { packages ->
+                        _emoticonPackages.value = packages
+                        com.android.purebilibili.feature.live.components.DanmakuEmoticonMapper.update(
+                            packages
+                                .flatMap { it.items }
+                                .filter { it.emoji.isNotBlank() && it.url.isNotBlank() }
+                                .associate { it.emoji to it.url }
+                        )
                     }
                 }
+                loadLiveShieldInfo()
             }
         }
     }
@@ -773,7 +804,9 @@ class LivePlayerViewModel : ViewModel() {
                     isSuperChat = true,
                     superChatId = seed.id,
                     superChatPrice = seed.price,
-                    superChatBackgroundColor = seed.backgroundColor
+                    superChatBackgroundColor = seed.backgroundColor,
+                    superChatToken = seed.token,
+                    superChatReportTs = seed.reportTs
                 )
                 prefetchedSuperChats += item
                 _danmakuFlow.tryEmit(item)
@@ -816,11 +849,21 @@ class LivePlayerViewModel : ViewModel() {
         }
         
         viewModelScope.launch {
-            val result = LiveRepository.sendDanmaku(currentRoomId, text)
+            val reply = _replyTarget.value
+            val request = LiveDanmakuSendRequest(
+                roomId = currentRoomId,
+                message = text,
+                replyMid = reply?.uid ?: 0L,
+                replyAttr = if (reply != null) 1 else 0,
+                replyUname = reply?.uname.orEmpty(),
+                replayDmid = reply?.idStr.orEmpty()
+            )
+            val result = LiveRepository.sendDanmaku(request)
             result.onSuccess {
                 // 记录发送的弹幕（用于去重）
                 recentSentDanmaku = text
                 recentSentTime = System.currentTimeMillis()
+                _replyTarget.value = null
                 
                 // 发送成功，模拟一条本地弹幕立即上屏
                 val mid = com.android.purebilibili.core.store.TokenManager.midCache ?: 0L
@@ -835,8 +878,47 @@ class LivePlayerViewModel : ViewModel() {
                 _danmakuFlow.tryEmit(item)
             }.onFailure { e ->
                 android.util.Log.e("LivePlayer", "Send danmaku failed: ${e.message}")
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "弹幕发送失败"))
             }
         }
+    }
+
+    fun sendEmoticon(item: LiveEmoticonItem) {
+        if (currentRoomId == 0L || item.emoji.isBlank()) return
+        viewModelScope.launch {
+            val request = LiveDanmakuSendRequest(
+                roomId = currentRoomId,
+                message = item.emoji,
+                dmType = if (item.emoticonOptions != null) 1 else null,
+                emoticonOptions = item.emoticonOptions
+            )
+            LiveRepository.sendDanmaku(request).onSuccess {
+                recentSentDanmaku = item.emoji
+                recentSentTime = System.currentTimeMillis()
+                val mid = com.android.purebilibili.core.store.TokenManager.midCache ?: 0L
+                _danmakuFlow.tryEmit(
+                    LiveDanmakuItem(
+                        text = item.emoji,
+                        uid = mid,
+                        uname = "我",
+                        isSelf = true,
+                        emoticonUrl = item.url
+                    )
+                )
+            }.onFailure { e ->
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "表情发送失败"))
+            }
+        }
+    }
+
+    fun setReplyTarget(item: LiveDanmakuItem) {
+        if (item.uid <= 0L || item.isSelf) return
+        _replyTarget.value = item
+        _events.tryEmit(LivePlayerEvent.Toast("正在回复 @${item.uname.ifBlank { item.uid.toString() }}"))
+    }
+
+    fun clearReplyTarget() {
+        _replyTarget.value = null
     }
     
     /**
@@ -861,11 +943,112 @@ class LivePlayerViewModel : ViewModel() {
     fun shieldUser(uid: Long) {
         if (uid <= 0L || currentRoomId == 0L) return
         viewModelScope.launch {
-            LiveRepository.shieldLiveUser(
+            LiveRepository.setLiveShieldUser(
                 roomId = currentRoomId,
                 uid = uid,
                 type = 1
-            )
+            ).onSuccess {
+                _events.tryEmit(LivePlayerEvent.Toast("已屏蔽该用户"))
+                loadLiveShieldInfo()
+            }.onFailure { e ->
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "屏蔽失败"))
+            }
+        }
+    }
+
+    fun unshieldUser(uid: Long) {
+        if (uid <= 0L || currentRoomId == 0L) return
+        viewModelScope.launch {
+            LiveRepository.setLiveShieldUser(
+                roomId = currentRoomId,
+                uid = uid,
+                type = 0
+            ).onSuccess {
+                _events.tryEmit(LivePlayerEvent.Toast("已解除屏蔽"))
+                loadLiveShieldInfo()
+            }.onFailure { e ->
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "解除屏蔽失败"))
+            }
+        }
+    }
+
+    fun loadLiveShieldInfo() {
+        val roomId = currentRoomId.takeIf { it > 0L } ?: return
+        viewModelScope.launch {
+            LiveRepository.getLiveShieldInfo(roomId).onSuccess {
+                _shieldInfo.value = it
+            }
+        }
+    }
+
+    fun addShieldKeyword(keyword: String) {
+        viewModelScope.launch {
+            LiveRepository.addLiveShieldKeyword(keyword).onSuccess {
+                _events.tryEmit(LivePlayerEvent.Toast("已添加屏蔽词"))
+                loadLiveShieldInfo()
+            }.onFailure { e ->
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "添加屏蔽词失败"))
+            }
+        }
+    }
+
+    fun deleteShieldKeyword(keyword: String) {
+        viewModelScope.launch {
+            LiveRepository.deleteLiveShieldKeyword(keyword).onSuccess {
+                _events.tryEmit(LivePlayerEvent.Toast("已删除屏蔽词"))
+                loadLiveShieldInfo()
+            }.onFailure { e ->
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "删除屏蔽词失败"))
+            }
+        }
+    }
+
+    fun setSilentRule(type: String, level: Int) {
+        viewModelScope.launch {
+            LiveRepository.setLiveSilentRule(type, level).onSuccess {
+                _events.tryEmit(LivePlayerEvent.Toast("屏蔽规则已更新"))
+                loadLiveShieldInfo()
+            }.onFailure { e ->
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "屏蔽规则设置失败"))
+            }
+        }
+    }
+
+    fun reportDanmaku(item: LiveDanmakuItem, reason: LiveReportReason) {
+        if (currentRoomId == 0L) return
+        viewModelScope.launch {
+            val result = if (item.isSuperChat) {
+                LiveRepository.reportSuperChat(
+                    LiveSuperChatReportRequest(
+                        roomId = currentRoomId,
+                        uid = item.uid,
+                        uname = item.uname,
+                        message = item.text,
+                        messageId = item.superChatId,
+                        token = item.superChatToken,
+                        reportTime = item.superChatReportTs,
+                        reason = reason
+                    )
+                )
+            } else {
+                LiveRepository.reportLiveDanmaku(
+                    LiveDanmakuReportRequest(
+                        roomId = currentRoomId,
+                        uid = item.uid,
+                        uname = item.uname,
+                        message = item.text,
+                        dmid = item.idStr,
+                        reportTime = item.reportTs,
+                        sign = item.reportSign,
+                        reason = reason
+                    )
+                )
+            }
+            result.onSuccess {
+                _events.tryEmit(LivePlayerEvent.Toast("举报已提交"))
+            }.onFailure { e ->
+                _events.tryEmit(LivePlayerEvent.Toast(e.message ?: "举报失败"))
+            }
         }
     }
 
@@ -894,16 +1077,29 @@ class LivePlayerViewModel : ViewModel() {
     private fun applyLiveRealtimeAction(action: LiveRealtimeAction) {
         when (action) {
             LiveRealtimeAction.Ignore -> Unit
-            LiveRealtimeAction.RefreshPlayback -> {
+            is LiveRealtimeAction.RefreshPlayback -> {
                 if (currentRoomId > 0L) {
                     CrashReporter.markLivePlaybackStage("live_realtime_refresh_playback")
-                    loadLiveStreamInternal(
-                        roomId = currentRoomId,
-                        qn = currentRequestedQuality,
-                        showLoading = false,
-                        reconnectDanmaku = false,
-                        refreshEmoticons = false
-                    )
+                    val current = _uiState.value as? LivePlayerState.Success
+                    if (action.playUrlData != null && current != null) {
+                        publishResolvedPlayback(
+                            data = action.playUrlData,
+                            requestedQn = currentRequestedQuality,
+                            roomInfo = current.roomInfo,
+                            anchorInfo = current.anchorInfo,
+                            isFollowing = current.isFollowing,
+                            redPocketInfo = current.redPocketInfo,
+                            danmakuPermission = current.danmakuPermission
+                        )
+                    } else {
+                        loadLiveStreamInternal(
+                            roomId = currentRoomId,
+                            qn = currentRequestedQuality,
+                            showLoading = false,
+                            reconnectDanmaku = false,
+                            refreshEmoticons = false
+                        )
+                    }
                 }
             }
             is LiveRealtimeAction.RoomUnavailable -> {

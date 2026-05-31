@@ -446,11 +446,15 @@ interface BilibiliApi {
         @Query("room_id") roomId: Long,
         @Query("protocol") protocol: String = "0,1",  // 0=http_stream, 1=http_hls
         @Query("format") format: String = "0,1,2",    // 0=flv, 1=ts, 2=fmp4
-        @Query("codec") codec: String = "0,1",        // 0=avc, 1=hevc
+        @Query("codec") codec: String = "0,1,2",      // 0=avc, 1=hevc, 2=av1
         @Query("qn") quality: Int = 150,              // 150=高清
         @Query("platform") platform: String = "web",
         @Query("ptype") ptype: Int = 8,
-        @Query("only_audio") onlyAudio: Int? = null
+        @Query("dolby") dolby: Int = 5,
+        @Query("panorama") panorama: Int = 1,
+        @Query("web_location") webLocation: String = "444.8",
+        @Query("only_audio") onlyAudio: Int? = null,
+        @QueryMap signedParams: Map<String, String> = emptyMap()
     ): LivePlayUrlResponse
     
     //  [新增] 旧版直播流 API - 可靠返回 quality_description 画质列表
@@ -465,11 +469,23 @@ interface BilibiliApi {
     @retrofit2.http.FormUrlEncoded
     @retrofit2.http.POST("https://api.live.bilibili.com/msg/send")
     suspend fun sendLiveDanmaku(
+        @retrofit2.http.QueryMap signedParams: Map<String, String> = emptyMap(),
         @retrofit2.http.Field("roomid") roomId: Long,
         @retrofit2.http.Field("msg") msg: String,
         @retrofit2.http.Field("color") color: Int = 16777215,
         @retrofit2.http.Field("fontsize") fontsize: Int = 25,
         @retrofit2.http.Field("mode") mode: Int = 1,
+        @retrofit2.http.Field("bubble") bubble: Int = 0,
+        @retrofit2.http.Field("room_type") roomType: Int = 0,
+        @retrofit2.http.Field("jumpfrom") jumpFrom: Int = 0,
+        @retrofit2.http.Field("reply_mid") replyMid: Long = 0,
+        @retrofit2.http.Field("reply_attr") replyAttr: Int = 0,
+        @retrofit2.http.Field("reply_uname") replyUname: String = "",
+        @retrofit2.http.Field("replay_dmid") replayDmid: String = "",
+        @retrofit2.http.Field("statistics") statistics: String = "{\"appId\":100,\"platform\":5}",
+        @retrofit2.http.Field("reply_type") replyType: Int = 0,
+        @retrofit2.http.Field("dm_type") dmType: Int? = null,
+        @retrofit2.http.Field("emoticonOptions") emoticonOptions: String? = null,
         @retrofit2.http.Field("rnd") rnd: Long = System.currentTimeMillis() / 1000,
         @retrofit2.http.Field("csrf") csrf: String,
         @retrofit2.http.Field("csrf_token") csrfToken: String
@@ -503,6 +519,73 @@ interface BilibiliApi {
         @retrofit2.http.Field("type") type: Int,
         @retrofit2.http.Field("csrf") csrf: String,
         @retrofit2.http.Field("csrf_token") csrfToken: String
+    ): SimpleApiResponse
+
+    @GET("https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByUser")
+    suspend fun getLiveInfoByUser(
+        @QueryMap params: Map<String, String>
+    ): ResponseBody
+
+    @retrofit2.http.FormUrlEncoded
+    @retrofit2.http.POST("https://api.live.bilibili.com/liveact/user_silent")
+    suspend fun setLiveSilentRule(
+        @retrofit2.http.Field("type") type: String,
+        @retrofit2.http.Field("level") level: Int,
+        @retrofit2.http.Field("csrf") csrf: String,
+        @retrofit2.http.Field("csrf_token") csrfToken: String
+    ): SimpleApiResponse
+
+    @retrofit2.http.FormUrlEncoded
+    @retrofit2.http.POST("https://api.live.bilibili.com/xlive/web-ucenter/v1/banned/AddShieldKeyword")
+    suspend fun addLiveShieldKeyword(
+        @retrofit2.http.Field("keyword") keyword: String,
+        @retrofit2.http.Field("csrf") csrf: String,
+        @retrofit2.http.Field("csrf_token") csrfToken: String
+    ): SimpleApiResponse
+
+    @retrofit2.http.FormUrlEncoded
+    @retrofit2.http.POST("https://api.live.bilibili.com/xlive/web-ucenter/v1/banned/DelShieldKeyword")
+    suspend fun deleteLiveShieldKeyword(
+        @retrofit2.http.Field("keyword") keyword: String,
+        @retrofit2.http.Field("csrf") csrf: String,
+        @retrofit2.http.Field("csrf_token") csrfToken: String
+    ): SimpleApiResponse
+
+    @retrofit2.http.FormUrlEncoded
+    @retrofit2.http.POST("https://api.live.bilibili.com/xlive/web-ucenter/v1/dMReport/Report")
+    suspend fun reportLiveDanmaku(
+        @retrofit2.http.Field("id") id: Long = 0,
+        @retrofit2.http.Field("roomid") roomId: Long,
+        @retrofit2.http.Field("tuid") targetUid: Long,
+        @retrofit2.http.Field("msg") message: String,
+        @retrofit2.http.Field("reason") reason: String,
+        @retrofit2.http.Field("ts") ts: Long,
+        @retrofit2.http.Field("sign") sign: String,
+        @retrofit2.http.Field("reason_id") reasonId: Int,
+        @retrofit2.http.Field("token") token: String = "",
+        @retrofit2.http.Field("dm_type") dmType: Int = 0,
+        @retrofit2.http.Field("id_str") idStr: String,
+        @retrofit2.http.Field("csrf") csrf: String,
+        @retrofit2.http.Field("csrf_token") csrfToken: String,
+        @retrofit2.http.Field("visit_id") visitId: String = ""
+    ): SimpleApiResponse
+
+    @retrofit2.http.FormUrlEncoded
+    @retrofit2.http.POST("https://api.live.bilibili.com/av/v1/SuperChat/report")
+    suspend fun reportLiveSuperChat(
+        @retrofit2.http.Field("id") id: Long,
+        @retrofit2.http.Field("roomid") roomId: Long,
+        @retrofit2.http.Field("uid") uid: Long,
+        @retrofit2.http.Field("msg") message: String,
+        @retrofit2.http.Field("reason") reason: String,
+        @retrofit2.http.Field("ts") ts: Long,
+        @retrofit2.http.Field("sign") sign: String = "",
+        @retrofit2.http.Field("reason_id") reasonId: String,
+        @retrofit2.http.Field("token") token: String = "",
+        @retrofit2.http.Field("id_str") idStr: String,
+        @retrofit2.http.Field("csrf") csrf: String,
+        @retrofit2.http.Field("csrf_token") csrfToken: String,
+        @retrofit2.http.Field("visit_id") visitId: String = ""
     ): SimpleApiResponse
 
     @GET("https://api.live.bilibili.com/av/v1/SuperChat/getMessageList")
