@@ -483,29 +483,17 @@ internal fun resolveKernelSuBottomBarSearchHeight(searchExpanded: Boolean): Dp {
     return 64.dp
 }
 
-internal data class BottomBarRefractionCaptureGeometry(
-    val captureMotionOverscan: Dp,
-    val captureEdgeGuard: Dp,
-    val captureHorizontalOverscan: Dp,
-    val captureWidth: Dp
-)
-
-internal fun resolveBottomBarRefractionCaptureGeometry(
-    rawCaptureWidth: Dp,
-    shellHeight: Dp,
-    exportCaptureWidthScale: Float,
-    lensEdgeGuard: Dp = 24.dp
-): BottomBarRefractionCaptureGeometry {
-    val captureMotionOverscan = rawCaptureWidth *
-        ((exportCaptureWidthScale - 1f) / 2f).coerceAtLeast(0f)
-    val captureEdgeGuard = shellHeight / 2f + lensEdgeGuard
-    val captureHorizontalOverscan = captureMotionOverscan.coerceAtLeast(captureEdgeGuard)
-    return BottomBarRefractionCaptureGeometry(
-        captureMotionOverscan = captureMotionOverscan,
-        captureEdgeGuard = captureEdgeGuard,
-        captureHorizontalOverscan = captureHorizontalOverscan,
-        captureWidth = rawCaptureWidth + captureHorizontalOverscan * 2f
-    )
+internal fun resolveBottomBarRefractionCaptureWidth(
+    dockWidth: Dp,
+    launchAdjustedSearchGap: Dp,
+    searchWidth: Dp,
+    searchEnabled: Boolean
+): Dp {
+    return if (searchEnabled) {
+        dockWidth + launchAdjustedSearchGap + searchWidth
+    } else {
+        dockWidth
+    }
 }
 
 private data class KernelSuBottomBarSearchLayoutState(
@@ -3315,20 +3303,16 @@ private fun KernelSuAlignedBottomBar(
                 }
 
                 if (shouldRenderIndicatorContentCapture && backdrop != null) {
-                    // 对齐 KSU：tabsBackdrop 只录制 dock item 内容和一块无端帽的矩形玻璃参考层。
-                    // 可见 dock 自己已经绘制胶囊外壳；若捕获层也录制 shellShape，最右项指示器会把
-                    // 捕获层或可见层的右端帽再次折射出来，形成截图里的“第二个右边缘”。
-                    val rawCaptureWidth = dockWidth
-                    val captureGeometry = resolveBottomBarRefractionCaptureGeometry(
-                        rawCaptureWidth = rawCaptureWidth,
-                        shellHeight = shellHeight,
-                        exportCaptureWidthScale = refractionMotionProfile.exportCaptureWidthScale
+                    // 对齐 KSU LiquidBottomTabs：tabsBackdrop 录制整条可见栏的同一个胶囊。
+                    // BiliPai 的搜索是独立可见胶囊，但折射参考层必须覆盖 dock + gap + search，
+                    // 否则 dock 右端帽会落在末项透镜采样范围内，提前折射成“第二个右边缘”。
+                    val rawCaptureWidth = resolveBottomBarRefractionCaptureWidth(
+                        dockWidth = dockWidth,
+                        launchAdjustedSearchGap = launchAdjustedSearchGap,
+                        searchWidth = searchWidth,
+                        searchEnabled = searchEnabled
                     )
-                    val captureMotionOverscan = captureGeometry.captureMotionOverscan
-                    // 透镜在边缘会横向取样，edge guard 至少覆盖半个端帽和一次透镜伸展量。
-                    val captureEdgeGuard = captureGeometry.captureEdgeGuard
-                    val captureHorizontalOverscan = captureGeometry.captureHorizontalOverscan
-                    val captureWidth = captureGeometry.captureWidth
+                    val captureWidth = rawCaptureWidth
                     Box(
                         modifier = Modifier
                             .width(captureWidth)
@@ -3337,12 +3321,11 @@ private fun KernelSuAlignedBottomBar(
                             .alpha(0f)
                             .layerBackdrop(tabsBackdrop)
                             .graphicsLayer {
-                                translationX = presetPanelOffsets.exportPanelOffsetPx -
-                                    captureHorizontalOverscan.toPx()
+                                translationX = presetPanelOffsets.exportPanelOffsetPx
                             }
                             .drawBackdrop(
                                 backdrop = backdrop,
-                                shape = { androidx.compose.ui.graphics.RectangleShape },
+                                shape = { shellShape },
                                 effects = {
                                     if (materialSpec.vibrancy) {
                                         vibrancy()
@@ -3424,7 +3407,6 @@ private fun KernelSuAlignedBottomBar(
                     ) {
                         Box(
                             modifier = Modifier
-                                .offset(x = captureHorizontalOverscan)
                                 .width(dockWidth)
                                 .height(dockHeight)
                                 .align(Alignment.CenterStart)
@@ -3491,44 +3473,28 @@ private fun KernelSuAlignedBottomBar(
                                 }
                             }
                         }
-                    }
 
-                    if (searchEnabled) {
-                        Box(
-                            modifier = Modifier
-                                .offset(x = dockWidth + launchAdjustedSearchGap)
-                                .width(searchWidth)
-                                .height(searchHeight)
-                                .kernelSuFloatingDockSurface(
-                                    shape = shellShape,
-                                    backdrop = backdrop,
-                                    containerColor = containerColor,
-                                    blurEnabled = blurEnabled,
-                                    glassEnabled = glassEnabled,
-                                    blurRadius = tuning.shellBlurRadiusDp.dp,
-                                    hazeState = hazeState,
-                                    motionTier = motionTier,
-                                    isTransitionRunning = isTransitionRunning,
-                                    forceLowBlurBudget = forceLowBlurBudget,
-                                    liquidGlassPreset = liquidGlassPreset,
-                                    isScrolling = isFeedScrollInProgress,
-                                    materialScrollProgress = materialScrollProgress,
-                                    materialMotionProgress = motionProgress,
-                                    materialPressProgress = effectivePressProgress
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            KernelSuBottomBarSearchVisualContent(
-                                expanded = effectiveSearchExpanded,
-                                query = searchQuery,
-                                onQueryChange = {},
-                                onSubmit = {},
-                                contentColor = unselectedColor,
-                                accentColor = selectedColor,
-                                iconScale = if (effectiveSearchExpanded) 0.92f else 1f,
-                                fieldAlpha = if (effectiveSearchExpanded) 1f else 0f,
-                                interactive = false
-                            )
+                        if (searchEnabled) {
+                            Box(
+                                modifier = Modifier
+                                    .offset(x = dockWidth + launchAdjustedSearchGap)
+                                    .width(searchWidth)
+                                    .height(searchHeight)
+                                    .align(Alignment.CenterStart),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                KernelSuBottomBarSearchVisualContent(
+                                    expanded = effectiveSearchExpanded,
+                                    query = searchQuery,
+                                    onQueryChange = {},
+                                    onSubmit = {},
+                                    contentColor = unselectedColor,
+                                    accentColor = selectedColor,
+                                    iconScale = if (effectiveSearchExpanded) 0.92f else 1f,
+                                    fieldAlpha = if (effectiveSearchExpanded) 1f else 0f,
+                                    interactive = false
+                                )
+                            }
                         }
                     }
                 }

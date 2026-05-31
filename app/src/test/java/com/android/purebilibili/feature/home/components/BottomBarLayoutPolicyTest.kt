@@ -131,31 +131,27 @@ class BottomBarLayoutPolicyTest {
     }
 
     @Test
-    fun `bottom bar refraction capture keeps shell end cap outside lens sample range`() {
-        val geometry = resolveBottomBarRefractionCaptureGeometry(
-            rawCaptureWidth = 353.dp,
-            shellHeight = 64.dp,
-            exportCaptureWidthScale = 1.16f
+    fun `bottom bar refraction capture follows full visible bar while search is enabled`() {
+        val captureWidth = resolveBottomBarRefractionCaptureWidth(
+            dockWidth = 279.dp,
+            launchAdjustedSearchGap = 10.dp,
+            searchWidth = 64.dp,
+            searchEnabled = true
         )
 
-        assertEquals(28.24f, geometry.captureMotionOverscan.value, 0.001f)
-        assertEquals(56.dp, geometry.captureEdgeGuard)
-        assertEquals(56.dp, geometry.captureHorizontalOverscan)
-        assertEquals(465.dp, geometry.captureWidth)
+        assertEquals(353.dp, captureWidth)
     }
 
     @Test
-    fun `bottom bar refraction capture uses motion overscan when it exceeds edge guard`() {
-        val geometry = resolveBottomBarRefractionCaptureGeometry(
-            rawCaptureWidth = 353.dp,
-            shellHeight = 64.dp,
-            exportCaptureWidthScale = 1.5f
+    fun `bottom bar refraction capture matches dock width without search`() {
+        val captureWidth = resolveBottomBarRefractionCaptureWidth(
+            dockWidth = 353.dp,
+            launchAdjustedSearchGap = 10.dp,
+            searchWidth = 64.dp,
+            searchEnabled = false
         )
 
-        assertEquals(88.25f, geometry.captureMotionOverscan.value, 0.001f)
-        assertEquals(56.dp, geometry.captureEdgeGuard)
-        assertEquals(88.25f, geometry.captureHorizontalOverscan.value, 0.001f)
-        assertEquals(529.5f, geometry.captureWidth.value, 0.001f)
+        assertEquals(353.dp, captureWidth)
     }
 
     @Test
