@@ -161,7 +161,6 @@ import io.github.alexzhirkevich.cupertino.icons.outlined.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 //  共享元素过渡
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -2769,26 +2768,21 @@ fun VideoDetailScreen(
             if (miniPlayerManager != null && shouldCacheMiniPlayer) {
                 lastCachedMiniPlayerBvid = currentBvid
                 
+                // PiP 判断依赖 MiniPlayerManager 的 active/player/playing/bvid 状态。
+                // 这一步必须先于后台缓存完成，避免竖屏全屏快速进入 PiP 时拿到旧状态而暂停。
+                miniPlayerManager.setVideoInfo(
+                    bvid = currentBvid,
+                    title = info.title,
+                    cover = info.pic,
+                    owner = info.owner.name,
+                    cid = info.cid,  //  传递 cid 用于弹幕加载
+                    aid = info.aid,
+                    externalPlayer = playerState.player,
+                    fromLeft = com.android.purebilibili.core.util.CardPositionManager.isCardOnLeft  //  传递入场方向
+                )
+                
                 launch(Dispatchers.Default) {
-                    com.android.purebilibili.core.util.Logger.d("VideoDetailScreen", "🔄 [Background] Preparing MiniPlayer info...")
-                    
-                    // 准备数据
-                    // 注意：这里访问外部变量需要确保线程安全，但在 Compose 中读取 State 是安全的
-                    // setVideoInfo 只是设置数据，通常是线程安全的或者内部做了处理
-                    // cacheUiState 涉及序列化，必须在后台
-                    
-                    withContext(Dispatchers.Main) {
-                        miniPlayerManager.setVideoInfo(
-                            bvid = currentBvid,
-                            title = info.title,
-                            cover = info.pic,
-                            owner = info.owner.name,
-                            cid = info.cid,  //  传递 cid 用于弹幕加载
-                            aid = info.aid,
-                            externalPlayer = playerState.player,
-                            fromLeft = com.android.purebilibili.core.util.CardPositionManager.isCardOnLeft  //  传递入场方向
-                        )
-                    }
+                    com.android.purebilibili.core.util.Logger.d("VideoDetailScreen", "🔄 [Background] Caching MiniPlayer UI state...")
                     
                     // 序列化缓存 (Heavy Operation)
                     miniPlayerManager.cacheUiState(success)
