@@ -23,8 +23,8 @@ class HomeFeedCardStylePolicyTest {
         val layout = resolveHomeFeedCardLayout(HomeFeedCardStyle.OFFICIAL)
 
         assertEquals(4f / 3f, layout.coverAspectRatio)
-        assertEquals(6, layout.outerPaddingDp)
-        assertEquals(6, layout.itemSpacingDp)
+        assertEquals(4, layout.outerPaddingDp)
+        assertEquals(4, layout.itemSpacingDp)
         assertEquals(6, layout.verticalItemSpacingDp)
         assertEquals(0, layout.storyCardHorizontalPaddingDp)
         assertEquals(true, layout.compactMetadata)
