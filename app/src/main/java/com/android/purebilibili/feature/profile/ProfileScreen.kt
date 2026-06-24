@@ -211,11 +211,7 @@ internal fun resolveProfileTopBarScrimAlpha(
     isImmersive: Boolean,
     collapsedFraction: Float
 ): Float {
-    if (!isImmersive) return 0f
-    // Immersive profile pages already have a wallpaper gradient behind the top bar.
-    // Keep this capped so controls stay readable without restoring the old dark band.
-    val progress = collapsedFraction.coerceIn(0f, 1f)
-    return 0.10f + (0.12f * progress)
+    return 0f
 }
 
 internal fun resolveProfileLightStatusBars(
@@ -1041,12 +1037,6 @@ private fun ProfileSpaceContent(
 
     val isImmersive = user.topPhoto.isNotEmpty()
     val statusBarTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val collapsedFraction = scrollBehavior.state.collapsedFraction.coerceIn(0f, 1f)
-    val topBarScrimColor = if (isImmersive) {
-        Color.Black.copy(alpha = resolveProfileTopBarScrimAlpha(true, collapsedFraction))
-    } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = collapsedFraction)
-    }
     val wallpaperUrl = user.topPhoto.ifBlank { user.face }
     val wallpaperColor = rememberProfileWallpaperColor(wallpaperUrl)
     val fallbackSurfaceColor = MaterialTheme.colorScheme.surface
@@ -1171,13 +1161,6 @@ private fun ProfileSpaceContent(
                     )
                 }
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(statusBarTopPadding + 64.dp)
-                    .background(topBarScrimColor)
-                    .align(Alignment.TopCenter)
-            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2721,18 +2704,7 @@ fun MobileProfileContent(
     
     val isImmersive = user.topPhoto.isNotEmpty()
     val contentColor = if (isImmersive) Color.White else MaterialTheme.colorScheme.onSurface
-    val collapsedFraction = scrollBehavior.state.collapsedFraction.coerceIn(0f, 1f)
     val statusBarTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val topBarScrimColor = if (isImmersive) {
-        Color.Black.copy(
-            alpha = resolveProfileTopBarScrimAlpha(
-                isImmersive = true,
-                collapsedFraction = collapsedFraction
-            )
-        )
-    } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = collapsedFraction)
-    }
 
         // [Modified] Background logic moved to ProfileBackground()
         // No need to duplicate here, but MobileProfileContent is called separately in Split Layout?
@@ -2842,14 +2814,6 @@ fun MobileProfileContent(
             // item { IOSGroup { ... } } // Removed
         }
         
-        // 🏗️ 沉浸式 TopBar (Standard)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .height(statusBarTopPadding + 64.dp)
-                .background(topBarScrimColor)
-        )
         AdaptiveTopAppBar(
             title = "我的",
             style = AdaptiveTopAppBarStyle.CENTERED,

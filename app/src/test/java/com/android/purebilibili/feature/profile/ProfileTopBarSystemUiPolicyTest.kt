@@ -26,18 +26,17 @@ class ProfileTopBarSystemUiPolicyTest {
     }
 
     @Test
-    fun immersiveMobileProfile_usesLightTopScrimAtRest() {
+    fun immersiveMobileProfile_doesNotDrawTopScrimAtRest() {
         val alpha = resolveProfileTopBarScrimAlpha(
             isImmersive = true,
             collapsedFraction = 0f
         )
 
-        assertTrue(alpha > 0f)
-        assertTrue(alpha <= 0.12f)
+        assertEquals(0f, alpha)
     }
 
     @Test
-    fun immersiveMobileProfile_increasesTopScrimWithoutObviousDarkBand() {
+    fun immersiveMobileProfile_keepsTopScrimRemovedWhileScrolling() {
         val restingAlpha = resolveProfileTopBarScrimAlpha(
             isImmersive = true,
             collapsedFraction = 0f
@@ -47,19 +46,18 @@ class ProfileTopBarSystemUiPolicyTest {
             collapsedFraction = 0.45f
         )
 
-        assertTrue(midScrollAlpha > restingAlpha)
-        assertTrue(midScrollAlpha <= 0.2f)
+        assertEquals(0f, restingAlpha)
+        assertEquals(0f, midScrollAlpha)
     }
 
     @Test
-    fun immersiveMobileProfile_capsTopScrimWhenFullyCollapsed() {
+    fun immersiveMobileProfile_keepsTopScrimRemovedWhenFullyCollapsed() {
         val alpha = resolveProfileTopBarScrimAlpha(
             isImmersive = true,
             collapsedFraction = 1f
         )
 
-        assertTrue(alpha > 0f)
-        assertTrue(alpha <= 0.24f)
+        assertEquals(0f, alpha)
     }
 
     @Test
