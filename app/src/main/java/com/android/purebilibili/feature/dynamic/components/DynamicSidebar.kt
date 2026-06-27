@@ -41,6 +41,8 @@ import com.android.purebilibili.core.ui.blur.hazeSourceCompat
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.core.ui.rememberAppVisibilityOffIcon
 import com.android.purebilibili.core.ui.rememberAppVisibilityOnIcon
+import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
+import com.android.purebilibili.core.ui.resolveGlobalWallpaperProtectiveColor
 import com.android.purebilibili.core.ui.blur.BlurStyles
 import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
 import com.android.purebilibili.feature.dynamic.resolveDynamicSidebarWidth
@@ -59,6 +61,36 @@ internal fun performDynamicSidebarUserAvatarClick(
 ) {
     haptic(HapticType.LIGHT)
     onClick()
+}
+
+internal fun resolveDynamicSidebarContainerColor(
+    surfaceColor: Color,
+    globalWallpaperVisible: Boolean
+): Color {
+    return if (globalWallpaperVisible) {
+        resolveGlobalWallpaperProtectiveColor(
+            baseColor = surfaceColor,
+            lightAlpha = 0.74f,
+            darkAlpha = 0.80f
+        )
+    } else {
+        surfaceColor
+    }
+}
+
+internal fun resolveDynamicSidebarReturnHeaderColor(
+    surfaceColor: Color,
+    backgroundAlpha: Float,
+    globalWallpaperVisible: Boolean
+): Color {
+    val rawColor = surfaceColor.copy(alpha = backgroundAlpha)
+    if (!globalWallpaperVisible) return rawColor
+    val protectiveColor = resolveGlobalWallpaperProtectiveColor(
+        baseColor = surfaceColor,
+        lightAlpha = 0.74f,
+        darkAlpha = 0.80f
+    )
+    return rawColor.copy(alpha = maxOf(rawColor.alpha, protectiveColor.alpha))
 }
 
 /**
@@ -93,6 +125,16 @@ fun DynamicSidebar(
     val blurIntensity = currentUnifiedBlurIntensity()
     val backgroundAlpha = BlurStyles.getBackgroundAlpha(blurIntensity)
     val returnHeaderHeight = resolveDynamicSidebarReturnHeaderHeightDp().dp
+    val globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
+    val sidebarContainerColor = resolveDynamicSidebarContainerColor(
+        surfaceColor = MaterialTheme.colorScheme.surface,
+        globalWallpaperVisible = globalWallpaperVisible
+    )
+    val returnHeaderColor = resolveDynamicSidebarReturnHeaderColor(
+        surfaceColor = MaterialTheme.colorScheme.surface,
+        backgroundAlpha = backgroundAlpha,
+        globalWallpaperVisible = globalWallpaperVisible
+    )
     
     // 侧边栏容器 - Glassmorphism 升级版
     Box(
@@ -101,7 +143,7 @@ fun DynamicSidebar(
             .fillMaxHeight()
             .clip(androidx.compose.ui.graphics.RectangleShape) // [修复] 直角
             .background(
-                MaterialTheme.colorScheme.surface // 纯白背景，减少割裂感
+                sidebarContainerColor
             )
     ) {
         // 内容层 - 使用 Box 重新组织布局以支持模糊
@@ -167,7 +209,7 @@ fun DynamicSidebar(
                     .fillMaxWidth()
                     .height(topPadding + returnHeaderHeight)
                     .unifiedBlur(sidebarHazeState) // 应用模糊
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = backgroundAlpha))
+                    .background(returnHeaderColor)
                     .align(Alignment.TopCenter)
             ) {
                 Box(
