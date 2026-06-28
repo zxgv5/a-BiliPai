@@ -4,11 +4,16 @@ import com.android.purebilibili.navigation3.BiliPaiNavRouteTransition
 
 internal fun resolveBiliPaiPredictiveBackAnimationHandler(
     routeTransition: BiliPaiNavRouteTransition,
+    predictiveBackEnabled: Boolean = true,
     style: BiliPaiPredictiveBackAnimationStyle = BiliPaiPredictiveBackAnimationStyle.SCALE,
     exitDirection: BiliPaiPredictiveBackExitDirection = BiliPaiPredictiveBackExitDirection.FOLLOW_GESTURE,
 ): BiliPaiPredictiveBackAnimationHandler {
     if (routeTransition == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT) {
         return BiliPaiSharedElementPredictiveBackAnimation()
+    }
+
+    if (!predictiveBackEnabled) {
+        return BiliPaiDisabledPredictiveBackAnimation()
     }
 
     return when (routeTransition) {

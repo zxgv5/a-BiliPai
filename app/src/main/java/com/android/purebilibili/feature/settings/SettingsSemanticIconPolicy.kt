@@ -76,6 +76,7 @@ internal enum class SettingsIconRole {
     HOME_CARD_WIDTH,
     CARD_ENTRANCE_ANIMATION,
     CARD_TRANSITION_ANIMATION,
+    PREDICTIVE_BACK,
     TOP_DOCK_GLASS,
     HOME_SEARCH_GLASS,
     BOTTOM_BAR_GLASS,
@@ -250,6 +251,7 @@ private fun resolveMd3SettingsSemanticIcon(role: SettingsIconRole): ImageVector 
     SettingsIconRole.HOME_CARD_WIDTH -> Icons.Outlined.WidthNormal
     SettingsIconRole.CARD_ENTRANCE_ANIMATION -> Icons.Outlined.AutoAwesomeMotion
     SettingsIconRole.CARD_TRANSITION_ANIMATION -> Icons.Outlined.SyncAlt
+    SettingsIconRole.PREDICTIVE_BACK -> Icons.AutoMirrored.Outlined.ArrowBack
     SettingsIconRole.TOP_DOCK_GLASS -> Icons.Outlined.Layers
     SettingsIconRole.HOME_SEARCH_GLASS -> Icons.AutoMirrored.Outlined.ManageSearch
     SettingsIconRole.BOTTOM_BAR_GLASS -> Icons.Outlined.BlurCircular
@@ -368,6 +370,7 @@ private fun resolveIosSettingsSemanticIcon(role: SettingsIconRole): ImageVector 
     SettingsIconRole.HOME_CARD_WIDTH -> CupertinoIcons.Outlined.Ruler
     SettingsIconRole.CARD_ENTRANCE_ANIMATION -> CupertinoIcons.Outlined.WandAndStarsInverse
     SettingsIconRole.CARD_TRANSITION_ANIMATION -> CupertinoIcons.Outlined.ArrowLeftAndRight
+    SettingsIconRole.PREDICTIVE_BACK -> CupertinoIcons.Outlined.ChevronBackward
     SettingsIconRole.TOP_DOCK_GLASS -> CupertinoIcons.Outlined.MenubarRectangle
     SettingsIconRole.HOME_SEARCH_GLASS -> CupertinoIcons.Outlined.PlusMagnifyingglass
     SettingsIconRole.BOTTOM_BAR_GLASS -> CupertinoIcons.Outlined.Square3Layers3dDownRight

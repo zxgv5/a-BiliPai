@@ -692,6 +692,7 @@ data class AppNavigationSettings(
     val orderedVisibleTabIds: List<String> = listOf("HOME", "DYNAMIC", "HISTORY", "PROFILE"),
     val bottomBarItemColors: Map<String, Int> = emptyMap(),
     val tabletUseSidebar: Boolean = false,
+    val predictiveBackEnabled: Boolean = true,
     val predictiveBackAnimationStyle: String = "scale",
 )
 
@@ -5621,6 +5622,7 @@ object SettingsManager {
     // ========== 📱 平板导航模式 ==========
     
     private val KEY_TABLET_NAVIGATION_MODE = booleanPreferencesKey("tablet_use_sidebar")
+    private val KEY_PREDICTIVE_BACK_ENABLED = booleanPreferencesKey("predictive_back_enabled")
     private val KEY_PREDICTIVE_BACK_ANIMATION_STYLE = stringPreferencesKey("predictive_back_animation_style")
     
     /**
@@ -5643,6 +5645,7 @@ object SettingsManager {
             orderedVisibleTabIds = resolveOrderedVisibleBottomTabs(order, visible),
             bottomBarItemColors = parseBottomBarItemColors(preferences[KEY_BOTTOM_BAR_ITEM_COLORS] ?: ""),
             tabletUseSidebar = preferences[KEY_TABLET_NAVIGATION_MODE] ?: false,
+            predictiveBackEnabled = preferences[KEY_PREDICTIVE_BACK_ENABLED] ?: true,
             predictiveBackAnimationStyle = preferences[KEY_PREDICTIVE_BACK_ANIMATION_STYLE] ?: "scale",
         )
     }
@@ -5663,6 +5666,14 @@ object SettingsManager {
 
     suspend fun setTabletUseSidebar(context: Context, useSidebar: Boolean) {
         NavigationSettingsStore.setTabletUseSidebar(context, useSidebar)
+    }
+
+    suspend fun setPredictiveBackEnabled(context: Context, enabled: Boolean) {
+        NavigationSettingsStore.setPredictiveBackEnabled(context, enabled)
+    }
+
+    suspend fun setPredictiveBackAnimationStyle(context: Context, style: String) {
+        NavigationSettingsStore.setPredictiveBackAnimationStyle(context, style)
     }
     
     // ========== [问题12] 视频操作按钮可见性 ==========

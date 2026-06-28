@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 internal fun BiliPaiNavDisplayHost(
     backStack: List<BiliPaiNavKey>,
     cardTransitionEnabled: Boolean = true,
+    predictiveBackEnabled: Boolean = true,
     predictiveBackAnimationStyle: BiliPaiPredictiveBackAnimationStyle = BiliPaiPredictiveBackAnimationStyle.SCALE,
     sourceMetadata: BiliPaiNavSourceMetadata,
     onBack: () -> Unit,
@@ -64,10 +65,12 @@ internal fun BiliPaiNavDisplayHost(
     }
     val predictiveBackHandler: BiliPaiPredictiveBackAnimationHandler = remember(
         popRouteTransition,
+        predictiveBackEnabled,
         predictiveBackAnimationStyle,
     ) {
         resolveBiliPaiPredictiveBackAnimationHandler(
             routeTransition = popRouteTransition,
+            predictiveBackEnabled = predictiveBackEnabled,
             style = predictiveBackAnimationStyle,
         )
     }

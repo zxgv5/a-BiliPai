@@ -146,8 +146,11 @@ fun AnimationSettingsContent(
     }
     val isLiquidGlassAvailable = shouldAllowHomeChromeLiquidGlass(Build.VERSION.SDK_INT)
     val bottomBarLiquidGlassEnabled = state.bottomBarLiquidGlassEnabled
+    val appNavigationSettings by SettingsManager.getAppNavigationSettings(context)
+        .collectAsStateWithLifecycle(initialValue = com.android.purebilibili.core.store.AppNavigationSettings())
     val uiEntranceAnimationEnabled by SettingsManager.getUiEntranceAnimationEnabled(context)
         .collectAsStateWithLifecycle(initialValue = true)
+    val predictiveBackStyleOptions = remember { resolvePredictiveBackStyleOptions() }
     val effectiveEntranceSpec = rememberEffectiveEntranceMotionSpec()
     // 开关开着、但有效参数被降级为不动画 → 系统减弱动效在生效。
     val entranceDowngradedBySystem = uiEntranceAnimationEnabled && !effectiveEntranceSpec.animate
@@ -324,6 +327,44 @@ fun AnimationSettingsContent(
                                 text = "设置页使用独立轻量入场动效，不跟随此开关关闭。",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Box(modifier = Modifier.entrance()) {
+                    IOSSectionTitle("返回手势")
+                }
+            }
+            item {
+                Box(modifier = Modifier.entrance()) {
+                    IOSGroup {
+                        IOSSwitchItem(
+                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PREDICTIVE_BACK),
+                            title = "预测性返回",
+                            subtitle = "边缘滑动时预览返回动画（Android 13+）",
+                            checked = appNavigationSettings.predictiveBackEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    SettingsManager.setPredictiveBackEnabled(context, enabled)
+                                }
+                            },
+                            iconTint = iOSBlue
+                        )
+                        if (appNavigationSettings.predictiveBackEnabled) {
+                            IOSDivider()
+                            IOSSlidingSegmentedSetting(
+                                title = "返回动画：${resolvePredictiveBackStyleLabel(appNavigationSettings.predictiveBackAnimationStyle)}",
+                                subtitle = "卡片缩放适合共享元素返场；系统跨页更接近原生体验",
+                                options = predictiveBackStyleOptions,
+                                selectedValue = appNavigationSettings.predictiveBackAnimationStyle,
+                                onSelectionChange = { style ->
+                                    scope.launch {
+                                        SettingsManager.setPredictiveBackAnimationStyle(context, style)
+                                    }
+                                }
                             )
                         }
                     }

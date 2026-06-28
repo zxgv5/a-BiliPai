@@ -8,7 +8,7 @@ import android.content.ContextWrapper
 import android.net.Uri
 import android.os.SystemClock
 import android.widget.Toast
-
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
@@ -847,7 +847,10 @@ fun AppNavigation(
                 sourceMetadata = navigation3SourceMetadata
             )
         }
-        val shouldInterceptSystemBack = backGestureDecision.interceptSystemBack
+        val predictiveBackEnabled = appNavigationSettings.predictiveBackEnabled
+        val shouldInterceptTabBack = backGestureDecision.interceptSystemBack
+        val shouldUseClassicBackHandler = !predictiveBackEnabled &&
+            systemBackAction != AppSystemBackAction.FINISH_ACTIVITY
         val predictiveBackAnimationStyle = remember(appNavigationSettings.predictiveBackAnimationStyle) {
             BiliPaiPredictiveBackAnimationStyle.fromStorageValue(
                 appNavigationSettings.predictiveBackAnimationStyle
@@ -2454,6 +2457,7 @@ fun AppNavigation(
                 BiliPaiNavDisplayHost(
                     backStack = navigation3BackStack,
                     cardTransitionEnabled = cardTransitionEnabled,
+                    predictiveBackEnabled = predictiveBackEnabled,
                     predictiveBackAnimationStyle = predictiveBackAnimationStyle,
                     sourceMetadata = navigation3SourceMetadata,
                     onBack = { performSystemBackAction() },
@@ -2562,16 +2566,19 @@ fun AppNavigation(
     }
 }
 
-            // 在 NavDisplay 之后注册 Tab 二级返回，保留预测性返回手势预览。
-            MainHostTabBackHandler(
-                enabled = shouldInterceptSystemBack,
-                onReturnToHomeTab = {
-                    val homeIndex = visibleBottomBarItems.indexOf(BottomNavItem.HOME)
-                    if (homeIndex >= 0) {
-                        mainBottomPagerState.animateToPage(homeIndex)
-                    }
-                },
-            )
+            if (predictiveBackEnabled) {
+                MainHostTabBackHandler(
+                    enabled = shouldInterceptTabBack,
+                    onReturnToHomeTab = {
+                        val homeIndex = visibleBottomBarItems.indexOf(BottomNavItem.HOME)
+                        if (homeIndex >= 0) {
+                            mainBottomPagerState.animateToPage(homeIndex)
+                        }
+                    },
+                )
+            } else if (shouldUseClassicBackHandler) {
+                BackHandler { performSystemBackAction() }
+            }
 
             if (showLaunchDisclaimer) {
                 ReleaseChannelDisclaimerDialog(

@@ -215,7 +215,7 @@ class AppNavigationNavigation3BridgeStructureTest {
         assertTrue(decisionIndex >= 0)
         assertTrue(handlerIndex > decisionIndex)
         assertTrue(source.contains("resolveBiliPaiBackGestureDecision("))
-        assertTrue(source.contains("shouldInterceptSystemBack = backGestureDecision.interceptSystemBack"))
+        assertTrue(source.contains("shouldInterceptTabBack = backGestureDecision.interceptSystemBack"))
         assertTrue(source.contains("sourceMetadata = navigation3SourceMetadata"))
         assertFalse(source.contains("shouldUseClassicBackForVideoSharedElementReturn("))
         assertFalse(source.contains("shouldInterceptVideoSharedElementReturn ||"))
@@ -230,7 +230,9 @@ class AppNavigationNavigation3BridgeStructureTest {
         assertFalse(source.contains("video" + "PredictiveReturnToCardEnabled"))
         assertFalse(source.contains("video" + "PredictiveReturnSourceBounds"))
         assertFalse(source.contains("shouldEnableVideo" + "PredictiveReturnToCard"))
+        assertTrue(source.contains("predictiveBackEnabled"))
         assertTrue(source.contains("predictiveBackAnimationStyle"))
+        assertTrue(source.contains("shouldUseClassicBackHandler"))
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.android.purebilibili.navigation3
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiAospCrossActivityPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiClassicPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiDefaultPredictiveBackAnimation
+import com.android.purebilibili.navigation3.predictiveback.BiliPaiDisabledPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiScalePredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiSharedElementPredictiveBackAnimation
@@ -45,6 +46,24 @@ class BiliPaiPredictiveBackAnimationPolicyTest {
             style = BiliPaiPredictiveBackAnimationStyle.CLASSIC,
         )
         assertTrue(handler is BiliPaiClassicPredictiveBackAnimation)
+    }
+
+    @Test
+    fun disabledClassicCard_usesDisabledHandler() {
+        val handler = resolveBiliPaiPredictiveBackAnimationHandler(
+            routeTransition = BiliPaiNavRouteTransition.CLASSIC_CARD,
+            predictiveBackEnabled = false,
+        )
+        assertTrue(handler is BiliPaiDisabledPredictiveBackAnimation)
+    }
+
+    @Test
+    fun disabledSharedElementRoute_keepsSharedElementHandler() {
+        val handler = resolveBiliPaiPredictiveBackAnimationHandler(
+            routeTransition = BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT,
+            predictiveBackEnabled = false,
+        )
+        assertTrue(handler is BiliPaiSharedElementPredictiveBackAnimation)
     }
 
     @Test

@@ -24,6 +24,7 @@ class AppNavigationSettingsMappingPolicyTest {
         assertEquals(listOf("HOME", "DYNAMIC", "HISTORY", "PROFILE"), result.orderedVisibleTabIds)
         assertEquals(emptyMap(), result.bottomBarItemColors)
         assertFalse(result.tabletUseSidebar)
+        assertTrue(result.predictiveBackEnabled)
         assertEquals("scale", result.predictiveBackAnimationStyle)
     }
 
