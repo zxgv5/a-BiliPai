@@ -394,6 +394,7 @@ private fun <T> IOSSlidingSegmentedControlImpl(
         labelFontSize = labelFontSize,
         miuixBackdrop = miuixBackdrop,
         forceLiquidChrome = forceLiquidIndicator,
+        liquidGlassRequestedEnabled = if (forceLiquidIndicator) true else null,
         tapPressRefractionEnabled = tapPressRefractionEnabled
     )
 }

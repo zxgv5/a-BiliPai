@@ -888,6 +888,7 @@ private fun HomeTopTabLiquidSegmentedTabs(
             labelFontSize = labelFontSize,
             liquidGlassEffectsEnabled = true,
             forceLiquidChrome = true,
+            liquidGlassRequestedEnabled = true,
             miuixBackdrop = segmentedMiuixBackdrop,
             selectedTextColorOverride = selectedTextColor,
             containerColorOverride = captureSurfaceColor,

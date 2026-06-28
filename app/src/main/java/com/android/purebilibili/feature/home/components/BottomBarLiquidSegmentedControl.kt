@@ -432,6 +432,7 @@ fun BottomBarLiquidSegmentedControl(
     dragSelectionEnabled: Boolean = true,
     preferInlineContentStyle: Boolean = false,
     forceLiquidChrome: Boolean = false,
+    liquidGlassRequestedEnabled: Boolean? = null,
     miuixBackdrop: MiuixBackdrop? = null,
     tapPressRefractionEnabled: Boolean = true,
     containerColorOverride: Color? = null,
@@ -484,8 +485,10 @@ fun BottomBarLiquidSegmentedControl(
         return
     }
 
+    val requestedLiquidGlassEnabled = liquidGlassRequestedEnabled
+        ?: homeSettings.isBottomBarLiquidGlassEnabled
     val liquidGlassEnabled = resolveSegmentedControlLiquidGlassEnabled(
-        storedLiquidGlassEnabled = homeSettings.isBottomBarLiquidGlassEnabled,
+        storedLiquidGlassEnabled = requestedLiquidGlassEnabled,
         liquidGlassEffectsEnabled = liquidGlassEffectsEnabled,
         uiPreset = uiPreset,
         androidNativeLiquidGlassEnabled = effectiveAndroidNativeLiquidGlassEnabled

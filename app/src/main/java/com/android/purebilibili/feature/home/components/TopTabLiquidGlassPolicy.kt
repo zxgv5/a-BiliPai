@@ -30,7 +30,7 @@ internal fun shouldTopTabDrawSegmentedCaptureBackdropEffects(
     liquidGlassEnabled: Boolean,
     hasOuterChromeSurface: Boolean
 ): Boolean {
-    return liquidGlassEnabled && !hasOuterChromeSurface
+    return liquidGlassEnabled
 }
 
 /**
@@ -39,7 +39,7 @@ internal fun shouldTopTabDrawSegmentedCaptureBackdropEffects(
  */
 internal fun shouldTopTabSegmentedControlUsePageBackdrop(
     hasOuterChromeSurface: Boolean
-): Boolean = !hasOuterChromeSurface
+): Boolean = true
 
 internal fun shouldSuppressTopTabSegmentedIndicatorDuringFeedScroll(
     isFeedScrollInProgress: Boolean,

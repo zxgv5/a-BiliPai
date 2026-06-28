@@ -739,6 +739,8 @@ fun HomeScreen(
         baseCardAnimationEnabled,
         baseCardTransitionEnabled,
         baseIsDataSaverActive,
+        homeSettings.isHomeSearchLiquidGlassEnabled,
+        homeSettings.isTopBarLiquidGlassEnabled,
         homeSettings.androidNativeLiquidGlassEnabled
     ) {
         resolveHomePerformanceConfig(
@@ -746,6 +748,7 @@ fun HomeScreen(
             headerBlurEnabled = baseIsHeaderBlurEnabled,
             bottomBarBlurEnabled = baseIsBottomBarBlurEnabled,
             topBarLiquidGlassEnabled = homeSettings.isTopBarLiquidGlassEnabled,
+            homeSearchLiquidGlassEnabled = homeSettings.isHomeSearchLiquidGlassEnabled,
             bottomBarLiquidGlassEnabled = baseBottomBarLiquidGlassEnabled,
             androidNativeLiquidGlassEnabled = homeSettings.androidNativeLiquidGlassEnabled,
             cardAnimationEnabled = baseCardAnimationEnabled,
@@ -1171,18 +1174,19 @@ fun HomeScreen(
     var isHeaderVisible by rememberSaveable { mutableStateOf(true) }
     
     // Constants
-    val topTabStyle = remember(isBottomBarFloating, isHeaderBlurEnabled) {
+    val topChromeLiquidGlassEnabled = homePerformanceConfig.topBarLiquidGlassEnabled
+    val topTabStyle = remember(isBottomBarFloating, isHeaderBlurEnabled, topChromeLiquidGlassEnabled) {
         resolveTopTabStyle(
             isBottomBarFloating = isBottomBarFloating,
             isBottomBarBlurEnabled = isHeaderBlurEnabled,
-            isLiquidGlassEnabled = false
+            isLiquidGlassEnabled = topChromeLiquidGlassEnabled
         )
     }
-    val topChromeMaterialMode = remember(isHeaderBlurEnabled) {
+    val topChromeMaterialMode = remember(isHeaderBlurEnabled, isBottomBarBlurEnabled, topChromeLiquidGlassEnabled) {
         resolveHomeTopChromeMaterialMode(
             isHeaderBlurEnabled = isHeaderBlurEnabled,
-            isBottomBarBlurEnabled = false,
-            isLiquidGlassEnabled = false
+            isBottomBarBlurEnabled = isBottomBarBlurEnabled,
+            isLiquidGlassEnabled = topChromeLiquidGlassEnabled
         )
     }
     val searchBarHeightDp = resolveHomeTopSearchBarHeight(

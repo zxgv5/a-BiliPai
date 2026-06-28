@@ -38,8 +38,8 @@ class TopTabLiquidGlassPolicyTest {
     }
 
     @Test
-    fun `outer dock shell suppresses inner page backdrop sampling`() {
-        assertFalse(shouldTopTabSegmentedControlUsePageBackdrop(hasOuterChromeSurface = true))
+    fun `outer dock shell preserves page backdrop sampling for matched indicator`() {
+        assertTrue(shouldTopTabSegmentedControlUsePageBackdrop(hasOuterChromeSurface = true))
         assertTrue(shouldTopTabSegmentedControlUsePageBackdrop(hasOuterChromeSurface = false))
     }
 
@@ -74,14 +74,14 @@ class TopTabLiquidGlassPolicyTest {
     }
 
     @Test
-    fun `outer dock shell owns container glass and suppresses segmented shell duplication`() {
+    fun `outer dock shell only owns container glass while segmented capture stays matched`() {
         assertFalse(
             shouldTopTabDrawSegmentedContainerShell(
                 liquidGlassEnabled = true,
                 hasOuterChromeSurface = true
             )
         )
-        assertFalse(
+        assertTrue(
             shouldTopTabDrawSegmentedCaptureBackdropEffects(
                 liquidGlassEnabled = true,
                 hasOuterChromeSurface = true
