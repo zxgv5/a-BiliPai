@@ -23,6 +23,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -95,6 +96,8 @@ import com.android.purebilibili.core.ui.rememberAppHistoryIcon
 import com.android.purebilibili.core.ui.rememberAppSearchIcon
 import com.android.purebilibili.core.ui.resolveOfficialVerifyBadge
 import com.android.purebilibili.core.ui.components.UpBadgeName
+import com.android.purebilibili.core.ui.components.shouldUseNativeMiuixSearchBar
+import top.yukonga.miuix.kmp.basic.InputField
 import com.android.purebilibili.feature.home.components.cards.ElegantVideoCard  //  使用首页卡片
 import com.android.purebilibili.feature.home.resolveHomeFeedCardLayout
 import com.android.purebilibili.core.store.HomeFeedCardStyle
@@ -1598,6 +1601,9 @@ fun SearchTopBar(
     val chromeSpec = remember(uiPreset, androidNativeVariant) {
         resolveSearchChromeVisualSpec(uiPreset, androidNativeVariant)
     }
+    val usesMiuixSearchInput = shouldUseNativeMiuixSearchBar(uiPreset, androidNativeVariant)
+    val searchInteractionSource = remember { MutableInteractionSource() }
+    val isSearchFieldFocused by searchInteractionSource.collectIsFocusedAsState()
     val backIcon = rememberAppBackIcon()
     val searchIcon = rememberAppSearchIcon()
     val clearIcon = rememberAppClearIcon()
@@ -1606,15 +1612,20 @@ fun SearchTopBar(
     //  Focus 状态追踪
     var isFocused by remember { mutableStateOf(false) }
     
-    //  自动聚焦并弹出键盘
-    LaunchedEffect(autoFocusEnabled, query) {
-        if (autoFocusEnabled && query.isEmpty()) {
+    //  自动聚焦并弹出键盘（Miuix InputField 在 expanded=true 时自行 requestFocus）
+    LaunchedEffect(autoFocusEnabled, query, usesMiuixSearchInput) {
+        if (!usesMiuixSearchInput && autoFocusEnabled && query.isEmpty()) {
             kotlinx.coroutines.delay(60)
             runCatching {
                 focusRequester.requestFocus()
             }.onFailure { e ->
                 com.android.purebilibili.core.util.Logger.e("SearchScreen", "Failed to auto focus search field", e)
             }
+        }
+    }
+    SideEffect {
+        if (usesMiuixSearchInput) {
+            isFocused = isSearchFieldFocused
         }
     }
     
@@ -1707,84 +1718,105 @@ fun SearchTopBar(
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                //  搜索输入框 (带 Focus 边框动画)
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(chromeSpec.inputHeightDp.dp)
-                        .clip(RoundedCornerShape(chromeSpec.inputCornerRadiusDp.dp))
-                        .border(
-                            width = borderWidth,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(chromeSpec.inputCornerRadiusDp.dp)
-                        )
-                        .background(
-                            if (uiPreset == UiPreset.MD3) {
-                                AppSurfaceTokens.surfaceContainerHigh()
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                if (usesMiuixSearchInput) {
+                    InputField(
+                        query = query,
+                        onQueryChange = onQueryChange,
+                        onSearch = {
+                            if (canSubmit) {
+                                onSearch(resolvedSubmitKeyword)
                             }
-                        )
-                        .padding(horizontal = chromeSpec.inputHorizontalPaddingDp.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BasicTextField(
-                        value = query,
-                        onValueChange = onQueryChange,
+                        },
+                        expanded = true,
+                        onExpandedChange = {},
                         modifier = Modifier
                             .weight(1f)
-                            .focusRequester(focusRequester)  //  应用 focusRequester
-                            .onFocusChanged { isFocused = it.isFocused },
-                        textStyle = TextStyle(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 15.sp
-                        ),
-                        singleLine = true,
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(
-                            onSearch = {
-                                if (canSubmit) {
-                                    onSearch(resolvedSubmitKeyword)
-                                }
-                            }
-                        ),
-                        decorationBox = { inner ->
-                            Box(contentAlignment = Alignment.CenterStart) {
-                                if (query.isEmpty()) {
-                                    Text(
-                                        placeholder,
-                                        style = TextStyle(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f),
-                                            fontSize = 15.sp
-                                        ),
-                                        maxLines = layoutSpec.placeholderMaxLines,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                    )
-                                }
-                                inner()
-                            }
-                        }
+                            .height(chromeSpec.inputHeightDp.dp),
+                        label = placeholder,
+                        interactionSource = searchInteractionSource,
                     )
+                } else {
+                    //  搜索输入框 (带 Focus 边框动画)
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(chromeSpec.inputHeightDp.dp)
+                            .clip(RoundedCornerShape(chromeSpec.inputCornerRadiusDp.dp))
+                            .border(
+                                width = borderWidth,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(chromeSpec.inputCornerRadiusDp.dp)
+                            )
+                            .background(
+                                if (uiPreset == UiPreset.MD3) {
+                                    AppSurfaceTokens.surfaceContainerHigh()
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                }
+                            )
+                            .padding(horizontal = chromeSpec.inputHorizontalPaddingDp.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BasicTextField(
+                            value = query,
+                            onValueChange = onQueryChange,
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { isFocused = it.isFocused },
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 15.sp
+                            ),
+                            singleLine = true,
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    if (canSubmit) {
+                                        onSearch(resolvedSubmitKeyword)
+                                    }
+                                }
+                            ),
+                            decorationBox = { inner ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (query.isEmpty()) {
+                                        Text(
+                                            placeholder,
+                                            style = TextStyle(
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f),
+                                                fontSize = 15.sp
+                                            ),
+                                            maxLines = layoutSpec.placeholderMaxLines,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    inner()
+                                }
+                            }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(chromeSpec.horizontalGapDp.dp))
 
-                IconButton(
-                    onClick = onClearQuery,
-                    enabled = query.isNotEmpty(),
-                    modifier = Modifier.size(chromeSpec.clearActionSizeDp.dp)
-                ) {
-                    Icon(
-                        clearIcon,
-                        contentDescription = stringResource(R.string.common_clear),
-                        tint = if (query.isNotEmpty()) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                        },
-                        modifier = Modifier.size(chromeSpec.actionIconSizeDp.dp)
-                    )
+                if (!usesMiuixSearchInput) {
+                    IconButton(
+                        onClick = onClearQuery,
+                        enabled = query.isNotEmpty(),
+                        modifier = Modifier.size(chromeSpec.clearActionSizeDp.dp)
+                    ) {
+                        Icon(
+                            clearIcon,
+                            contentDescription = stringResource(R.string.common_clear),
+                            tint = if (query.isNotEmpty()) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                            },
+                            modifier = Modifier.size(chromeSpec.actionIconSizeDp.dp)
+                        )
+                    }
                 }
 
                 IconButton(

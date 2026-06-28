@@ -99,6 +99,20 @@ class MiuixV2MigrationStructureTest {
     }
 
     @Test
+    fun ioSearchBar_miuixBranchUsesOfficialInputField() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/core/ui/components/iOSListComponents.kt")
+        assertTrue(source.contains("InputField("))
+        assertTrue(source.contains("shouldUseNativeMiuixSearchBar("))
+    }
+
+    @Test
+    fun searchTopBar_routesMiuixVariantToInputField() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/search/SearchScreen.kt")
+        assertTrue(source.contains("InputField("))
+        assertTrue(source.contains("shouldUseNativeMiuixSearchBar("))
+    }
+
+    @Test
     fun homePullRefreshPolicy_routesMiuixToNativeIndicator() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/HomePullRefreshUiPolicy.kt")
         assertTrue(source.contains("HomePullRefreshIndicatorStyle.MIUIX_NATIVE"))

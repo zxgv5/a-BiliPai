@@ -76,6 +76,7 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch as MiuixSwitch
 import top.yukonga.miuix.kmp.preference.ArrowPreference as MiuixArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference as MiuixSwitchPreference
+import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.max
 
@@ -277,13 +278,6 @@ private fun isDefaultListContainerColor(
         opaqueColor == colorScheme.surfaceContainerLow.copy(alpha = 1f) ||
         opaqueColor == colorScheme.surfaceContainerHigh.copy(alpha = 1f)
 }
-
-private val miuixAdaptiveSearchShape = RoundedCornerShape(percent = 50)
-private val miuixAdaptiveSearchLeadingStartPadding = 16.dp
-private val miuixAdaptiveSearchLeadingEndPadding = 8.dp
-private val miuixAdaptiveSearchTrailingStartPadding = 8.dp
-private val miuixAdaptiveSearchTrailingEndPadding = 16.dp
-private val miuixAdaptiveSearchMinHeight = 45.dp
 
 internal fun resolveAdaptiveSemanticIconTint(
     iconTint: Color,
@@ -1324,79 +1318,18 @@ private fun MiuixAdaptiveSearchBar(
     onQueryChange: (String) -> Unit,
     modifier: Modifier,
     placeholder: String,
-    containerColor: Color,
+    @Suppress("UNUSED_PARAMETER") containerColor: Color,
     height: androidx.compose.ui.unit.Dp
 ) {
-    val capsuleShape = miuixAdaptiveSearchShape
-    val inputTextStyle = MiuixTheme.textStyles.main
-        .copy(fontWeight = FontWeight.Medium)
-        .merge(MaterialTheme.typography.bodyMedium)
-        .copy(color = AppSurfaceTokens.onSurface())
-
-    BasicTextField(
-        value = query,
-        onValueChange = onQueryChange,
+    InputField(
+        query = query,
+        onQueryChange = onQueryChange,
+        onSearch = {},
+        expanded = true,
+        onExpandedChange = {},
         modifier = modifier
             .fillMaxWidth()
-            .height(height)
-            .clip(capsuleShape)
-            .background(containerColor),
-        singleLine = true,
-        textStyle = inputTextStyle,
-        cursorBrush = SolidColor(AppSurfaceTokens.primary()),
-        decorationBox = { innerTextField ->
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    modifier = Modifier.padding(
-                        start = miuixAdaptiveSearchLeadingStartPadding,
-                        end = miuixAdaptiveSearchLeadingEndPadding
-                    ),
-                    imageVector = Icons.Default.Search,
-                    tint = AppSurfaceTokens.onSurfaceContainerHigh(),
-                    contentDescription = null
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = miuixAdaptiveSearchMinHeight),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    if (query.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = AppSurfaceTokens.onSurfaceContainerHigh()
-                        )
-                    }
-                    innerTextField()
-                }
-                if (query.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier.padding(
-                            start = miuixAdaptiveSearchTrailingStartPadding,
-                            end = miuixAdaptiveSearchTrailingEndPadding
-                        ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            modifier = Modifier
-                                .clip(capsuleShape)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { onQueryChange("") },
-                            imageVector = Icons.Default.Clear,
-                            tint = AppSurfaceTokens.onSurfaceContainerHighest(),
-                            contentDescription = "Clear"
-                        )
-                    }
-                }
-            }
-        }
+            .height(height),
+        label = placeholder,
     )
 }

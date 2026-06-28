@@ -11,6 +11,7 @@ import com.android.purebilibili.core.theme.iOSRed
 import com.android.purebilibili.core.theme.iOSSystemGray
 import com.android.purebilibili.core.theme.UiPreset
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -227,6 +228,20 @@ class AdaptiveListComponentPolicyTest {
                 androidNativeVariant = AndroidNativeVariant.MIUIX
             )
         )
+    }
+
+    @Test
+    fun `miuix search bar implementation uses official input field`() {
+        val source = java.io.File("app/src/main/java/com/android/purebilibili/core/ui/components/iOSListComponents.kt")
+            .takeIf { it.exists() }
+            ?: java.io.File("src/main/java/com/android/purebilibili/core/ui/components/iOSListComponents.kt")
+        val text = source.readText()
+        val miuixSearchBarStart = text.indexOf("private fun MiuixAdaptiveSearchBar")
+        assertTrue(miuixSearchBarStart >= 0)
+        val miuixSearchBarEnd = text.indexOf("\n}", miuixSearchBarStart).let { if (it < 0) text.length else it + 2 }
+        val miuixSearchBarBlock = text.substring(miuixSearchBarStart, miuixSearchBarEnd)
+        assertTrue(miuixSearchBarBlock.contains("InputField("))
+        assertFalse(miuixSearchBarBlock.contains("BasicTextField("))
     }
 
     @Test
