@@ -84,3 +84,13 @@ internal fun resolveDynamicSettledLogicalTab(
 ): Int? {
     return visibleTabs.getOrNull(settledPage)?.logicalIndex
 }
+
+internal fun resolveDynamicPagerIndicatorPosition(
+    currentPage: Int,
+    currentPageOffsetFraction: Float,
+    pageCount: Int
+): Float {
+    if (pageCount <= 0) return 0f
+    return (currentPage + currentPageOffsetFraction)
+        .coerceIn(0f, (pageCount - 1).toFloat())
+}

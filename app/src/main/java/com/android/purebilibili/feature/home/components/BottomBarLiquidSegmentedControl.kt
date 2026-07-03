@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -168,6 +167,16 @@ internal fun resolveSegmentedControlSweepSelectionIndex(
     return (pointerX.coerceAtLeast(0f) / itemWidthPx)
         .toInt()
         .coerceIn(0, itemCount - 1)
+}
+
+internal fun resolveSegmentedControlIndicatorPosition(
+    internalPosition: Float,
+    externalPosition: Float?,
+    itemCount: Int
+): Float {
+    if (itemCount <= 0) return 0f
+    return (externalPosition ?: internalPosition)
+        .coerceIn(0f, (itemCount - 1).toFloat())
 }
 
 internal fun shouldDrawSegmentedControlIndicatorBackdrop(
@@ -398,6 +407,7 @@ fun BottomBarLiquidSegmentedControl(
     selectedTextColorOverride: Color? = null,
     unselectedTextColorOverride: Color? = null,
     indicatorIdleSurfaceColorOverride: Color? = null,
+    indicatorPositionProvider: (() -> Float)? = null,
     onIndicatorPositionChanged: ((Float) -> Unit)? = null
 ) {
     if (items.isEmpty()) return
@@ -428,6 +438,7 @@ fun BottomBarLiquidSegmentedControl(
             labelFontSize = labelFontSize,
             selectedTextColorOverride = selectedTextColorOverride,
             unselectedTextColorOverride = unselectedTextColorOverride,
+            indicatorPositionProvider = indicatorPositionProvider,
             onIndicatorPositionChanged = onIndicatorPositionChanged
         )
         return
@@ -450,6 +461,7 @@ fun BottomBarLiquidSegmentedControl(
         initialIndex = safeSelectedIndex,
         itemCount = itemCount,
         motionSpec = motionSpec,
+        notifyIndexChangedOnReleaseStart = indicatorPositionProvider != null,
         onIndexChanged = { index ->
             if (enabled && index in items.indices) {
                 onSelected(index)
@@ -514,7 +526,11 @@ fun BottomBarLiquidSegmentedControl(
             indicatorHeightDp = indicatorHeight.value
         ).dp
         val indicatorOffset = resolveSegmentedControlIndicatorOffsetDp(
-            position = dragState.value,
+            position = resolveSegmentedControlIndicatorPosition(
+                internalPosition = dragState.value,
+                externalPosition = if (dragState.isDragging) null else indicatorPositionProvider?.invoke(),
+                itemCount = itemCount
+            ),
             slotWidthDp = slotWidth.value,
             contentPaddingDp = contentPadding.value
         ).dp
@@ -533,7 +549,11 @@ fun BottomBarLiquidSegmentedControl(
                 shouldFollowIndicatorFrom = { downX ->
                     shouldFollowSegmentedControlIndicatorDrag(
                         pointerX = downX,
-                        indicatorPosition = dragState.value,
+                        indicatorPosition = resolveSegmentedControlIndicatorPosition(
+                            internalPosition = dragState.value,
+                            externalPosition = if (dragState.isDragging) null else indicatorPositionProvider?.invoke(),
+                            itemCount = itemCount
+                        ),
                         itemWidthPx = itemWidthPx
                     )
                 }
@@ -541,7 +561,11 @@ fun BottomBarLiquidSegmentedControl(
         } else {
             Modifier
         }
-        val indicatorPosition = dragState.value
+        val indicatorPosition = resolveSegmentedControlIndicatorPosition(
+            internalPosition = dragState.value,
+            externalPosition = if (dragState.isDragging) null else indicatorPositionProvider?.invoke(),
+            itemCount = itemCount
+        )
         SideEffect {
             onIndicatorPositionChanged?.invoke(indicatorPosition)
         }
@@ -757,6 +781,7 @@ private fun AndroidNativeUnderlinedSegmentedControl(
     labelFontSize: TextUnit,
     selectedTextColorOverride: Color? = null,
     unselectedTextColorOverride: Color? = null,
+    indicatorPositionProvider: (() -> Float)? = null,
     onIndicatorPositionChanged: ((Float) -> Unit)? = null
 ) {
     val itemCount = items.size
@@ -765,9 +790,14 @@ private fun AndroidNativeUnderlinedSegmentedControl(
     val unselectedTextColor = unselectedTextColorOverride
         ?: MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.42f)
     val underlineShape = CircleShape
+    val indicatorPosition = resolveSegmentedControlIndicatorPosition(
+        internalPosition = safeSelectedIndex.toFloat(),
+        externalPosition = indicatorPositionProvider?.invoke(),
+        itemCount = itemCount
+    )
 
     SideEffect {
-        onIndicatorPositionChanged?.invoke(safeSelectedIndex.toFloat())
+        onIndicatorPositionChanged?.invoke(indicatorPosition)
     }
 
     BoxWithConstraints(
@@ -782,6 +812,10 @@ private fun AndroidNativeUnderlinedSegmentedControl(
             .height(height)
     ) {
         val segmentWidth = maxWidth / itemCount
+        val underlineWidth = (segmentWidth * 0.42f)
+            .coerceAtLeast(28.dp)
+            .coerceAtMost(56.dp)
+        val underlineOffsetX = (segmentWidth * indicatorPosition) + ((segmentWidth - underlineWidth) / 2)
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
@@ -803,21 +837,18 @@ private fun AndroidNativeUnderlinedSegmentedControl(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
-                    if (selected) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .width(segmentWidth * 0.42f)
-                                .widthIn(min = 28.dp, max = 56.dp)
-                                .height(3.dp)
-                                .clip(underlineShape)
-                                .background(selectedTextColor)
-                        )
-                    }
                 }
             }
         }
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = underlineOffsetX)
+                .width(underlineWidth)
+                .height(3.dp)
+                .clip(underlineShape)
+                .background(selectedTextColor)
+        )
     }
 }
 

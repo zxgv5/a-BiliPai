@@ -57,7 +57,8 @@ fun DynamicTopBarWithTabs(
     displayMode: DynamicDisplayMode = DynamicDisplayMode.SIDEBAR,
     onDisplayModeChange: (DynamicDisplayMode) -> Unit = {},
     hazeState: HazeState? = null,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    indicatorPositionProvider: (() -> Float)? = null
 ) {
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -117,7 +118,8 @@ fun DynamicTopBarWithTabs(
                     tabs = tabs,
                     onTabSelected = onTabSelected,
                     modifier = Modifier.weight(1f),
-                    backdrop = backdrop
+                    backdrop = backdrop,
+                    indicatorPositionProvider = indicatorPositionProvider
                 )
                 
                 //  布局模式切换按钮
@@ -148,7 +150,8 @@ private fun DynamicCompactTabRow(
     tabs: List<String>,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    indicatorPositionProvider: (() -> Float)? = null
 ) {
     BottomBarLiquidSegmentedControl(
         items = tabs,
@@ -159,7 +162,8 @@ private fun DynamicCompactTabRow(
         indicatorHeight = 36.dp,
         labelFontSize = 14.sp,
         preferInlineContentStyle = true,
-        backdrop = backdrop
+        backdrop = backdrop,
+        indicatorPositionProvider = indicatorPositionProvider
     )
 }
 

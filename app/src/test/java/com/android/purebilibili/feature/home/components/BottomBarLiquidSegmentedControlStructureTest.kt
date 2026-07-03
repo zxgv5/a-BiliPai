@@ -124,6 +124,34 @@ class BottomBarLiquidSegmentedControlStructureTest {
     }
 
     @Test
+    fun `segmented indicator can follow external realtime page position`() {
+        assertEquals(
+            1.35f,
+            resolveSegmentedControlIndicatorPosition(
+                internalPosition = 1f,
+                externalPosition = 1.35f,
+                itemCount = 4
+            )
+        )
+        assertEquals(
+            0f,
+            resolveSegmentedControlIndicatorPosition(
+                internalPosition = 1f,
+                externalPosition = -0.2f,
+                itemCount = 4
+            )
+        )
+        assertEquals(
+            3f,
+            resolveSegmentedControlIndicatorPosition(
+                internalPosition = 1f,
+                externalPosition = 4.2f,
+                itemCount = 4
+            )
+        )
+    }
+
+    @Test
     fun `segmented indicator only samples hidden tab backdrop while sliding without external backdrop`() {
         assertFalse(
             shouldDrawSegmentedControlIndicatorBackdrop(
@@ -239,8 +267,12 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertTrue(source.contains("resolveSegmentedControlChromeStyle("))
         assertTrue(source.contains("AndroidNativeUnderlinedSegmentedControl("))
         assertTrue(source.contains("SegmentedControlChromeStyle.ANDROID_NATIVE_UNDERLINE"))
-        assertTrue(source.contains("onIndicatorPositionChanged?.invoke(safeSelectedIndex.toFloat())"))
-        assertTrue(source.contains(".widthIn(min = 28.dp, max = 56.dp)"))
+        assertTrue(source.contains("onIndicatorPositionChanged?.invoke(indicatorPosition)"))
+        assertTrue(source.contains("indicatorPositionProvider: (() -> Float)? = null"))
+        assertTrue(source.contains("resolveSegmentedControlIndicatorPosition("))
+        assertTrue(source.contains("externalPosition = if (dragState.isDragging) null else indicatorPositionProvider?.invoke()"))
+        assertTrue(source.contains("notifyIndexChangedOnReleaseStart = indicatorPositionProvider != null"))
+        assertTrue(source.contains("val underlineOffsetX = (segmentWidth * indicatorPosition) + ((segmentWidth - underlineWidth) / 2)"))
         assertTrue(source.contains("if (enabled && itemCount > 1 && dragSelectionEnabled)"))
         assertTrue(source.contains("Modifier.segmentedControlSelectionGesture("))
         assertTrue(source.contains("change.consume()"))

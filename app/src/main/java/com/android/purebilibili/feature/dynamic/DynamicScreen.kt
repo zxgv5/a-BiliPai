@@ -190,6 +190,15 @@ fun DynamicScreen(
         pageCount = { visibleTabs.size },
         initialPage = selectedVisibleTabIndex
     )
+    val dynamicTabIndicatorPositionProvider = remember(pagerState, visibleTabs) {
+        {
+            resolveDynamicPagerIndicatorPosition(
+                currentPage = pagerState.currentPage,
+                currentPageOffsetFraction = pagerState.currentPageOffsetFraction,
+                pageCount = visibleTabs.size
+            )
+        }
+    }
     val displayedTabIndex = pagerState.settledPage.coerceIn(0, visibleTabs.lastIndex.coerceAtLeast(0))
     val displayedLogicalTab = resolveDynamicSettledLogicalTab(displayedTabIndex, visibleTabs)
         ?: activeSelectedTab
@@ -662,7 +671,8 @@ fun DynamicScreen(
                                     displayMode = displayMode,
                                     onDisplayModeChange = { viewModel.setDisplayMode(it) },
                                     hazeState = hazeState,
-                                    backdrop = dynamicChromeBackdrop
+                                    backdrop = dynamicChromeBackdrop,
+                                    indicatorPositionProvider = dynamicTabIndicatorPositionProvider
                                 )
                             }
 
@@ -816,7 +826,8 @@ fun DynamicScreen(
                                             },
                                             displayMode = displayMode,
                                             onDisplayModeChange = { viewModel.setDisplayMode(it) },
-                                            hazeState = null
+                                            hazeState = null,
+                                            indicatorPositionProvider = dynamicTabIndicatorPositionProvider
                                         )
                                     }
 

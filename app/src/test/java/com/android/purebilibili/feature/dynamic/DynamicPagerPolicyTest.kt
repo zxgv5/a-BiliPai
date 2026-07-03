@@ -18,6 +18,34 @@ class DynamicPagerPolicyTest {
     }
 
     @Test
+    fun `顶部指示器跟随 Pager 实时偏移并限制在可见页范围`() {
+        assertEquals(
+            1.25f,
+            resolveDynamicPagerIndicatorPosition(
+                currentPage = 1,
+                currentPageOffsetFraction = 0.25f,
+                pageCount = 4
+            )
+        )
+        assertEquals(
+            0f,
+            resolveDynamicPagerIndicatorPosition(
+                currentPage = 0,
+                currentPageOffsetFraction = -0.3f,
+                pageCount = 4
+            )
+        )
+        assertEquals(
+            3f,
+            resolveDynamicPagerIndicatorPosition(
+                currentPage = 3,
+                currentPageOffsetFraction = 0.4f,
+                pageCount = 4
+            )
+        )
+    }
+
+    @Test
     fun `Pager 不在组合阶段创建列表状态或切页回顶`() {
         val source = File("src/main/java/com/android/purebilibili/feature/dynamic/DynamicScreen.kt")
             .readText()
@@ -27,5 +55,8 @@ class DynamicPagerPolicyTest {
         assertFalse(source.contains("beyondViewportPageCount = 1"))
         assertFalse(source.contains("activeListState?.scrollToItem(0)"))
         assertTrue(source.contains("snapshotFlow { pagerState.settledPage }"))
+        assertTrue(source.contains("val dynamicTabIndicatorPositionProvider = remember(pagerState, visibleTabs)"))
+        assertTrue(source.contains("currentPageOffsetFraction = pagerState.currentPageOffsetFraction"))
+        assertTrue(source.contains("indicatorPositionProvider = dynamicTabIndicatorPositionProvider"))
     }
 }
