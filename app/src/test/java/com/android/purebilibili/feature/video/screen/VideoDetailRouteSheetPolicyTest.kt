@@ -8,29 +8,46 @@ import kotlin.test.assertTrue
 class VideoDetailRouteSheetPolicyTest {
 
     @Test
-    fun homeSourceEnablesRouteSheetMotion() {
-        val motion = resolveVideoDetailRouteSheetMotion(
-            sourceRoute = "home",
-            transitionEnabled = true
-        )
+    fun cardReturnTargetSourcesEnableRouteSheetMotion() {
+        listOf(
+            "home",
+            "dynamic",
+            "search",
+            "watch_later",
+            "dynamic_detail/123",
+            "space/42",
+            "category/1",
+            "season_series_detail/favorite_season/1324105"
+        ).forEach { route ->
+            val motion = resolveVideoDetailRouteSheetMotion(
+                sourceRoute = route,
+                transitionEnabled = true
+            )
 
-        assertTrue(motion.enabled)
-        assertEquals(416, motion.durationMillis)
-        assertEquals(320, motion.mainDurationMillis)
-        assertEquals(96, motion.settleDurationMillis)
-        assertEquals(0.965f, motion.initialScale)
-        assertEquals(28f, motion.initialCornerDp)
-        assertTrue(motion.settleScaleDelta in 0f..0.002f)
-        assertTrue(motion.settleTranslationDp in 0f..2f)
-        assertTrue(motion.easing.transform(0.35f) > 0.7f)
-        assertTrue(motion.easing.transform(0.75f) > 0.96f)
+            assertTrue(motion.enabled, "expected route sheet motion for $route")
+            assertEquals(416, motion.durationMillis)
+            assertEquals(320, motion.mainDurationMillis)
+            assertEquals(96, motion.settleDurationMillis)
+            assertEquals(0.965f, motion.initialScale)
+            assertEquals(28f, motion.initialCornerDp)
+            assertTrue(motion.settleScaleDelta in 0f..0.002f)
+            assertTrue(motion.settleTranslationDp in 0f..2f)
+            assertTrue(motion.easing.transform(0.35f) > 0.7f)
+            assertTrue(motion.easing.transform(0.75f) > 0.96f)
+        }
     }
 
     @Test
-    fun nonHomeSourceDoesNotUseRouteSheetMotion() {
+    fun nonCardSourceDoesNotUseRouteSheetMotion() {
         assertFalse(
             resolveVideoDetailRouteSheetMotion(
-                sourceRoute = "search",
+                sourceRoute = "settings",
+                transitionEnabled = true
+            ).enabled
+        )
+        assertFalse(
+            resolveVideoDetailRouteSheetMotion(
+                sourceRoute = "video",
                 transitionEnabled = true
             ).enabled
         )

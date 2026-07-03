@@ -4,6 +4,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
+import com.android.purebilibili.navigation.isVideoCardReturnTargetRoute
 import kotlin.math.roundToInt
 
 internal enum class VideoSharedTransitionProfile {
@@ -244,8 +245,22 @@ internal fun shouldUseHomeVideoCardShellContainerTransform(
     hasSharedTransitionScope: Boolean,
     hasAnimatedVisibilityScope: Boolean
 ): Boolean {
+    return shouldUseVideoCardShellContainerTransform(
+        sourceRoute = sourceRoute,
+        transitionEnabled = transitionEnabled,
+        hasSharedTransitionScope = hasSharedTransitionScope,
+        hasAnimatedVisibilityScope = hasAnimatedVisibilityScope
+    )
+}
+
+internal fun shouldUseVideoCardShellContainerTransform(
+    sourceRoute: String?,
+    transitionEnabled: Boolean,
+    hasSharedTransitionScope: Boolean,
+    hasAnimatedVisibilityScope: Boolean
+): Boolean {
     if (!transitionEnabled || !hasSharedTransitionScope || !hasAnimatedVisibilityScope) return false
-    return sourceRoute?.substringBefore("?") == HOME_SOURCE_ROUTE
+    return isVideoCardReturnTargetRoute(sourceRoute)
 }
 
 internal fun shouldEnableVideoMetadataSharedTransition(

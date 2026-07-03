@@ -1,12 +1,21 @@
 package com.android.purebilibili.navigation3
 
 import android.app.Application
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,7 +42,13 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.navigationevent.NavigationEventTransitionState
 import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
-import androidx.compose.runtime.remember
+import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS
+import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_FORWARD_DURATION_MS
+import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS
+import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundPhase
+import com.android.purebilibili.core.ui.transition.shouldApplyVideoCardTransitionBackgroundToRoute
+import com.android.purebilibili.core.ui.transition.videoCardTransitionBackgroundEffect
+import com.android.purebilibili.navigation.isVideoCardReturnTargetRoute
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationHandler
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiAutoPredictiveBackExitDirection
@@ -64,6 +79,75 @@ internal fun BiliPaiNavDisplayHost(
     val application = LocalContext.current.applicationContext as Application
     var navigationEventState: NavigationEventState<SceneInfo<BiliPaiNavKey>>? = null
     val navigationScope = rememberCoroutineScope()
+    val videoCardTransitionBackgroundProgress = remember { Animatable(0f) }
+    var videoCardTransitionBackgroundPhase by remember {
+        mutableStateOf(VideoCardTransitionBackgroundPhase.IDLE)
+    }
+    var previousVideoCardTransitionBackStack by remember {
+        mutableStateOf(safeBackStack)
+    }
+    LaunchedEffect(
+        safeBackStack,
+        cardTransitionEnabled,
+        sourceMetadata.sourceRoute
+    ) {
+        val previousTop = previousVideoCardTransitionBackStack.lastOrNull()
+        val currentTop = safeBackStack.lastOrNull()
+        val hasVideoCardTransitionSource = isVideoCardReturnTargetRoute(sourceMetadata.sourceRoute)
+        val openedVideoDetail = currentTop is BiliPaiNavKey.VideoDetail &&
+            previousTop !is BiliPaiNavKey.VideoDetail &&
+            hasVideoCardTransitionSource
+        val returnedFromVideoDetail = previousTop is BiliPaiNavKey.VideoDetail &&
+            currentTop !is BiliPaiNavKey.VideoDetail &&
+            hasVideoCardTransitionSource
+        previousVideoCardTransitionBackStack = safeBackStack
+
+        if (!cardTransitionEnabled || !hasVideoCardTransitionSource) {
+            videoCardTransitionBackgroundPhase = VideoCardTransitionBackgroundPhase.IDLE
+            videoCardTransitionBackgroundProgress.snapTo(0f)
+            return@LaunchedEffect
+        }
+
+        when {
+            openedVideoDetail -> {
+                videoCardTransitionBackgroundPhase = VideoCardTransitionBackgroundPhase.OPENING
+                videoCardTransitionBackgroundProgress.snapTo(0f)
+                videoCardTransitionBackgroundProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = VIDEO_CARD_TRANSITION_BACKGROUND_FORWARD_DURATION_MS,
+                        easing = LinearOutSlowInEasing
+                    )
+                )
+            }
+
+            returnedFromVideoDetail -> {
+                videoCardTransitionBackgroundPhase = VideoCardTransitionBackgroundPhase.RETURNING
+                if (videoCardTransitionBackgroundProgress.value <= 0.01f) {
+                    videoCardTransitionBackgroundProgress.snapTo(1f)
+                }
+                videoCardTransitionBackgroundProgress.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS,
+                        easing = LinearOutSlowInEasing
+                    )
+                )
+                videoCardTransitionBackgroundPhase = VideoCardTransitionBackgroundPhase.IDLE
+            }
+
+            currentTop !is BiliPaiNavKey.VideoDetail -> {
+                videoCardTransitionBackgroundProgress.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS,
+                        easing = FastOutLinearInEasing
+                    )
+                )
+                videoCardTransitionBackgroundPhase = VideoCardTransitionBackgroundPhase.IDLE
+            }
+        }
+    }
     val popRouteTransition = remember(cardTransitionEnabled, sourceMetadata, safeBackStack) {
         resolveBiliPaiNavDisplayPopRouteTransition(
             cardTransitionEnabled = cardTransitionEnabled,
@@ -114,17 +198,43 @@ internal fun BiliPaiNavDisplayHost(
         content,
         application,
         cardTransitionEnabled,
-        safeBackStack
+        sourceMetadata.sourceRoute,
+        activeMainHostRoute
     ) {
         { key ->
-            ProvideAnimatedVisibilityScope(
-                animatedVisibilityScope = LocalNavAnimatedContentScope.current
-            ) {
-                CompositionLocalProvider(
-                    LocalVideoCardSharedElementSourceRoute provides key.toLegacyRoute()
+            val entryRoute = key.toLegacyRoute()
+            val shouldApplyBackground = cardTransitionEnabled &&
+                shouldApplyVideoCardTransitionBackgroundToRoute(
+                    entryRoute = entryRoute,
+                    sourceRoute = sourceMetadata.sourceRoute,
+                    activeMainHostRoute = activeMainHostRoute
+                )
+            val entryModifier = Modifier
+                .fillMaxSize()
+                .let { baseModifier ->
+                    if (shouldApplyBackground) {
+                        baseModifier.videoCardTransitionBackgroundEffect(
+                            progressProvider = {
+                                videoCardTransitionBackgroundProgress.value
+                            },
+                            phaseProvider = {
+                                videoCardTransitionBackgroundPhase
+                            }
+                        )
+                    } else {
+                        baseModifier
+                    }
+                }
+            Box(modifier = entryModifier) {
+                ProvideAnimatedVisibilityScope(
+                    animatedVisibilityScope = LocalNavAnimatedContentScope.current
                 ) {
-                    ProvideNavigation3ViewModelApplicationExtras(application) {
-                        content(key)
+                    CompositionLocalProvider(
+                        LocalVideoCardSharedElementSourceRoute provides entryRoute
+                    ) {
+                        ProvideNavigation3ViewModelApplicationExtras(application) {
+                            content(key)
+                        }
                     }
                 }
             }

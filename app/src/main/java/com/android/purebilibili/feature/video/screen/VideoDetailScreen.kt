@@ -9,8 +9,6 @@ import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.database.ContentObserver
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -54,7 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.luminance
@@ -70,6 +67,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
@@ -136,7 +134,6 @@ import com.android.purebilibili.feature.video.ui.components.TripleSuccessAnimati
 import com.android.purebilibili.feature.video.ui.components.VideoDetailSkeleton
 import com.android.purebilibili.feature.video.ui.components.VideoActionFeedbackHost
 import com.android.purebilibili.feature.video.subtitle.SubtitleAutoPreference
-import kotlin.math.roundToInt
 import com.android.purebilibili.feature.video.subtitle.SubtitleDisplayMode
 import com.android.purebilibili.feature.video.subtitle.resolveSubtitleDisplayModePreference
 import com.android.purebilibili.feature.video.progress.PbpProgressData
@@ -167,7 +164,7 @@ import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionV
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldFadePlayerSurfaceOnDetailReturn
 import com.android.purebilibili.core.ui.transition.shouldUseDetailReturnCoverCrossfade
-import com.android.purebilibili.core.ui.transition.shouldUseHomeVideoCardShellContainerTransform
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellContainerTransform
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.ui.transition.videoSharedElementBoundsTransformSpec
 import com.android.purebilibili.core.ui.rememberAppCollectionIcon
@@ -680,8 +677,8 @@ internal fun resolveVideoDetailRouteSheetMotion(
     sourceRoute: String?,
     transitionEnabled: Boolean
 ): VideoDetailRouteSheetMotion {
-    val isHomeSource = sourceRoute?.substringBefore("?") == com.android.purebilibili.navigation.ScreenRoutes.Home.route
-    val enabled = transitionEnabled && isHomeSource
+    val enabled = transitionEnabled &&
+        com.android.purebilibili.navigation.isVideoCardReturnTargetRoute(sourceRoute)
     return VideoDetailRouteSheetMotion(
         enabled = enabled,
         durationMillis = HOME_VIDEO_ROUTE_SHEET_DURATION_MILLIS,
@@ -738,11 +735,11 @@ private fun lerpVideoDetailFloat(start: Float, stop: Float, fraction: Float): Fl
 }
 
 @Composable
-private fun rememberVideoDetailRouteSheetFrame(
+private fun rememberVideoDetailRouteSheetFrameProvider(
     motion: VideoDetailRouteSheetMotion,
     isExitTransitionInProgress: Boolean,
     sharedBoundsActive: Boolean = false
-): VideoDetailRouteSheetFrame {
+): () -> VideoDetailRouteSheetFrame {
     // shell sharedBounds 接管整张详情壳的 morph 时，sheet 自身的 scale/translation/corner/scrim
     // 必须全部停摆——否则会与共享元素同时形变导致撕裂。等价于 motion.enabled = false。
     val effectiveMotion = if (sharedBoundsActive) motion.copy(enabled = false) else motion
@@ -795,24 +792,21 @@ private fun rememberVideoDetailRouteSheetFrame(
         settleDirection = VideoDetailRouteSheetSettleDirection.None
     }
 
-    return remember(
-        routeSheetProgress.value,
-        routeSheetSettleProgress.value,
-        settleDirection,
-        effectiveMotion
-    ) {
-        resolveVideoDetailRouteSheetFrame(
-            rawProgress = routeSheetProgress.value,
-            settleProgress = routeSheetSettleProgress.value,
-            settleDirection = settleDirection,
-            motion = effectiveMotion
-        )
+    return remember(effectiveMotion, routeSheetProgress, routeSheetSettleProgress) {
+        {
+            resolveVideoDetailRouteSheetFrame(
+                rawProgress = routeSheetProgress.value,
+                settleProgress = routeSheetSettleProgress.value,
+                settleDirection = settleDirection,
+                motion = effectiveMotion
+            )
+        }
     }
 }
 
 @Composable
 private fun VideoDetailRouteSheetHost(
-    frame: VideoDetailRouteSheetFrame,
+    frameProvider: () -> VideoDetailRouteSheetFrame,
     motion: VideoDetailRouteSheetMotion,
     isFullscreenMode: Boolean,
     backgroundColor: Color,
@@ -820,22 +814,28 @@ private fun VideoDetailRouteSheetHost(
     content: @Composable BoxScope.() -> Unit,
     overlayContent: @Composable BoxScope.() -> Unit
 ) {
-    val routeSheetTranslationYPx = with(LocalDensity.current) {
-        frame.translationYDp.dp.toPx()
-    }
-    val routeSheetShape = RoundedCornerShape(frame.cornerDp.dp)
+    val density = LocalDensity.current
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = frame.backgroundScrimAlpha))
+            .drawWithContent {
+                val frame = frameProvider()
+                if (frame.backgroundScrimAlpha > 0.001f) {
+                    drawRect(Color.Black.copy(alpha = frame.backgroundScrimAlpha))
+                }
+                drawContent()
+            }
             .graphicsLayer {
+                val frame = frameProvider()
                 scaleX = frame.scale
                 scaleY = frame.scale
-                translationY = routeSheetTranslationYPx
+                translationY = with(density) {
+                    frame.translationYDp.dp.toPx()
+                }
                 transformOrigin = TransformOrigin(0.5f, 0f)
                 clip = motion.enabled && frame.cornerDp > 0.01f
-                shape = routeSheetShape
+                shape = RoundedCornerShape(frame.cornerDp.dp)
             }
             .background(if (isFullscreenMode) Color.Black else backgroundColor),
     ) {
@@ -1715,7 +1715,7 @@ fun VideoDetailScreen(
     val isExitTransitionInProgress =
         rootAnimatedVisibilityScope?.transition?.targetState == EnterExitState.PostExit
     val rootSharedTransitionScope = LocalSharedTransitionScope.current
-    val detailShellSharedBoundsEnabled = shouldUseHomeVideoCardShellContainerTransform(
+    val detailShellSharedBoundsEnabled = shouldUseVideoCardShellContainerTransform(
         sourceRoute = sourceRouteForSharedElement,
         transitionEnabled = transitionEnabled,
         hasSharedTransitionScope = rootSharedTransitionScope != null,
@@ -1728,7 +1728,7 @@ fun VideoDetailScreen(
         hasAnimatedVisibilityScope = rootAnimatedVisibilityScope != null
     ) && !sourceRouteForSharedElement.isNullOrBlank()
     val sharedBoundsActive = detailShellSharedBoundsEnabled || coverSharedBoundsActive
-    val routeSheetFrame = rememberVideoDetailRouteSheetFrame(
+    val routeSheetFrameProvider = rememberVideoDetailRouteSheetFrameProvider(
         motion = routeSheetMotion,
         isExitTransitionInProgress = isExitTransitionInProgress,
         sharedBoundsActive = sharedBoundsActive
@@ -4574,7 +4574,7 @@ fun VideoDetailScreen(
     }
 
     VideoDetailRouteSheetHost(
-        frame = routeSheetFrame,
+        frameProvider = routeSheetFrameProvider,
         motion = routeSheetMotion,
         isFullscreenMode = isFullscreenMode,
         backgroundColor = MaterialTheme.colorScheme.background,

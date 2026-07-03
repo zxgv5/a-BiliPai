@@ -3,12 +3,8 @@ package com.android.purebilibili.feature.home
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.os.Build
 import android.os.SystemClock
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -41,7 +37,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.zIndex
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
@@ -806,57 +801,6 @@ fun HomeScreen(
         cardTransitionEnabled = cardTransitionEnabled,
         isQuickReturnFromDetail = isQuickReturningFromVideoDetail
     )
-    val homeVideoTransitionBackgroundProgress = remember { Animatable(0f) }
-    var homeVideoTransitionBackgroundPhase by remember {
-        mutableStateOf(HomeVideoTransitionBackgroundPhase.IDLE)
-    }
-    val isOpeningVideoDetailBackgroundTransition =
-        hideTopTabsForForwardDetailNav && !isReturningFromVideoDetail
-    LaunchedEffect(
-        isOpeningVideoDetailBackgroundTransition,
-        isReturningFromVideoDetail,
-        cardTransitionEnabled,
-        returnAnimationSuppressionDurationMs
-    ) {
-        if (!cardTransitionEnabled) {
-            homeVideoTransitionBackgroundPhase = HomeVideoTransitionBackgroundPhase.IDLE
-            homeVideoTransitionBackgroundProgress.snapTo(0f)
-            return@LaunchedEffect
-        }
-        when {
-            isReturningFromVideoDetail -> {
-                homeVideoTransitionBackgroundPhase = HomeVideoTransitionBackgroundPhase.RETURNING
-                homeVideoTransitionBackgroundProgress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(
-                        durationMillis = HOME_VIDEO_TRANSITION_BACKGROUND_RETURN_DURATION_MS,
-                        easing = LinearOutSlowInEasing
-                    )
-                )
-                homeVideoTransitionBackgroundPhase = HomeVideoTransitionBackgroundPhase.IDLE
-            }
-            isOpeningVideoDetailBackgroundTransition -> {
-                homeVideoTransitionBackgroundPhase = HomeVideoTransitionBackgroundPhase.OPENING
-                homeVideoTransitionBackgroundProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = HOME_VIDEO_TRANSITION_BACKGROUND_FORWARD_DURATION_MS,
-                        easing = LinearOutSlowInEasing
-                    )
-                )
-            }
-            else -> {
-                homeVideoTransitionBackgroundProgress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(
-                        durationMillis = HOME_VIDEO_TRANSITION_BACKGROUND_CANCEL_DURATION_MS,
-                        easing = FastOutLinearInEasing
-                    )
-                )
-                homeVideoTransitionBackgroundPhase = HomeVideoTransitionBackgroundPhase.IDLE
-            }
-        }
-    }
     // Navigation 返回不一定触发首页 Lifecycle.ON_START，顶栏恢复必须直接跟随返回态。
     LaunchedEffect(isReturningFromVideoDetail, cardTransitionEnabled, isQuickReturningFromVideoDetail) {
         if (!isReturningFromVideoDetail) return@LaunchedEffect
@@ -2355,16 +2299,7 @@ fun HomeScreen(
     
     // 指示器位置逻辑也移入 graphicsLayer
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .homeVideoTransitionBackgroundEffect(
-                progressProvider = {
-                    homeVideoTransitionBackgroundProgress.value
-                },
-                phaseProvider = {
-                    homeVideoTransitionBackgroundPhase
-                }
-            )
+        modifier = Modifier.fillMaxSize()
     ) {
         scaffoldContent()
         val video = pendingNotInterestedVideo
@@ -2416,61 +2351,6 @@ internal fun resolveHomeOverlayMotionSpec(): HomeOverlayMotionSpec {
     )
 }
 
-private const val HOME_VIDEO_TRANSITION_MAX_BLUR_RADIUS_PX = 36f
-private const val HOME_VIDEO_TRANSITION_MAX_SCRIM_ALPHA = 0.22f
-private const val HOME_VIDEO_TRANSITION_MAX_CONTENT_SCALE_REDUCTION = 0.045f
-private const val HOME_VIDEO_TRANSITION_BLUR_CLEAR_TAIL_PROGRESS = 0.18f
-private const val HOME_VIDEO_TRANSITION_BACKGROUND_FORWARD_DURATION_MS = 160
-private const val HOME_VIDEO_TRANSITION_BACKGROUND_RETURN_DURATION_MS = 180
-private const val HOME_VIDEO_TRANSITION_BACKGROUND_CANCEL_DURATION_MS = 160
-
-internal enum class HomeVideoTransitionBackgroundPhase {
-    IDLE,
-    OPENING,
-    RETURNING
-}
-
-internal data class HomeVideoTransitionBackgroundFrame(
-    val blurRadiusPx: Float,
-    val scrimAlpha: Float,
-    val contentScale: Float
-)
-
-internal fun resolveHomeVideoTransitionBackgroundFrame(
-    progress: Float,
-    phase: HomeVideoTransitionBackgroundPhase,
-    sdkInt: Int = Build.VERSION.SDK_INT
-): HomeVideoTransitionBackgroundFrame {
-    val clamped = progress.coerceIn(0f, 1f)
-    val blurProgress = ((clamped - HOME_VIDEO_TRANSITION_BLUR_CLEAR_TAIL_PROGRESS) /
-        (1f - HOME_VIDEO_TRANSITION_BLUR_CLEAR_TAIL_PROGRESS)).coerceIn(0f, 1f)
-    val blurStrength = smoothHomeVideoTransitionBackgroundProgress(blurProgress)
-    return HomeVideoTransitionBackgroundFrame(
-        blurRadiusPx = if (sdkInt >= Build.VERSION_CODES.S) {
-            HOME_VIDEO_TRANSITION_MAX_BLUR_RADIUS_PX * blurStrength
-        } else {
-            0f
-        },
-        scrimAlpha = when (phase) {
-            HomeVideoTransitionBackgroundPhase.OPENING ->
-                HOME_VIDEO_TRANSITION_MAX_SCRIM_ALPHA * clamped
-            HomeVideoTransitionBackgroundPhase.IDLE,
-            HomeVideoTransitionBackgroundPhase.RETURNING -> 0f
-        },
-        contentScale = when (phase) {
-            HomeVideoTransitionBackgroundPhase.OPENING ->
-                1f - HOME_VIDEO_TRANSITION_MAX_CONTENT_SCALE_REDUCTION * clamped
-            HomeVideoTransitionBackgroundPhase.IDLE,
-            HomeVideoTransitionBackgroundPhase.RETURNING -> 1f
-        }
-    )
-}
-
-private fun smoothHomeVideoTransitionBackgroundProgress(progress: Float): Float {
-    val clamped = progress.coerceIn(0f, 1f)
-    return clamped * clamped * (3f - 2f * clamped)
-}
-
 internal fun resolveReturnAnimationSuppressionDurationMs(
     isTabletLayout: Boolean,
     cardAnimationEnabled: Boolean,
@@ -2495,40 +2375,6 @@ internal fun resolveHomeContentInteractionRestoreDelayMs(
     // 视觉返场保护仍由 suppression / 底栏恢复窗口负责；
     // 首页列表手势应在页面重新可见时立即恢复，避免第一下滑动被导航态吞掉。
     return 0L
-}
-
-private fun Modifier.homeVideoTransitionBackgroundEffect(
-    progressProvider: () -> Float,
-    phaseProvider: () -> HomeVideoTransitionBackgroundPhase
-): Modifier {
-    return graphicsLayer {
-        val frame = resolveHomeVideoTransitionBackgroundFrame(
-            progress = progressProvider(),
-            phase = phaseProvider()
-        )
-        scaleX = frame.contentScale
-        scaleY = frame.contentScale
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && frame.blurRadiusPx > 0.01f) {
-            renderEffect = RenderEffect
-                .createBlurEffect(
-                    frame.blurRadiusPx,
-                    frame.blurRadiusPx,
-                    Shader.TileMode.CLAMP
-                )
-                .asComposeRenderEffect()
-        } else {
-            renderEffect = null
-        }
-    }.drawWithContent {
-        drawContent()
-        val frame = resolveHomeVideoTransitionBackgroundFrame(
-            progress = progressProvider(),
-            phase = phaseProvider()
-        )
-        if (frame.scrimAlpha > 0.001f) {
-            drawRect(Color.Black.copy(alpha = frame.scrimAlpha))
-        }
-    }
 }
 
 private fun Modifier.homeFeedTopVideoFadeMask(fadeHeight: Dp): Modifier {

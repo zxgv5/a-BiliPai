@@ -114,9 +114,9 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun homeVideoCardShellContainerTransform_requiresHomeSourceAndBothScopes() {
+    fun videoCardShellContainerTransform_supportsReturnTargetSourcesAndScopes() {
         assertTrue(
-            shouldUseHomeVideoCardShellContainerTransform(
+            shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "home",
                 transitionEnabled = true,
                 hasSharedTransitionScope = true,
@@ -124,23 +124,55 @@ class VideoSharedTransitionPolicyTest {
             )
         )
         assertTrue(
-            shouldUseHomeVideoCardShellContainerTransform(
+            shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "home?tab=recommend",
                 transitionEnabled = true,
                 hasSharedTransitionScope = true,
                 hasAnimatedVisibilityScope = true
             )
         )
-        assertFalse(
-            shouldUseHomeVideoCardShellContainerTransform(
+        assertTrue(
+            shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "search",
                 transitionEnabled = true,
                 hasSharedTransitionScope = true,
                 hasAnimatedVisibilityScope = true
             )
         )
+        assertTrue(
+            shouldUseVideoCardShellContainerTransform(
+                sourceRoute = "dynamic_detail/123",
+                transitionEnabled = true,
+                hasSharedTransitionScope = true,
+                hasAnimatedVisibilityScope = true
+            )
+        )
+        assertTrue(
+            shouldUseVideoCardShellContainerTransform(
+                sourceRoute = "space/42",
+                transitionEnabled = true,
+                hasSharedTransitionScope = true,
+                hasAnimatedVisibilityScope = true
+            )
+        )
         assertFalse(
-            shouldUseHomeVideoCardShellContainerTransform(
+            shouldUseVideoCardShellContainerTransform(
+                sourceRoute = "settings",
+                transitionEnabled = true,
+                hasSharedTransitionScope = true,
+                hasAnimatedVisibilityScope = true
+            )
+        )
+        assertFalse(
+            shouldUseVideoCardShellContainerTransform(
+                sourceRoute = "video",
+                transitionEnabled = true,
+                hasSharedTransitionScope = true,
+                hasAnimatedVisibilityScope = true
+            )
+        )
+        assertFalse(
+            shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "home",
                 transitionEnabled = false,
                 hasSharedTransitionScope = true,
@@ -148,7 +180,7 @@ class VideoSharedTransitionPolicyTest {
             )
         )
         assertFalse(
-            shouldUseHomeVideoCardShellContainerTransform(
+            shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "home",
                 transitionEnabled = true,
                 hasSharedTransitionScope = false,
@@ -168,12 +200,12 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoDetailRootProvidesHomeCardShellSharedBoundsTarget() {
+    fun videoDetailRootProvidesGlobalCardShellSharedBoundsTarget() {
         val detailSource = File(
             "src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt"
         ).readText()
 
-        assertTrue(detailSource.contains("shouldUseHomeVideoCardShellContainerTransform("))
+        assertTrue(detailSource.contains("shouldUseVideoCardShellContainerTransform("))
         assertTrue(detailSource.contains("detailShellSharedBoundsEnabled"))
         assertTrue(detailSource.contains("videoCardShellSharedBoundsOrEmpty("))
     }

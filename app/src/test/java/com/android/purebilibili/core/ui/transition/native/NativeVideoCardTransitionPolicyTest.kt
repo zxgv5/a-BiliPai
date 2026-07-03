@@ -1,6 +1,7 @@
 package com.android.purebilibili.core.ui.transition.native
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NativeVideoCardTransitionPolicyTest {
@@ -30,12 +31,13 @@ class NativeVideoCardTransitionPolicyTest {
 
         assertTrue(start.blurRadiusPx > middle.blurRadiusPx)
         assertTrue(middle.blurRadiusPx > end.blurRadiusPx)
-        assertTrue(start.scrimAlpha > middle.scrimAlpha)
-        assertTrue(middle.scrimAlpha > end.scrimAlpha)
+        assertEquals(0f, start.scrimAlpha)
+        assertEquals(0f, middle.scrimAlpha)
+        assertEquals(0f, end.scrimAlpha)
     }
 
     @Test
-    fun nativeFrameOnlyDescribesBlurAndScrim() {
+    fun nativeFrameQuantizesBlurAndDoesNotDrawReturnScrim() {
         val middle = resolveNativeVideoCardTransitionFrame(
             spec = spec,
             progress = 0.5f,
@@ -44,11 +46,12 @@ class NativeVideoCardTransitionPolicyTest {
         )
 
         assertTrue(middle.blurRadiusPx > 0f)
-        assertTrue(middle.scrimAlpha > 0f)
+        assertEquals(0f, middle.blurRadiusPx % 2f)
+        assertEquals(0f, middle.scrimAlpha)
     }
 
     @Test
-    fun api30KeepsBlurDisabledButStillAppliesScrim() {
+    fun api30KeepsBlurAndReturnScrimDisabled() {
         val middle = resolveNativeVideoCardTransitionFrame(
             spec = spec,
             progress = 0.5f,
@@ -56,22 +59,22 @@ class NativeVideoCardTransitionPolicyTest {
             sdkInt = 30
         )
 
-        kotlin.test.assertEquals(0f, middle.blurRadiusPx)
-        assertTrue(middle.scrimAlpha > 0f)
+        assertEquals(0f, middle.blurRadiusPx)
+        assertEquals(0f, middle.scrimAlpha)
     }
 
     @Test
-    fun defaultMidProgressKeepsBackgroundBlurAndScrimVisible() {
-        val middle = resolveNativeVideoCardTransitionFrame(
+    fun defaultMaxBlurIsCappedToTwentyFourPixels() {
+        val start = resolveNativeVideoCardTransitionFrame(
             spec = NativeVideoCardTransitionSpec(
                 maxBlurRadiusPx = NATIVE_VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_PX
             ),
-            progress = 0.5f,
+            progress = 0f,
             phase = NativeVideoCardTransitionPhase.Closing,
             sdkInt = 35
         )
 
-        assertTrue(middle.blurRadiusPx > 0f)
-        assertTrue(middle.scrimAlpha > 0f)
+        assertEquals(24f, start.blurRadiusPx)
+        assertEquals(0f, start.scrimAlpha)
     }
 }
