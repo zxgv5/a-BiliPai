@@ -86,7 +86,7 @@ android {
         // 🔥🔥 [版本号] 发布新版前记得更新！格式：versionCode +1, versionName 递增
         // 更新日志：CHANGELOG.md
         versionCode = 254
-        versionName = "9.9.5"
+        versionName = "9.9.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

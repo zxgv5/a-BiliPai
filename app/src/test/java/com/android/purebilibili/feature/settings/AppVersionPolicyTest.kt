@@ -14,6 +14,6 @@ class AppVersionPolicyTest {
         ).first { it.exists() }.readText()
 
         assertTrue(buildFile.contains("versionCode = 254"))
-        assertTrue(buildFile.contains("versionName = \"9.9.5\""))
+        assertTrue(buildFile.contains("versionName = \"9.9.6\""))
     }
 }
