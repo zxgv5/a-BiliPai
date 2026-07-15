@@ -452,8 +452,13 @@ internal fun resolveLiquidReuseIdleSurfaceMaxAlpha(
  */
 internal fun resolveLiquidReuseExportSurfaceColor(
     shellContainerColor: Color,
-    chromeContext: LiquidReuseChromeContext,
-): Color = shellContainerColor
+    glassEnabled: Boolean,
+    darkTheme: Boolean,
+): Color = resolveKernelSuBottomBarShellColor(
+    containerColor = shellContainerColor,
+    liquidGlassEnabled = glassEnabled,
+    darkTheme = darkTheme,
+)
 
 /** Capture lens strength: full 24dp while interacting, like KernelSu bottom bar capture. */
 internal fun resolveSharedLiquidIndicatorCaptureLensProgress(
@@ -760,7 +765,8 @@ fun BottomBarLiquidSegmentedControl(
         // indicator grows, instead of exposing the darker raw page capture mid-swipe.
         val exportSurfaceColor = resolveLiquidReuseExportSurfaceColor(
             shellContainerColor = containerColor,
-            chromeContext = liquidReuseChrome,
+            glassEnabled = liquidGlassEnabled,
+            darkTheme = isDarkTheme,
         )
         val tabsBackdrop = rememberLayerBackdrop(onDraw = {
             drawRect(exportSurfaceColor)
@@ -865,19 +871,16 @@ fun BottomBarLiquidSegmentedControl(
                         .height(controlHeight)
                         .graphicsLayer { translationX = exportPanelOffsetPx }
                         .run {
-                            // In-content export stays surface-filled only. Re-sampling page/list
-                            // into export reintroduces OOB black under monochrome glyphs.
-                            // Local stable surface is already painted by tabsBackdrop.onDraw.
+                            // Match the floating dock whenever the caller guarantees that the
+                            // external page source covers this control. The expanded export fill
+                            // remains underneath as safe edge sampling beyond the control bounds.
                             if (
                                 shouldDrawSegmentedControlExportCaptureBackdrop(
                                     liquidGlassEnabled = liquidGlassEnabled,
                                     hasExternalBackdrop = hasExternalBackdrop
                                 ) &&
                                 samplingBackdrop != null &&
-                                // Only composite an extra shell tint when we have a non-local page
-                                // sample that is known safe (coordinate-independent).
-                                samplingBackdrop !== localSamplingBackdrop &&
-                                !samplingBackdrop.isCoordinatesDependent
+                                samplingBackdrop !== localSamplingBackdrop
                             ) {
                                 drawBackdrop(
                                     backdrop = samplingBackdrop,

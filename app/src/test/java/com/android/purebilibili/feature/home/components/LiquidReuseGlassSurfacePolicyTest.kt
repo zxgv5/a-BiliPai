@@ -93,12 +93,13 @@ class LiquidReuseGlassSurfacePolicyTest {
     }
 
     @Test
-    fun exportSurfaceKeepsShellTint() {
-        val shell = Color.White.copy(alpha = 0.35f)
+    fun exportSurfaceUsesTheSameKsuTintAsFloatingDock() {
+        val shell = Color.White.copy(alpha = 0.30f)
         val export = resolveLiquidReuseExportSurfaceColor(
             shellContainerColor = shell,
-            chromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
+            glassEnabled = true,
+            darkTheme = false,
         )
-        assertEquals(shell.alpha, export.alpha, absoluteTolerance = 0.001f)
+        assertEquals(resolveKernelSuBottomBarContainerColor(darkTheme = false), export)
     }
 }
