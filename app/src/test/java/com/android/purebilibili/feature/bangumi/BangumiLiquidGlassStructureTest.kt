@@ -8,9 +8,12 @@ class BangumiLiquidGlassStructureTest {
 
     @Test
     fun `bangumi segmented controls reuse home liquid indicator`() {
+        val screenSource = sourceOf("BangumiScreen.kt")
         val filterSource = sourceOf("ui/components/BangumiFilterComponents.kt")
         val followSource = sourceOf("MyBangumiScreen.kt")
 
+        assertTrue(screenSource.contains("fun BangumiTypeTabs("))
+        assertTrue(screenSource.contains("BottomBarLiquidSegmentedControl("))
         assertTrue(filterSource.contains("fun BangumiModeTabs("))
         assertTrue(filterSource.contains("fun BangumiIndexFilterRows("))
         assertTrue(filterSource.contains("BottomBarLiquidSegmentedControl("))
