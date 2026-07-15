@@ -216,15 +216,13 @@ class HomeChromeLiquidSurfaceStructureTest {
                 topBarSource.contains("rememberCombinedBackdrop(backdrop, tabContentBackdrop)")
         )
         assertTrue(
-            "KSU dock surface should use backdrop vibrancy, blur, and lens like the floating bottom bar",
-            bottomBar.readText().contains("internal fun Modifier.kernelSuFloatingDockSurface(") &&
-                bottomBar.readText().contains("vibrancy()") &&
+            "KSU dock surface should use Miuix floating dock (InstallerX-aligned) with lens support",
+            bottomBar.readText().contains("internal fun Modifier.kernelSuMiuixFloatingDockSurface(") &&
+                bottomBar.readText().contains("miuixVibrancy()") &&
                 bottomBar.readText().contains("drawShellLens: Boolean = true") &&
-                bottomBar.readText().contains("glassEnabled && drawShellLens") &&
-                bottomBar.readText().contains("shellRefractionHeightDp") &&
-                bottomBar.readText().contains("shellRefractionAmountDp") &&
-                bottomBar.readText().contains("runtimeShaderEffect(") &&
-                bottomBar.readText().contains("LIQUID_GLASS_SHADER_KEY")
+                bottomBar.readText().contains("miuixLens(") &&
+                !bottomBar.readText().contains("internal fun Modifier.kernelSuFloatingDockSurface(") &&
+                !bottomBar.readText().contains("com.kyant.backdrop")
         )
         assertFalse(
             "bottom bar should not keep the old appChromeLiquidSurface renderer",
