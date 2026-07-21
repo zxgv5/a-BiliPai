@@ -281,6 +281,58 @@ class SpaceDynamicLoadPolicyTest {
     }
 
     @Test
+    fun resolveSpaceDynamicCardItem_mapsForwardOrigForNestedDisplay() {
+        val item = SpaceDynamicItem(
+            id_str = "forward",
+            type = "DYNAMIC_TYPE_FORWARD",
+            modules = SpaceDynamicModules(
+                module_dynamic = SpaceDynamicContent(
+                    desc = SpaceDynamicDesc(text = "我的4P也到了 查看图片")
+                )
+            ),
+            orig = SpaceDynamicItem(
+                id_str = "orig",
+                type = "DYNAMIC_TYPE_DRAW",
+                modules = SpaceDynamicModules(
+                    module_author = com.android.purebilibili.data.model.response.SpaceDynamicAuthor(
+                        mid = 1L,
+                        name = "奇妙的摸鱼禁止",
+                        face = "https://face"
+                    ),
+                    module_dynamic = SpaceDynamicContent(
+                        desc = SpaceDynamicDesc(text = "大疆Pocket收纳包"),
+                        major = SpaceDynamicMajor(
+                            type = "MAJOR_TYPE_DRAW",
+                            draw = SpaceDynamicDraw(
+                                items = listOf(
+                                    SpaceDynamicDrawItem(
+                                        src = "https://i0.hdslb.com/bfs/new_dyn/bag.jpg",
+                                        width = 800,
+                                        height = 800
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val mapped = resolveSpaceDynamicCardItem(item)
+        assertEquals("DYNAMIC_TYPE_FORWARD", mapped.type)
+        assertEquals("我的4P也到了 查看图片", mapped.modules.module_dynamic?.desc?.text)
+        val orig = mapped.orig
+        assertEquals("orig", orig?.id_str)
+        assertEquals("DYNAMIC_TYPE_DRAW", orig?.type)
+        assertEquals("奇妙的摸鱼禁止", orig?.modules?.module_author?.name)
+        assertEquals("大疆Pocket收纳包", orig?.modules?.module_dynamic?.desc?.text)
+        assertEquals(
+            listOf("https://i0.hdslb.com/bfs/new_dyn/bag.jpg"),
+            orig?.modules?.module_dynamic?.major?.draw?.items?.map { it.src }
+        )
+    }
+
+    @Test
     fun resolveSpaceDynamicCardItem_preservesDeleteMenuParams() {
         val item = SpaceDynamicItem(
             id_str = "1063487284684259332",
