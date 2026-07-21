@@ -1,8 +1,6 @@
 package com.android.purebilibili.navigation3
 
-import android.app.ActivityManager
 import android.app.Application
-import android.content.Context
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.tween
@@ -48,8 +46,6 @@ import androidx.navigationevent.NavigationEventTransitionState
 import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.adaptive.MotionTier
-import com.android.purebilibili.core.ui.adaptive.resolveDeviceMotionCapabilityTier
-import com.android.purebilibili.core.ui.adaptive.resolveVideoCardTransitionMotionTier
 import com.android.purebilibili.core.ui.motion.rememberSystemReduceMotion
 import com.android.purebilibili.core.ui.transition.LocalPredictiveBackBackgroundState
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
@@ -222,8 +218,9 @@ internal fun BiliPaiNavDisplayHost(
             withFrameNanos { }
         }
     }
-    // 系统减弱动画 + 设备算力档：低端跳过全屏 GPU 模糊，仅 scrim；高端保留完整景深。
-    val transitionBackgroundMotionTier = rememberVideoCardTransitionMotionTier()
+    // 仅系统减弱动画时降为 scrim-only；不按机型降级，保证完整 20px 景深观感。
+    val transitionBackgroundMotionTier =
+        if (rememberSystemReduceMotion()) MotionTier.Reduced else MotionTier.Normal
     var previousVideoCardTransitionBackStack by remember {
         mutableStateOf(safeBackStack)
     }
@@ -769,32 +766,6 @@ internal fun BiliPaiNavDisplayHost(
             },
         )
     }
-}
-
-@Composable
-private fun rememberVideoCardTransitionMotionTier(): MotionTier {
-    val context = LocalContext.current.applicationContext
-    val reduceMotion = rememberSystemReduceMotion()
-    val deviceCapabilityTier = remember(context) {
-        resolveDeviceMotionCapabilityTierFromContext(context)
-    }
-    return remember(reduceMotion, deviceCapabilityTier) {
-        resolveVideoCardTransitionMotionTier(
-            reduceMotion = reduceMotion,
-            deviceCapabilityTier = deviceCapabilityTier,
-        )
-    }
-}
-
-internal fun resolveDeviceMotionCapabilityTierFromContext(context: Context): MotionTier {
-    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-    val isLowRam = activityManager?.isLowRamDevice == true
-    val memoryClassMb = activityManager?.memoryClass ?: 0
-    return resolveDeviceMotionCapabilityTier(
-        isLowRamDevice = isLowRam,
-        memoryClassMb = memoryClassMb,
-        cpuCores = Runtime.getRuntime().availableProcessors(),
-    )
 }
 
 @Composable

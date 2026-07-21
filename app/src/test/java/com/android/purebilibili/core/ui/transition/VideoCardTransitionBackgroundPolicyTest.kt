@@ -122,44 +122,7 @@ class VideoCardTransitionBackgroundPolicyTest {
     }
 
     @Test
-    fun openingEarlyProgressSkipsBlurToProtectClickFirstFrames() {
-        val early = resolveVideoCardTransitionBackgroundFrame(
-            progress = 0.1f,
-            phase = VideoCardTransitionBackgroundPhase.OPENING,
-            motionTier = MotionTier.Enhanced,
-            sdkInt = 35,
-        )
-        val late = resolveVideoCardTransitionBackgroundFrame(
-            progress = 0.5f,
-            phase = VideoCardTransitionBackgroundPhase.OPENING,
-            motionTier = MotionTier.Enhanced,
-            sdkInt = 35,
-        )
-        assertEquals(0f, early.blurRadiusPx)
-        assertTrue(early.scrimAlpha > 0f)
-        assertTrue(late.blurRadiusPx > 0f)
-        assertTrue(
-            shouldWarmUpVideoCardTransitionWithoutRecording(
-                phase = VideoCardTransitionBackgroundPhase.OPENING,
-                freezeRecording = false,
-            )
-        )
-        assertFalse(
-            shouldWarmUpVideoCardTransitionWithoutRecording(
-                phase = VideoCardTransitionBackgroundPhase.OPENING,
-                freezeRecording = true,
-            )
-        )
-        assertFalse(
-            shouldWarmUpVideoCardTransitionWithoutRecording(
-                phase = VideoCardTransitionBackgroundPhase.HELD,
-                freezeRecording = false,
-            )
-        )
-    }
-
-    @Test
-    fun normalMotionTierUsesLowerBlurBudgetThanEnhanced() {
+    fun normalAndEnhancedShareFullBlurBudget_noDeviceTierDowngrade() {
         val normal = resolveVideoCardTransitionBackgroundFrame(
             progress = 1f,
             phase = VideoCardTransitionBackgroundPhase.OPENING,
@@ -173,13 +136,26 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35,
         )
 
-        assertEquals(12f, normal.blurRadiusPx)
+        assertEquals(20f, normal.blurRadiusPx)
         assertEquals(20f, enhanced.blurRadiusPx)
-        assertEquals(12f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Normal))
+        assertEquals(20f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Normal))
         assertEquals(20f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Enhanced))
         assertEquals(0f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Reduced))
-        assertEquals(2f, resolveVideoCardTransitionBlurQuantumPx(MotionTier.Normal))
+        assertEquals(1f, resolveVideoCardTransitionBlurQuantumPx(MotionTier.Normal))
         assertEquals(1f, resolveVideoCardTransitionBlurQuantumPx(MotionTier.Enhanced))
+    }
+
+    @Test
+    fun openingEarlyProgressStillAppliesBlurForVisualQuality() {
+        val early = resolveVideoCardTransitionBackgroundFrame(
+            progress = 0.1f,
+            phase = VideoCardTransitionBackgroundPhase.OPENING,
+            motionTier = MotionTier.Normal,
+            sdkInt = 35,
+        )
+        assertEquals(2f, early.blurRadiusPx, 1f)
+        assertTrue(early.scrimAlpha > 0f)
+        assertTrue(early.blurRadiusPx > 0f)
     }
 
     @Test
