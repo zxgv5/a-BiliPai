@@ -107,6 +107,8 @@ class SpaceScreenStructureTest {
         assertTrue(source.contains(".focusRequester(searchFocusRequester)"))
         assertTrue(source.contains("SpaceSearchEntryChip("))
         assertTrue(source.contains("onSearchEntryClick = { viewModel.setSearchMode(true) }"))
+        // bordered Field shape avoids iOS continuous-corner + BorderStroke chamfer
+        assertTrue(source.contains("AppShapes.borderedContainer(ContainerLevel.Field)"))
         assertTrue(source.contains("onPrimaryClickOverride = { onSpaceDynamicCommentClick(dynamic) }"))
     }
 

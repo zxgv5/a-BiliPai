@@ -63,6 +63,45 @@ internal fun filterSpaceDynamicItemsByQuery(
     }
 }
 
+/** Extra feed pages to pull when local search has no hit yet. */
+internal const val SPACE_DYNAMIC_SEARCH_PREFETCH_PAGE_LIMIT = 5
+
+internal const val SPACE_DYNAMIC_SEARCH_DEBOUNCE_MS = 300L
+
+/**
+ * Keep fetching more space dynamics while the query has no local matches.
+ * Stops when a match appears, the feed ends, or [maxPages] pages were pulled this search.
+ */
+internal fun shouldPrefetchMoreSpaceDynamicsForSearch(
+    query: String,
+    matchCount: Int,
+    hasMore: Boolean,
+    pagesFetchedForSearch: Int,
+    maxPages: Int = SPACE_DYNAMIC_SEARCH_PREFETCH_PAGE_LIMIT
+): Boolean {
+    if (query.trim().isEmpty()) return false
+    if (matchCount > 0) return false
+    if (!hasMore) return false
+    if (pagesFetchedForSearch >= maxPages) return false
+    return true
+}
+
+internal fun mergeSpaceDynamicPages(
+    existing: List<SpaceDynamicItem>,
+    incoming: List<SpaceDynamicItem>
+): List<SpaceDynamicItem> {
+    if (incoming.isEmpty()) return existing
+    if (existing.isEmpty()) return incoming
+    val seen = existing.mapTo(HashSet(existing.size + incoming.size)) { it.id_str }
+    val merged = existing.toMutableList()
+    incoming.forEach { item ->
+        if (item.id_str.isNotBlank() && seen.add(item.id_str)) {
+            merged += item
+        }
+    }
+    return merged
+}
+
 /**
  * Build searchable plain text for a space dynamic.
  * Bilibili space feeds often leave [SpaceDynamicDesc.text] empty and put body only in

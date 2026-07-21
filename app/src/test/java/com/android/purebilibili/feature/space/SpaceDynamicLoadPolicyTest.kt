@@ -83,6 +83,71 @@ class SpaceDynamicLoadPolicyTest {
     }
 
     @Test
+    fun shouldPrefetchMoreSpaceDynamicsForSearch_onlyWhenNoLocalMatches() {
+        assertEquals(
+            true,
+            shouldPrefetchMoreSpaceDynamicsForSearch(
+                query = "星轨",
+                matchCount = 0,
+                hasMore = true,
+                pagesFetchedForSearch = 0
+            )
+        )
+        assertEquals(
+            false,
+            shouldPrefetchMoreSpaceDynamicsForSearch(
+                query = "星轨",
+                matchCount = 1,
+                hasMore = true,
+                pagesFetchedForSearch = 0
+            )
+        )
+        assertEquals(
+            false,
+            shouldPrefetchMoreSpaceDynamicsForSearch(
+                query = "星轨",
+                matchCount = 0,
+                hasMore = false,
+                pagesFetchedForSearch = 0
+            )
+        )
+        assertEquals(
+            false,
+            shouldPrefetchMoreSpaceDynamicsForSearch(
+                query = "星轨",
+                matchCount = 0,
+                hasMore = true,
+                pagesFetchedForSearch = SPACE_DYNAMIC_SEARCH_PREFETCH_PAGE_LIMIT
+            )
+        )
+        assertEquals(
+            false,
+            shouldPrefetchMoreSpaceDynamicsForSearch(
+                query = "   ",
+                matchCount = 0,
+                hasMore = true,
+                pagesFetchedForSearch = 0
+            )
+        )
+    }
+
+    @Test
+    fun mergeSpaceDynamicPages_appendsUniqueById() {
+        val existing = listOf(
+            SpaceDynamicItem(id_str = "1"),
+            SpaceDynamicItem(id_str = "2")
+        )
+        val incoming = listOf(
+            SpaceDynamicItem(id_str = "2"),
+            SpaceDynamicItem(id_str = "3")
+        )
+        assertEquals(
+            listOf("1", "2", "3"),
+            mergeSpaceDynamicPages(existing, incoming).map { it.id_str }
+        )
+    }
+
+    @Test
     fun filterSpaceDynamicItemsByQuery_matchesRichTextNodesAndRepostOrig() {
         val items = listOf(
             SpaceDynamicItem(

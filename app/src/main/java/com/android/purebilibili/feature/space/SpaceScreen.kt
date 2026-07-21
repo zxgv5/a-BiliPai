@@ -1128,7 +1128,13 @@ private fun SpaceContent(
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SpaceSectionEmptyState(
                             title = "没有结果",
-                            subtitle = "已加载动态中没有匹配项，可继续下滑加载更多后再搜"
+                            subtitle = if (state.isLoadingDynamics) {
+                                "正在自动加载更多动态…"
+                            } else if (state.hasMoreDynamics) {
+                                "未在近期动态中找到，可继续下滑加载更多"
+                            } else {
+                                "已加载的动态中没有匹配项"
+                            }
                         )
                     }
                 } else if (presentationState == SpaceDynamicPresentationState.EMPTY) {
@@ -2080,12 +2086,15 @@ private fun SpaceSearchEntryChip(
     modifier: Modifier = Modifier
 ) {
     if (label.isBlank()) return
+    // Use bordered Field shape (not continuous Pill + stroke) so corners stay round
+    // and match the real search bar; continuous iOS corners + BorderStroke chamfer.
+    val shape = AppShapes.borderedContainer(ContainerLevel.Field)
     Surface(
+        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick),
-        shape = AppShapes.container(ContainerLevel.Pill),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = shape,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
         border = BorderStroke(
             1.dp,
