@@ -83,6 +83,62 @@ class SpaceDynamicLoadPolicyTest {
     }
 
     @Test
+    fun filterSpaceDynamicItemsByQuery_matchesRichTextNodesAndRepostOrig() {
+        val items = listOf(
+            SpaceDynamicItem(
+                id_str = "rich",
+                modules = SpaceDynamicModules(
+                    module_dynamic = SpaceDynamicContent(
+                        desc = SpaceDynamicDesc(
+                            text = "",
+                            rich_text_nodes = listOf(
+                                com.android.purebilibili.data.model.response.SpaceDynamicRichText(
+                                    type = "RICH_TEXT_NODE_TYPE_TEXT",
+                                    text = "只有富文本节点有关键词夜航船"
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            SpaceDynamicItem(
+                id_str = "repost",
+                modules = SpaceDynamicModules(
+                    module_dynamic = SpaceDynamicContent(
+                        desc = SpaceDynamicDesc(text = "转发了一条动态")
+                    )
+                ),
+                orig = SpaceDynamicItem(
+                    id_str = "orig",
+                    modules = SpaceDynamicModules(
+                        module_dynamic = SpaceDynamicContent(
+                            major = SpaceDynamicMajor(
+                                archive = SpaceDynamicArchive(
+                                    bvid = "BV9",
+                                    title = "被转发的原视频：星轨摄影"
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        assertEquals(
+            listOf("rich"),
+            filterSpaceDynamicItemsByQuery(items, "夜航船").map { it.id_str }
+        )
+        assertEquals(
+            listOf("repost"),
+            filterSpaceDynamicItemsByQuery(items, "星轨").map { it.id_str }
+        )
+        assertEquals(
+            listOf("repost"),
+            filterSpaceDynamicItemsByQuery(items, "BV9").map { it.id_str }
+        )
+    }
+
+    @Test
     fun resolveSpaceDynamicCardItem_preservesDeleteMenuParams() {
         val item = SpaceDynamicItem(
             id_str = "1063487284684259332",

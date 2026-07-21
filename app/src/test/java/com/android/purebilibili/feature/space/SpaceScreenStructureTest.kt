@@ -105,6 +105,8 @@ class SpaceScreenStructureTest {
         assertTrue(source.contains("scrollOffset = searchBarRevealScrollOffsetPx"))
         assertTrue(source.contains("val searchFocusRequester = remember { FocusRequester() }"))
         assertTrue(source.contains(".focusRequester(searchFocusRequester)"))
+        assertTrue(source.contains("SpaceSearchEntryChip("))
+        assertTrue(source.contains("onSearchEntryClick = { viewModel.setSearchMode(true) }"))
         assertTrue(source.contains("onPrimaryClickOverride = { onSpaceDynamicCommentClick(dynamic) }"))
     }
 

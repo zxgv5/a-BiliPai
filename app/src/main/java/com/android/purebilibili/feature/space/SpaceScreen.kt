@@ -212,7 +212,9 @@ fun SpaceScreen(
                 totalAudios = success.totalAudios
             ).isNotEmpty()
     } == true
-    val screenTitle = stringResource(R.string.space_title)
+    val screenTitle = currentSuccessState?.userInfo?.name
+        ?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.space_title)
     val backLabel = stringResource(R.string.common_back)
     val moreLabel = stringResource(R.string.common_more)
     val blockUserLabel = stringResource(R.string.space_block_user)
@@ -404,6 +406,7 @@ fun SpaceScreen(
                             onLoadArticles = { viewModel.loadSpaceArticles(refresh = true) },
                             onLoadMoreArticles = { viewModel.loadSpaceArticles(refresh = false) },
                             onSearchQueryChange = viewModel::updateSearchQuery,
+                            onSearchEntryClick = { viewModel.setSearchMode(true) },
                             onFollowClick = viewModel::toggleFollow,
                             onTopPhotoClick = { showTopPhotoPreview = true },
                             onAvatarClick = { showAvatarPreview = true },
@@ -649,6 +652,7 @@ private fun SpaceContent(
     onLoadArticles: () -> Unit,
     onLoadMoreArticles: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    onSearchEntryClick: () -> Unit,
     onFollowClick: () -> Unit,
     onTopPhotoClick: () -> Unit,
     onAvatarClick: () -> Unit,
@@ -1089,6 +1093,14 @@ private fun SpaceContent(
             }
 
             SpaceMainTab.DYNAMIC -> {
+                if (shouldShowSpaceSearchEntry(currentSearchScope, state.isSearchMode)) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        SpaceSearchEntryChip(
+                            label = resolveSpaceSearchEntryLabel(currentSearchScope),
+                            onClick = onSearchEntryClick
+                        )
+                    }
+                }
                 if (state.isSearchMode && currentSearchScope == SpaceSearchScope.DYNAMIC) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         LaunchedEffect(state.isSearchMode, currentSearchScope) {
@@ -1116,7 +1128,7 @@ private fun SpaceContent(
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SpaceSectionEmptyState(
                             title = "没有结果",
-                            subtitle = "换个关键词再搜搜这个 UP 的动态"
+                            subtitle = "已加载动态中没有匹配项，可继续下滑加载更多后再搜"
                         )
                     }
                 } else if (presentationState == SpaceDynamicPresentationState.EMPTY) {
@@ -1196,6 +1208,18 @@ private fun SpaceContent(
                                 contributionVideoLayoutMode =
                                     toggleSpaceContributionVideoLayoutMode(contributionVideoLayoutMode)
                             }
+                        )
+                    }
+                }
+
+                if (
+                    shouldShowSpaceSearchEntry(currentSearchScope, state.isSearchMode) &&
+                    selectedContributionTab.subTab in setOf(SpaceSubTab.VIDEO, SpaceSubTab.CHARGING_VIDEO)
+                ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        SpaceSearchEntryChip(
+                            label = resolveSpaceSearchEntryLabel(currentSearchScope),
+                            onClick = onSearchEntryClick
                         )
                     }
                 }
@@ -2050,6 +2074,47 @@ private fun SpaceHeader(
 }
 
 @Composable
+private fun SpaceSearchEntryChip(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (label.isBlank()) return
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clickable(onClick = onClick),
+        shape = AppShapes.container(ContainerLevel.Pill),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
 private fun SpaceMainTabRow(
     tabs: List<SpaceMainTabItem>,
     selectedTab: SpaceMainTab,
@@ -2096,7 +2161,8 @@ private fun SpaceContributionToolbar(
     onOrderClick: (VideoSortOrder) -> Unit,
     onLayoutModeClick: () -> Unit
 ) {
-    var expanded by remember(selectedTabId) { mutableStateOf(false) }
+    // Start expanded so video / 图文 / 音频 categories are immediately visible.
+    var expanded by remember(selectedTabId) { mutableStateOf(true) }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()

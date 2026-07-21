@@ -21,6 +21,7 @@ import com.android.purebilibili.data.model.response.SpaceDynamicContent
 import com.android.purebilibili.data.model.response.SpaceDynamicDesc
 import com.android.purebilibili.data.model.response.SpaceDynamicItem
 import com.android.purebilibili.data.model.response.SpaceDynamicMajor
+import com.android.purebilibili.data.model.response.SpaceDynamicOpusSummary
 import com.android.purebilibili.data.model.response.SpaceDynamicRichText
 import com.android.purebilibili.data.model.response.StatItem
 
@@ -62,20 +63,72 @@ internal fun filterSpaceDynamicItemsByQuery(
     }
 }
 
-private fun resolveSpaceDynamicSearchText(item: SpaceDynamicItem): String {
-    val content = item.modules.module_dynamic
-    val major = content?.major
-    return listOfNotNull(
-        content?.desc?.text,
-        major?.archive?.title,
-        major?.archive?.desc,
-        major?.opus?.title,
-        major?.opus?.summary?.text,
-        major?.article?.title,
-        major?.article?.desc
-    )
-        .filter { it.isNotBlank() }
-        .joinToString(separator = "\n")
+/**
+ * Build searchable plain text for a space dynamic.
+ * Bilibili space feeds often leave [SpaceDynamicDesc.text] empty and put body only in
+ * rich_text_nodes, or only put content on the reposted [SpaceDynamicItem.orig].
+ */
+internal fun resolveSpaceDynamicSearchText(item: SpaceDynamicItem): String {
+    return buildString {
+        appendSpaceDynamicContentSearchText(item.modules.module_dynamic)
+        item.orig?.let { orig ->
+            append('\n')
+            appendSpaceDynamicContentSearchText(orig.modules.module_dynamic)
+            orig.modules.module_author?.name?.takeIf { it.isNotBlank() }?.let {
+                append('\n')
+                append(it)
+            }
+        }
+        item.modules.module_author?.name?.takeIf { it.isNotBlank() }?.let {
+            append('\n')
+            append(it)
+        }
+    }
+}
+
+private fun StringBuilder.appendSpaceDynamicContentSearchText(content: SpaceDynamicContent?) {
+    if (content == null) return
+    appendSpaceDynamicDescSearchText(content.desc)
+    val major = content.major ?: return
+    major.archive?.let { archive ->
+        appendLineIfNotBlank(archive.title)
+        appendLineIfNotBlank(archive.desc)
+        appendLineIfNotBlank(archive.bvid)
+    }
+    major.opus?.let { opus ->
+        appendLineIfNotBlank(opus.title)
+        appendSpaceDynamicOpusSummarySearchText(opus.summary)
+    }
+    major.article?.let { article ->
+        appendLineIfNotBlank(article.title)
+        appendLineIfNotBlank(article.desc)
+        appendLineIfNotBlank(article.label)
+    }
+}
+
+private fun StringBuilder.appendSpaceDynamicDescSearchText(desc: SpaceDynamicDesc?) {
+    if (desc == null) return
+    appendLineIfNotBlank(desc.text)
+    desc.rich_text_nodes.forEach { node ->
+        appendLineIfNotBlank(node.text)
+        appendLineIfNotBlank(node.orig_text)
+    }
+}
+
+private fun StringBuilder.appendSpaceDynamicOpusSummarySearchText(summary: SpaceDynamicOpusSummary?) {
+    if (summary == null) return
+    appendLineIfNotBlank(summary.text)
+    summary.rich_text_nodes.forEach { node ->
+        appendLineIfNotBlank(node.text)
+        appendLineIfNotBlank(node.orig_text)
+    }
+}
+
+private fun StringBuilder.appendLineIfNotBlank(value: String?) {
+    val normalized = value?.trim().orEmpty()
+    if (normalized.isEmpty()) return
+    if (isNotEmpty()) append('\n')
+    append(normalized)
 }
 
 internal fun resolveSpaceDynamicCardItems(items: List<SpaceDynamicItem>): List<DynamicItem> {
