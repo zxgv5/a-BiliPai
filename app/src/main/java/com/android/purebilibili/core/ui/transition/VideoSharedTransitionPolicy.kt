@@ -60,9 +60,8 @@ internal enum class VideoSharedTransitionTargetMode {
 /**
  * 共享元素 / Glass·Cinematic 等默认封面框比例。
  *
- * 首页三档见 [HomeFeedCardStyle]：粉版 4:3 / PiliPlus 16:10 / 16:9 完整。
- * 此处取 **PiliPlus 16:10**，与其 `Style.aspectRatio` 及历史共享壳一致；
- * 具体列表卡仍以 [resolveHomeFeedCardLayout] 传入的比例为准。
+ * 列表卡三档见 [HomeFeedCardStyle]：16:9 / 4:3 / 16:10。
+ * 此处默认 **16:10**；具体列表卡仍以 [resolveHomeFeedCardLayout] 传入的比例为准。
  */
 internal const val VIDEO_SHARED_COVER_ASPECT_RATIO = 16f / 10f
 private const val HOME_SOURCE_ROUTE = "home"

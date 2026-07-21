@@ -24,7 +24,7 @@ class HomeFeedCardStylePolicyTest {
     fun officialStyle_usesFourByThreeLikeOfficialDualColumnFeed() {
         val layout = resolveHomeFeedCardLayout(HomeFeedCardStyle.OFFICIAL)
 
-        // 粉版双列列表框 4:3 + 居中 Crop（CDN 源 16:9 会裁左右，与本家截图一致）
+        // 4:3 列表框 + 居中 Crop（CDN 源 16:9 会裁左右）
         assertEquals(HOME_FEED_OFFICIAL_COVER_ASPECT_RATIO, layout.coverAspectRatio, 0.0001f)
         assertEquals(4f / 3f, resolveHomeFeedCoverAspectRatio(HomeFeedCardStyle.OFFICIAL), 0.0001f)
         assertEquals(4, layout.outerPaddingDp)
@@ -32,11 +32,11 @@ class HomeFeedCardStylePolicyTest {
         assertEquals(6, layout.verticalItemSpacingDp)
         assertEquals(0, layout.storyCardHorizontalPaddingDp)
         assertEquals(true, layout.compactMetadata)
-        assertEquals("粉版 4:3", HomeFeedCardStyle.OFFICIAL.label)
+        assertEquals("4:3", HomeFeedCardStyle.OFFICIAL.label)
     }
 
     @Test
-    fun piliPlusStyle_usesSixteenByTenLikePiliPlusCard() {
+    fun piliPlusStyle_usesSixteenByTenBetweenFullAndTall() {
         val layout = resolveHomeFeedCardLayout(HomeFeedCardStyle.PILIPLUS)
 
         assertEquals(HOME_FEED_PILIPLUS_COVER_ASPECT_RATIO, layout.coverAspectRatio, 0.0001f)
@@ -46,7 +46,7 @@ class HomeFeedCardStylePolicyTest {
         assertEquals(8, layout.verticalItemSpacingDp)
         assertEquals(8, layout.storyCardHorizontalPaddingDp)
         assertEquals(true, layout.compactMetadata)
-        assertEquals("PiliPlus", HomeFeedCardStyle.PILIPLUS.label)
+        assertEquals("16:10", HomeFeedCardStyle.PILIPLUS.label)
         assertEquals(2, HomeFeedCardStyle.PILIPLUS.value)
         assertEquals(HomeFeedCardStyle.PILIPLUS, HomeFeedCardStyle.fromValue(2))
     }

@@ -11,10 +11,10 @@ internal data class HomeFeedCardLayout(
     val compactMetadata: Boolean
 )
 
-/** 粉版双列列表框（偏高）。CDN 16:9 源图会左右裁。 */
+/** 4:3 更高列表框。CDN 16:9 源图会左右裁。 */
 internal const val HOME_FEED_OFFICIAL_COVER_ASPECT_RATIO = 4f / 3f
 
-/** PiliPlus `Style.aspectRatio`：16:10。 */
+/** 16:10，介于 16:9 与 4:3 之间。 */
 internal const val HOME_FEED_PILIPLUS_COVER_ASPECT_RATIO = 16f / 10f
 
 /** 与投稿/CDN 源同比例，标准封面几乎不裁。 */

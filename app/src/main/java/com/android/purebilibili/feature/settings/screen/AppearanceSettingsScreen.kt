@@ -1490,9 +1490,8 @@ fun AppearanceSettingsContent(
                         IOSDivider(modifier = Modifier.padding(start = 16.dp))
                         Column(modifier = Modifier.padding(16.dp)) {
                             IOSSlidingSegmentedSetting(
-                                title = "首页卡片样式：${homeFeedCardStyle.label}",
-                                subtitle = homeFeedCardStyle.subtitle +
-                                    "（粉版 4:3 / PiliPlus 16:10 / 16:9 完整，均居中裁切）",
+                                title = "卡片封面比例：${homeFeedCardStyle.label}",
+                                subtitle = homeFeedCardStyle.subtitle + "（首页、搜索、列表、相关推荐等同步）",
                                 options = HomeFeedCardStyle.entries.map {
                                     PlaybackSegmentOption(it, it.label)
                                 },

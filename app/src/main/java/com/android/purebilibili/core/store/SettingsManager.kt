@@ -362,15 +362,15 @@ enum class HomeFeedCardWidthPreset(
 }
 
 /**
- * 首页视频封面框三档（均居中 Crop）：
+ * 双列视频卡封面框三档（全局一份设置，均居中 Crop）：
  * - [CURRENT] 16:9：与 CDN 投稿源同比例，标准封面几乎不裁
- * - [OFFICIAL] 4:3：粉版双列列表框，左右会裁
- * - [PILIPLUS] 16:10：对齐 PiliPlus `Style.aspectRatio`
+ * - [OFFICIAL] 4:3：更高列表框，左右会裁
+ * - [PILIPLUS] 16:10：介于 16:9 与 4:3 之间
  */
 enum class HomeFeedCardStyle(val value: Int, val label: String, val subtitle: String) {
     CURRENT(0, "16:9", "完整显示，接近投稿源图"),
-    OFFICIAL(1, "粉版 4:3", "官方双列框，居中裁切"),
-    PILIPLUS(2, "PiliPlus", "16:10 框，与 PiliPlus 一致");
+    OFFICIAL(1, "4:3", "更高列表框，左右居中裁切"),
+    PILIPLUS(2, "16:10", "介于两者之间，轻微裁切");
 
     companion object {
         fun fromValue(value: Int): HomeFeedCardStyle =
