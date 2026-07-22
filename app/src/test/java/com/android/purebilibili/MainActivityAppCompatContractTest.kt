@@ -208,6 +208,50 @@ class MainActivityAppCompatContractTest {
     }
 
     @Test
+    fun blueSnowMaidNightIcons_shouldUseTelegramBlueCircleAndBlackShell() {
+        assertTrue(
+            loadResourceText("drawable-night/ic_launcher_blue_snow_maid_background.xml")
+                .contains("#FF090A0C"),
+            "Dark mode adaptive icons should use the near-black outer shell"
+        )
+
+        mapOf(
+            "mdpi" to (48 to 108),
+            "hdpi" to (72 to 162),
+            "xhdpi" to (96 to 216),
+            "xxhdpi" to (144 to 324),
+            "xxxhdpi" to (192 to 432)
+        ).forEach { (density, sizes) ->
+            listOf(
+                "ic_launcher_blue_snow_maid.png",
+                "ic_launcher_blue_snow_maid_round.png",
+                "ic_launcher_blue_snow_maid_front.png",
+                "ic_launcher_blue_snow_maid_front_round.png"
+            ).forEach { fileName ->
+                val file = loadResourceFile("mipmap-night-$density/$fileName")
+                val header = readPngHeader(file)
+                assertTrue(header.width == sizes.first && header.height == sizes.first)
+                assertTrue(header.colorType == 6 && readPngCornerAlphaValues(file).all { it == 0 })
+            }
+            listOf(
+                "ic_launcher_blue_snow_maid_foreground.png",
+                "ic_launcher_blue_snow_maid_front_foreground.png"
+            ).forEach { fileName ->
+                val header = readPngHeader(loadResourceFile("mipmap-night-$density/$fileName"))
+                assertTrue(header.width == sizes.second && header.height == sizes.second && header.colorType == 6)
+            }
+        }
+
+        val darkRows = readPngRgbaRows(
+            loadResourceFile("mipmap-night-xxxhdpi/ic_launcher_blue_snow_maid_front.png")
+        )
+        val shellPixel = darkRows[30].slice(30 * 4 until 30 * 4 + 4)
+        val bluePixel = darkRows[30].slice(96 * 4 until 96 * 4 + 4)
+        assertTrue(shellPixel[0] <= 16 && shellPixel[1] <= 16 && shellPixel[2] <= 16 && shellPixel[3] == 255)
+        assertTrue(bluePixel[0] <= 32 && bluePixel[1] in 100..170 && bluePixel[2] >= 220 && bluePixel[3] == 255)
+    }
+
+    @Test
     fun launcherAliases_shouldBindMatchingSplashThemesForSelectedIcons() {
         val manifest = loadResourceText("../AndroidManifest.xml")
 
