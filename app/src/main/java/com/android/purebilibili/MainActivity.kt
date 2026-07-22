@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Outline
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.net.Uri
@@ -15,6 +16,7 @@ import android.os.Bundle
 import android.util.Rational
 import android.view.Gravity
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -612,6 +614,27 @@ internal fun splashExitBackgroundAlpha(progress: Float): Float {
     return (1f - normalized.pow(1.1f)).coerceIn(0f, 1f)
 }
 
+internal fun splashFlyoutCornerRadiusPx(sizePx: Int): Float {
+    return sizePx.coerceAtLeast(0) * 0.24f
+}
+
+private fun applySplashFlyoutRoundedClip(view: View) {
+    view.outlineProvider = object : ViewOutlineProvider() {
+        override fun getOutline(view: View, outline: Outline) {
+            val sizePx = minOf(view.width, view.height)
+            outline.setRoundRect(
+                0,
+                0,
+                view.width,
+                view.height,
+                splashFlyoutCornerRadiusPx(sizePx)
+            )
+        }
+    }
+    view.clipToOutline = true
+    view.invalidateOutline()
+}
+
 internal fun splashTrailPrimaryAlpha(progress: Float): Float {
     val normalized = progress.coerceIn(0f, 1f)
     if (normalized <= 0.08f) return 0f
@@ -873,6 +896,7 @@ open class MainActivity : AppCompatActivity() {
                 runCatching {
                     val splashView = splashScreenViewProvider.view
                     val animatedTarget = splashScreenViewProvider.iconView
+                    applySplashFlyoutRoundedClip(animatedTarget)
                     val targetType = resolveSplashFlyoutTargetType(
                         hasSystemIcon = true,
                         hasFallbackIcon = false
@@ -907,6 +931,7 @@ open class MainActivity : AppCompatActivity() {
                         return ImageView(this).apply {
                             scaleType = ImageView.ScaleType.FIT_CENTER
                             alpha = 0f
+                            applySplashFlyoutRoundedClip(this)
                             if (drawable != null) {
                                 setImageDrawable(drawable)
                             } else {

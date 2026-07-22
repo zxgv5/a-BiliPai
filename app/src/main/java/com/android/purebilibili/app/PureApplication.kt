@@ -5,7 +5,9 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ComponentCallbacks2
+import android.content.ComponentName
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -46,9 +48,19 @@ import com.android.purebilibili.feature.plugin.dlna.DlnaCastPlugin
 import com.android.purebilibili.feature.plugin.googlecast.GoogleCastPlugin
 import com.android.purebilibili.feature.plugin.TodayWatchPlugin
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+internal fun shouldRefreshLauncherIconForNightModeChange(
+    previousUiMode: Int,
+    currentUiMode: Int
+): Boolean {
+    val previousNightMode = previousUiMode and Configuration.UI_MODE_NIGHT_MASK
+    val currentNightMode = currentUiMode and Configuration.UI_MODE_NIGHT_MASK
+    return previousNightMode != currentNightMode
+}
 
 //  实现 ImageLoaderFactory 以提供自定义 Coil 配置
 //  实现 ComponentCallbacks2 响应系统内存警告
@@ -56,6 +68,7 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
     
     //  保存 ImageLoader 引用以便在 onTrimMemory 中使用
     private var _imageLoader: ImageLoader? = null
+    private var launcherIconUiModeSnapshot: Int? = null
 
     private val telemetryListener =
         PureApplicationRuntimeConfig.createTelemetryBackgroundStateListener()
@@ -104,6 +117,7 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
         applyThemePreference()
         
         super.onCreate()
+        launcherIconUiModeSnapshot = resources.configuration.uiMode
         Logger.init(this)
         CrashReporter.installGlobalExceptionHandler()
 
@@ -121,6 +135,18 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
 
         startupOrchestrator.runImmediate(::runStartupTask)
         startupOrchestrator.scheduleDeferred(::runStartupTask)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        val previousUiMode = launcherIconUiModeSnapshot
+        super.onConfigurationChanged(newConfig)
+        launcherIconUiModeSnapshot = newConfig.uiMode
+        if (
+            previousUiMode != null &&
+            shouldRefreshLauncherIconForNightModeChange(previousUiMode, newConfig.uiMode)
+        ) {
+            refreshActiveLauncherAliasForNightMode()
+        }
     }
 
     private fun runStartupTask(task: AppStartupTask) {
@@ -440,6 +466,67 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
                 Logger.d(PureApplicationRuntimeConfig.TAG, " Synced app icon state: $currentIcon")
             } catch (e: Exception) {
                 android.util.Log.e(PureApplicationRuntimeConfig.TAG, "Failed to sync app icon state", e)
+            }
+        }
+    }
+
+    private fun refreshActiveLauncherAliasForNightMode() {
+        AppScope.ioScope.launch {
+            val currentIcon = SettingsManager.getAppIconSync(this@PureApplication)
+            val splashIconVisible = SettingsManager.isSplashIconAnimationEnabledSync(this@PureApplication)
+            val alias = resolveAppIconLauncherAlias(
+                packageName = packageName,
+                rawKey = currentIcon,
+                splashIconVisible = splashIconVisible
+            )
+            val component = ComponentName(packageName, alias)
+            val pm = packageManager
+            var aliasDisabled = false
+            try {
+                if (
+                    pm.getComponentEnabledSetting(component) ==
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                ) {
+                    Logger.w(
+                        PureApplicationRuntimeConfig.TAG,
+                        "Launcher icon refresh skipped because alias is disabled: $alias"
+                    )
+                    return@launch
+                }
+                pm.setComponentEnabledSetting(
+                    component,
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+                aliasDisabled = true
+                delay(100)
+            } catch (throwable: Exception) {
+                Logger.e(
+                    PureApplicationRuntimeConfig.TAG,
+                    "Failed to invalidate launcher icon after night mode change",
+                    throwable
+                )
+            } finally {
+                if (aliasDisabled) {
+                    runCatching {
+                        pm.setComponentEnabledSetting(
+                            component,
+                            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                            android.content.pm.PackageManager.DONT_KILL_APP
+                        )
+                    }.onSuccess {
+                        Logger.d(
+                            PureApplicationRuntimeConfig.TAG,
+                            "Launcher icon refreshed after night mode change: $alias"
+                        )
+                    }.onFailure { throwable ->
+                        Logger.e(
+                            PureApplicationRuntimeConfig.TAG,
+                            "Failed to restore launcher icon alias after night mode change",
+                            throwable
+                        )
+                    }
+                }
             }
         }
     }
