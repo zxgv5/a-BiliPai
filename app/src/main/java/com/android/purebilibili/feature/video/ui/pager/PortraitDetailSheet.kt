@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 
 /**
  * 竖屏视频详情页 (简介)
@@ -156,7 +157,7 @@ fun PortraitDetailSheet(
                                 .height(200.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator()
+                            AdaptiveLoadingIndicator()
                         }
                     } else {
                         Column(

@@ -907,7 +907,7 @@ private fun PartitionVideoList(
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CutePersonLoadingIndicator(modifier = Modifier.size(24.dp))
+                            CutePersonLoadingIndicator(size = 24.dp)
                         }
                     }
                 }

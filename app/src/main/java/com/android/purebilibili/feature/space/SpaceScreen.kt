@@ -41,6 +41,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -348,7 +349,7 @@ fun SpaceScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator()
+                            AdaptiveLoadingIndicator()
                         }
                     }
 
@@ -549,7 +550,7 @@ fun SpaceScreen(
                             .padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        AdaptiveLoadingIndicator()
                     }
                 } else {
                     Column(
@@ -3793,7 +3794,7 @@ private fun SpaceLoadingFooter() {
             .padding(vertical = 18.dp),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+        AdaptiveLoadingIndicator(size = 24.dp)
     }
 }
 
